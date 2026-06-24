@@ -1,0 +1,157 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Yardımcı fonksiyonlar ───────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function userExists() {
+      return isAuthenticated() && exists(userDocPath());
+    }
+
+    function userDoc() {
+      return get(userDocPath());
+    }
+
+    function userRole() {
+      return userDoc().data.role;
+    }
+
+    function isAdmin() {
+      return userExists() && userRole() == 'admin';
+    }
+
+    function isBusiness() {
+      return userExists() && userRole() == 'business';
+    }
+
+    function isNotBanned() {
+      return userExists() && userDoc().data.isBanned == false;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isBusinessOwner(businessId) {
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid;
+    }
+
+    // Kullanıcının kendi profilinde değiştiremeyeceği alanlar
+    function userProtectedFields() {
+      return ['role', 'isBanned', 'reputationScore', 'completedTaskCount'];
+    }
+
+    // ─── users ───────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.role in ['user', 'business']
+        && request.resource.data.isBanned == false
+        && request.resource.data.reputationScore == 0
+        && request.resource.data.completedTaskCount == 0;
+
+      allow update: if isAdmin()
+        || (isOwner(userId)
+            && isNotBanned()
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(userProtectedFields()));
+
+      allow delete: if isAdmin();
+    }
+
+    // ─── businesses ──────────────────────────────────────────
+
+    match /businesses/{businessId} {
+      allow read: if true;
+
+      allow create: if isBusiness()
+        && isNotBanned()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.isVerified == false
+        && request.resource.data.reputationScore == 0
+        && request.resource.data.totalTasksPublished == 0;
+
+      allow update: if isAdmin()
+        || (isBusinessOwner(businessId) && isNotBanned());
+
+      allow delete: if isAdmin();
+    }
+
+    // ─── tasks ───────────────────────────────────────────────
+
+    match /tasks/{taskId} {
+      // Herkes onaylı aktif görevleri okuyabilir; işletme sahibi kendi taslaklarını da okur
+      allow read: if (resource.data.status == 'active' && resource.data.approvedByAdmin == true)
+        || isBusinessOwner(resource.data.businessId)
+        || isAdmin();
+
+      allow create: if isBusiness()
+        && isNotBanned()
+        && isBusinessOwner(request.resource.data.businessId)
+        && request.resource.data.status in ['draft', 'active']
+        && request.resource.data.approvedByAdmin == false
+        && request.resource.data.currentApplicantCount == 0;
+
+      allow update: if isAdmin()
+        || (isBusinessOwner(resource.data.businessId)
+            && isNotBanned()
+            && !(request.resource.data.approvedByAdmin == true && resource.data.approvedByAdmin == false));
+
+      allow delete: if isAdmin()
+        || (isBusinessOwner(resource.data.businessId) && resource.data.status == 'draft');
+    }
+
+    // ─── applications ────────────────────────────────────────
+
+    match /applications/{applicationId} {
+      allow read: if isOwner(resource.data.userId)
+        || isBusinessOwner(resource.data.businessId)
+        || isAdmin();
+
+      allow create: if isNotBanned()
+        && userRole() == 'user'
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.submissionText == ''
+        && request.resource.data.submissionFiles == [];
+
+      allow update: if isAdmin()
+        || (isOwner(resource.data.userId)
+            && isNotBanned()
+            && resource.data.status in ['pending', 'approved']
+            && request.resource.data.status == 'submitted')
+        || (isBusinessOwner(resource.data.businessId)
+            && isNotBanned()
+            && resource.data.status in ['submitted', 'pending']
+            && request.resource.data.status in ['approved', 'rejected']);
+
+      // Kupon üretimi Cloud Function ile yapılır — client rewarded yapamaz
+      allow delete: if isAdmin();
+    }
+
+    // ─── coupons ─────────────────────────────────────────────
+    // Oluşturma ve güncelleme yalnızca Cloud Functions (FAZ 5)
+
+    match /coupons/{couponId} {
+      allow read: if isOwner(resource.data.userId)
+        || isBusinessOwner(resource.data.businessId)
+        || isAdmin();
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+  }
+}

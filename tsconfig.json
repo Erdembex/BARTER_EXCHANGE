@@ -1,0 +1,23 @@
+{
+  "extends": "./bex/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./bex",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@features/*": ["src/features/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@lib/*": ["src/lib/*"],
+      "@store/*": ["src/store/*"],
+      "@theme/*": ["src/theme/*"],
+      "@types/*": ["src/types/*"]
+    }
+  },
+  "include": [
+    "bex/**/*.ts",
+    "bex/**/*.tsx",
+    "bex/.expo/types/**/*.ts",
+    "bex/expo-env.d.ts"
+  ],
+  "exclude": ["bex/node_modules"]
+}

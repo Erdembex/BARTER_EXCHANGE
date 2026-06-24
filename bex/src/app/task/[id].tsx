@@ -1,0 +1,220 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { tasksRepository, businessesRepository, EnrichedTask } from '@/features/data';
+import { Business } from '@/types';
+import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
+import { formatDeadline, getDifficultyColor } from '@/lib/taskUtils';
+import { TaskCard } from '@/components/tasks';
+import { Button } from '@/components/ui';
+import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+
+export default function TaskDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [task, setTask] = useState<EnrichedTask | null>(null);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [similar, setSimilar] = useState<EnrichedTask[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const t = await tasksRepository.getEnrichedById(id);
+      setTask(t);
+      if (t) {
+        const b = await businessesRepository.getById(t.businessId);
+        setBusiness(b);
+        const sim = await tasksRepository.getSimilar(t);
+        setSimilar(sim);
+      }
+      setLoading(false);
+    })();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!task) {
+    return (
+      <View style={styles.loader}>
+        <Text style={styles.error}>Görev bulunamadı.</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backLink}>← Geri dön</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const diffColor = getDifficultyColor(task.difficulty);
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+          <Text style={styles.backText}>← Geri</Text>
+        </TouchableOpacity>
+
+        {task.featured && (
+          <View style={styles.featuredBadge}>
+            <Text style={styles.featuredText}>⭐ Öne Çıkan Görev</Text>
+          </View>
+        )}
+
+        <Text style={styles.title}>{task.title}</Text>
+
+        <View style={styles.metaRow}>
+          <View style={[styles.badge, { backgroundColor: diffColor + '22' }]}>
+            <Text style={[styles.badgeText, { color: diffColor }]}>
+              {DIFFICULTY_LABELS[task.difficulty]}
+            </Text>
+          </View>
+          <Text style={styles.meta}>⏱ ~{task.estimatedHours} saat</Text>
+          <Text style={styles.meta}>{formatDeadline(task.deadline)}</Text>
+        </View>
+
+        {/* Ödül */}
+        <View style={styles.rewardBox}>
+          <Text style={styles.rewardLabel}>Kazanılacak Ödül</Text>
+          <Text style={styles.rewardValue}>🎁 {task.rewardDescription}</Text>
+        </View>
+
+        {/* Açıklama */}
+        <Text style={styles.sectionTitle}>Görev Açıklaması</Text>
+        <Text style={styles.description}>{task.description}</Text>
+
+        {/* İşletme */}
+        {business && (
+          <View style={[styles.businessCard, Shadow.sm]}>
+            <View style={styles.businessLogo}>
+              <Text style={styles.businessLogoText}>{business.name.charAt(0)}</Text>
+            </View>
+            <View style={styles.businessInfo}>
+              <Text style={styles.businessName}>{business.name}</Text>
+              <Text style={styles.businessAddr}>📍 {business.address}</Text>
+              <Text style={styles.businessScore}>
+                ⭐ {business.reputationScore} · {CATEGORY_LABELS[task.category]}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Detaylar */}
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Başvuru</Text>
+            <Text style={styles.detailValue}>
+              {task.currentApplicantCount}/{task.maxApplicants}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Kategori</Text>
+            <Text style={styles.detailValue}>{CATEGORY_LABELS[task.category]}</Text>
+          </View>
+        </View>
+
+        <Button
+          title="Başvur"
+          onPress={() => router.push(`/task/apply/${task.id}`)}
+        />
+
+        {/* Benzer görevler */}
+        {similar.length > 0 && (
+          <View style={styles.similarSection}>
+            <Text style={styles.sectionTitle}>Benzer Görevler</Text>
+            {similar.map((t) => (
+              <View key={t.id} style={{ marginBottom: Spacing[3] }}>
+                <TaskCard
+                  task={t}
+                  businessName={t.businessName}
+                  compact
+                  onPress={() => router.replace(`/task/${t.id}`)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.background },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing[4] },
+  scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
+  back: { alignSelf: 'flex-start' },
+  backText: { ...Typography.labelMedium, color: Colors.textSecondary },
+  backLink: { ...Typography.labelMedium, color: Colors.primary },
+  error: { ...Typography.bodyMedium, color: Colors.error },
+  featuredBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+  },
+  featuredText: { ...Typography.caption, fontWeight: '700', color: Colors.textPrimary },
+  title: { ...Typography.displayMedium, color: Colors.textPrimary },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3], flexWrap: 'wrap' },
+  badge: { paddingHorizontal: Spacing[2], paddingVertical: 3, borderRadius: Radius.sm },
+  badgeText: { ...Typography.caption, fontWeight: '700' },
+  meta: { ...Typography.caption, color: Colors.textTertiary },
+  rewardBox: {
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing[5],
+    borderRadius: Radius.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+    gap: Spacing[2],
+  },
+  rewardLabel: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '600' },
+  rewardValue: { ...Typography.headingSmall, color: Colors.textPrimary },
+  sectionTitle: { ...Typography.headingSmall, color: Colors.textPrimary, marginTop: Spacing[2] },
+  description: { ...Typography.bodyLarge, color: Colors.textSecondary, lineHeight: 24 },
+  businessCard: {
+    flexDirection: 'row',
+    gap: Spacing[4],
+    padding: Spacing[4],
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  businessLogo: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  businessLogoText: { fontSize: 22, fontWeight: '800', color: Colors.textOnPrimary },
+  businessInfo: { flex: 1, gap: 4 },
+  businessName: { ...Typography.labelLarge, color: Colors.textPrimary },
+  businessAddr: { ...Typography.caption, color: Colors.textTertiary },
+  businessScore: { ...Typography.caption, color: Colors.textSecondary },
+  detailsGrid: { flexDirection: 'row', gap: Spacing[3] },
+  detailItem: {
+    flex: 1,
+    padding: Spacing[4],
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    gap: 4,
+  },
+  detailLabel: { ...Typography.caption, color: Colors.textTertiary },
+  detailValue: { ...Typography.labelLarge, color: Colors.textPrimary },
+  similarSection: { gap: Spacing[3], marginTop: Spacing[2] },
+});
