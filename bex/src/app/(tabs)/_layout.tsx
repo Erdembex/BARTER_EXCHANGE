@@ -23,7 +23,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textTertiary,
         tabBarStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.card,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           paddingBottom: 8,
@@ -47,6 +47,13 @@ export default function TabsLayout() {
         options={{
           title: 'Görevler',
           tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="applications/index"
+        options={{
+          title: 'Başvurularım',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
         }}
       />
       <Tabs.Screen

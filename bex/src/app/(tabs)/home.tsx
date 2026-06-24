@@ -7,8 +7,9 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -19,6 +20,8 @@ import {
 import type { EnrichedTask } from '@/features/data';
 import { Business, Application, TaskCategory } from '@/types';
 import { getGreeting } from '@/lib/taskUtils';
+import { shouldUseDemoData } from '@/lib/devMode';
+import { demoStore } from '@/lib/demoStore';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { SearchBar, CategoryFilter, TaskCard, BusinessCard } from '@/components/tasks';
 import { SectionHeader } from '@/components/common/SectionHeader';
@@ -45,6 +48,9 @@ export default function HomeScreen() {
 
       if (firebaseUser) {
         try {
+          if (shouldUseDemoData()) {
+            demoStore.ensureSampleApplicationsForUser(firebaseUser.uid);
+          }
           const apps = await applicationsRepository.getActiveByUser(firebaseUser.uid);
           setMyApplications(apps);
         } catch {
@@ -112,16 +118,25 @@ export default function HomeScreen() {
         {/* Aktif görevlerim */}
         {myApplications.length > 0 && (
           <View style={styles.section}>
-            <SectionHeader title="Aktif Görevlerim" />
-            {myApplications.slice(0, 3).map((app) => (
-              <View key={app.id} style={styles.appRow}>
+            <SectionHeader
+              title="Aktif Görevlerim"
+              actionLabel="Tümü →"
+              onAction={() => router.push('/(tabs)/applications' as Href)}
+            />
+            {myApplications.slice(0, 2).map((app) => (
+              <TouchableOpacity
+                key={app.id}
+                style={styles.appRow}
+                onPress={() => router.push(`/application/${app.id}` as Href)}
+                activeOpacity={0.85}
+              >
                 <Text style={styles.appStatus}>
                   {APPLICATION_STATUS_LABELS[app.status]}
                 </Text>
                 <Text style={styles.appTask} numberOfLines={1}>
                   Görev #{app.taskId.slice(0, 8)}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}

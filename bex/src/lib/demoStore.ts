@@ -48,6 +48,7 @@ export const demoStore = {
       ...data,
       ownerUid,
       isVerified: false,
+      verificationStatus: 'none',
       reputationScore: 0,
       totalTasksPublished: 0,
       createdAt: Timestamp.now(),
@@ -102,7 +103,7 @@ export const demoStore = {
     return coupons.find((c) => c.couponCode === code) ?? null;
   },
 
-  redeemCoupon(couponId: string, verifiedBy: string): Coupon | null {
+  redeemCoupon(couponId: string, scannedBy: string): Coupon | null {
     const coupon = coupons.find((c) => c.id === couponId);
     if (!coupon || coupon.status !== 'active') return null;
     if (coupon.usedCount >= coupon.totalUses) return null;
@@ -116,7 +117,7 @@ export const demoStore = {
       status,
       usageHistory: [
         ...coupon.usageHistory,
-        { usedAt: Timestamp.now(), verifiedBy },
+        { usedAt: Timestamp.now(), scannedBy },
       ],
     };
 
@@ -124,8 +125,60 @@ export const demoStore = {
     return updated;
   },
 
+  submitVerification(
+    businessId: string,
+    documentUrl: string,
+    fileName: string
+  ): Business {
+    businesses = businesses.map((b) =>
+      b.id === businessId
+        ? {
+            ...b,
+            verificationStatus: 'pending',
+            verificationDocumentUrl: documentUrl,
+          }
+        : b
+    );
+    const updated = businesses.find((b) => b.id === businessId);
+    if (!updated) throw new Error('İşletme bulunamadı');
+    return updated;
+  },
+
   getCouponsByBusiness(businessId: string): Coupon[] {
     return coupons.filter((c) => c.businessId === businessId);
+  },
+
+  ensureSampleApplicationsForUser(userId: string) {
+    if (applications.some((a) => a.userId === userId)) return;
+
+    const samples: Application[] = [
+      {
+        id: `demo-a-sample1-${userId.slice(-6)}`,
+        taskId: 'demo-t1',
+        userId,
+        businessId: 'demo-b1',
+        status: 'pending',
+        coverLetter:
+          'Bu göreve uygun olduğumu düşünüyorum. Deneyimlerimi paylaşmaya hazırım.',
+        portfolioUrl: '',
+        submissionText: '',
+        submissionFiles: [],
+        createdAt: Timestamp.now(),
+      },
+      {
+        id: `demo-a-sample2-${userId.slice(-6)}`,
+        taskId: 'demo-t4',
+        userId,
+        businessId: 'demo-b1',
+        status: 'approved',
+        coverLetter: 'Logo ve marka kimliği projelerinde deneyimliyim.',
+        portfolioUrl: 'https://behance.net',
+        submissionText: '',
+        submissionFiles: [],
+        createdAt: Timestamp.fromMillis(Date.now() - 86400000 * 2),
+      },
+    ];
+    applications = [...samples, ...applications];
   },
 
   ensureSampleCouponForUser(userId: string) {

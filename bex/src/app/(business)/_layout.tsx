@@ -83,6 +83,12 @@ export default function BusinessTabsLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="verification"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

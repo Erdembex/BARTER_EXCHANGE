@@ -30,6 +30,8 @@ const styles = StyleSheet.create({
   },
   badge: {
     backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

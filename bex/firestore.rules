@@ -80,11 +80,16 @@ service cloud.firestore {
         && isNotBanned()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.isVerified == false
+        && request.resource.data.verificationStatus == 'none'
         && request.resource.data.reputationScore == 0
         && request.resource.data.totalTasksPublished == 0;
 
       allow update: if isAdmin()
-        || (isBusinessOwner(businessId) && isNotBanned());
+        || (isBusinessOwner(businessId)
+            && isNotBanned()
+            && request.resource.data.isVerified == resource.data.isVerified
+            && request.resource.data.verificationStatus in ['none', 'pending']
+            && !(request.resource.data.verificationStatus == 'verified'));
 
       allow delete: if isAdmin();
     }
@@ -132,6 +137,10 @@ service cloud.firestore {
             && isNotBanned()
             && resource.data.status in ['pending', 'approved']
             && request.resource.data.status == 'submitted')
+        || (isOwner(resource.data.userId)
+            && isNotBanned()
+            && resource.data.status in ['pending', 'approved']
+            && request.resource.data.status == 'cancelled')
         || (isBusinessOwner(resource.data.businessId)
             && isNotBanned()
             && resource.data.status in ['submitted', 'pending']
@@ -152,6 +161,20 @@ service cloud.firestore {
       allow create: if false;
       allow update: if false;
       allow delete: if isAdmin();
+    }
+
+    // ─── business_documents ──────────────────────────────────
+
+    match /business_documents/{docId} {
+      allow read: if isBusinessOwner(resource.data.businessId) || isAdmin();
+
+      allow create: if isBusiness()
+        && isNotBanned()
+        && isBusinessOwner(request.resource.data.businessId)
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update, delete: if isAdmin();
     }
   }
 }

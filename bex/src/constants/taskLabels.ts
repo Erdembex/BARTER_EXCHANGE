@@ -36,6 +36,7 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: 'Reddedildi',
   submitted: 'Teslim Edildi',
   rewarded: 'Ödül Kazanıldı',
+  cancelled: 'İptal Edildi',
 };
 
 export const ALL_CATEGORIES: TaskCategory[] = [

@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1E035B",
+        "backgroundColor": "#443C5D",
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.bex.app"
@@ -29,7 +29,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#1E035B"
+          "color": "#B87EA8"
         }
       ],
       "expo-secure-store"

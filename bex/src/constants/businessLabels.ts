@@ -32,3 +32,10 @@ export const ALL_BUSINESS_CATEGORIES: BusinessCategory[] = [
   'entertainment',
   'other',
 ];
+
+export const VERIFICATION_STATUS_LABELS = {
+  none: 'Doğrulanmadı',
+  pending: 'İncelemede',
+  verified: 'Doğrulandı',
+  rejected: 'Reddedildi',
+} as const;

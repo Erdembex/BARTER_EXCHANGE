@@ -17,6 +17,7 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   rejected: Colors.error,
   submitted: Colors.primary,
   rewarded: Colors.success,
+  cancelled: Colors.textTertiary,
 };
 
 export function ApplicationCard({

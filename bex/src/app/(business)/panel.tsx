@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
@@ -122,8 +122,15 @@ export default function BusinessDashboardScreen() {
           <Button
             title="Kupon Doğrula"
             variant="outline"
-            onPress={() => router.push('/(business)/coupons/index')}
+            onPress={() => router.push('/(business)/coupons/index' as Href)}
           />
+          {business && business.verificationStatus !== 'verified' && (
+            <Button
+              title="İşletme Doğrulama (KYC)"
+              variant="secondary"
+              onPress={() => router.push('/(business)/verification' as Href)}
+            />
+          )}
         </View>
 
         <View style={styles.note}>

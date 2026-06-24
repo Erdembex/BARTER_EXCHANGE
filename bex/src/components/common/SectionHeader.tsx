@@ -34,6 +34,6 @@ const styles = StyleSheet.create({
   },
   action: {
     ...Typography.labelMedium,
-    color: Colors.primaryDark,
+    color: Colors.primary,
   },
 });

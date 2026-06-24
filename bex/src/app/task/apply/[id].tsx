@@ -9,7 +9,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Href } from 'expo-router';
 import { tasksRepository, applicationsRepository, EnrichedTask } from '@/features/data';
 import { useAuthStore } from '@/store/authStore';
 import { Button, Input } from '@/components/ui';
@@ -49,7 +49,7 @@ export default function ApplyScreen() {
         coverLetter: coverLetter.trim(),
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/applications' as Href);
     } catch (err: any) {
       setError(err?.message ?? 'Başvuru gönderilemedi.');
     } finally {

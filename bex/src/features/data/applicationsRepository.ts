@@ -161,6 +161,16 @@ export const applicationsRepository = {
       reviewedAt: serverTimestamp(),
     });
   },
+
+  async cancel(id: string, userId: string): Promise<boolean> {
+    const application = await this.getById(id);
+    if (!application) return false;
+    if (application.userId !== userId) return false;
+    if (!['pending', 'approved'].includes(application.status)) return false;
+
+    await this.updateStatus(id, 'cancelled');
+    return true;
+  },
 };
 
 function generateCouponCode(): string {
@@ -280,9 +290,9 @@ export const couponsRepository = {
     return { id: ref.id, ...couponData };
   },
 
-  async redeem(couponId: string, verifiedBy: string): Promise<Coupon | null> {
+  async redeem(couponId: string, scannedBy: string): Promise<Coupon | null> {
     if (shouldUseDemoData()) {
-      return demoStore.redeemCoupon(couponId, verifiedBy);
+      return demoStore.redeemCoupon(couponId, scannedBy);
     }
     const coupon = await this.getById(couponId);
     if (!coupon || coupon.status !== 'active') return null;
@@ -296,7 +306,7 @@ export const couponsRepository = {
       status,
       usageHistory: [
         ...coupon.usageHistory,
-        { usedAt: serverTimestamp(), verifiedBy },
+        { usedAt: serverTimestamp(), scannedBy },
       ],
     });
 

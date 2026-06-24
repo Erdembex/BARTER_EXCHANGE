@@ -196,7 +196,13 @@ export const businessesRepository = {
     }
     try {
       const snap = await getDoc(doc(db, COLLECTIONS.BUSINESSES, id));
-      return snap.exists() ? ({ id: snap.id, ...snap.data() } as Business) : null;
+      if (!snap.exists()) return null;
+      const data = snap.data() as Omit<Business, 'id'>;
+      return {
+        id: snap.id,
+        ...data,
+        verificationStatus: data.verificationStatus ?? 'none',
+      };
     } catch {
       return DEMO_BUSINESSES.find((b) => b.id === id) ?? null;
     }
@@ -248,6 +254,7 @@ export const businessesRepository = {
     const ref = await addDoc(collection(db, COLLECTIONS.BUSINESSES), {
       ...data,
       isVerified: false,
+      verificationStatus: 'none',
       reputationScore: 0,
       totalTasksPublished: 0,
       createdAt: serverTimestamp(),

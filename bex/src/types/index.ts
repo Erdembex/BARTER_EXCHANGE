@@ -32,6 +32,12 @@ export type BusinessCategory =
   | 'entertainment'
   | 'other';
 
+export type BusinessVerificationStatus =
+  | 'none'
+  | 'pending'
+  | 'verified'
+  | 'rejected';
+
 export interface Business {
   id: string;
   ownerUid: string;
@@ -41,12 +47,23 @@ export interface Business {
   address: string;
   location: GeoPoint;
   isVerified: boolean;
+  verificationStatus: BusinessVerificationStatus;
+  verificationDocumentUrl?: string;
   reputationScore: number;
   totalTasksPublished: number;
   createdAt: Timestamp;
 }
 
-export type CreateBusiness = Omit<Business, 'id' | 'createdAt' | 'isVerified' | 'reputationScore' | 'totalTasksPublished'>;
+export type CreateBusiness = Omit<
+  Business,
+  | 'id'
+  | 'createdAt'
+  | 'isVerified'
+  | 'verificationStatus'
+  | 'verificationDocumentUrl'
+  | 'reputationScore'
+  | 'totalTasksPublished'
+>;
 
 // ─── Görev ───────────────────────────────────────────────────
 export type TaskCategory =
@@ -95,7 +112,8 @@ export type ApplicationStatus =
   | 'approved'
   | 'rejected'
   | 'submitted'
-  | 'rewarded';
+  | 'rewarded'
+  | 'cancelled';
 
 export interface Application {
   id: string;
@@ -123,7 +141,7 @@ export type CouponStatus = 'active' | 'exhausted' | 'expired';
 
 export interface CouponUsage {
   usedAt: Timestamp;
-  verifiedBy: string;
+  scannedBy: string;
 }
 
 export interface Coupon {
@@ -159,4 +177,5 @@ export const COLLECTIONS = {
   TASKS: 'tasks',
   APPLICATIONS: 'applications',
   COUPONS: 'coupons',
+  BUSINESS_DOCUMENTS: 'business_documents',
 } as const;
