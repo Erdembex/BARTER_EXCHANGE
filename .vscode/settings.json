@@ -1,0 +1,5 @@
+{
+  "typescript.tsdk": "bex/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "eslint.workingDirectories": ["bex"]
+}
