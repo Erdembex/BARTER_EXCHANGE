@@ -24,6 +24,7 @@ import {
   Task,
 } from '../../types';
 import { tasksRepository } from './businessesRepository';
+import { notifyUser } from '../notifications/notificationsRepository';
 
 export const applicationsRepository = {
   async getById(id: string): Promise<Application | null> {
@@ -64,14 +65,14 @@ export const applicationsRepository = {
         .filter(
           (a) =>
             a.userId === userId &&
-            ['pending', 'approved', 'submitted'].includes(a.status)
+            ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
         );
     }
     try {
       const q = query(
         collection(db, COLLECTIONS.APPLICATIONS),
         where('userId', '==', userId),
-        where('status', 'in', ['pending', 'approved', 'submitted']),
+        where('status', 'in', ['pending', 'approved', 'submitted', 'submission_approved']),
         orderBy('createdAt', 'desc')
       );
       const snap = await getDocs(q);
@@ -111,6 +112,19 @@ export const applicationsRepository = {
         createdAt: Timestamp.now(),
       };
       demoStore.addApplication(app);
+
+      const business = demoStore.getBusinessById(data.businessId);
+      if (business?.ownerUid) {
+        await notifyUser({
+          userId: business.ownerUid,
+          title: 'Yeni başvuru',
+          body: 'Görevine yeni bir başvuru geldi. İncelemen bekleniyor.',
+          type: 'general',
+          data: { applicationId: id, taskId: data.taskId },
+          showLocalForUserId: business.ownerUid,
+        });
+      }
+
       return id;
     }
     const ref = await addDoc(collection(db, COLLECTIONS.APPLICATIONS), {
@@ -132,6 +146,17 @@ export const applicationsRepository = {
         submissionFiles,
         submittedAt: Timestamp.now(),
       });
+      const app = demoStore.getApplications().find((a) => a.id === id);
+      if (app) {
+        await notifyUser({
+          userId: app.userId,
+          title: 'Teslimin alındı',
+          body: 'Admin ekibimiz içeriği inceliyor. Uygunsuz içerik kontrolünden sonra süreç devam eder.',
+          type: 'general',
+          data: { applicationId: id },
+          showLocalForUserId: app.userId,
+        });
+      }
       return;
     }
     await updateDoc(doc(db, COLLECTIONS.APPLICATIONS, id), {
@@ -254,7 +279,7 @@ export const couponsRepository = {
   async createFromApplication(
     application: Application,
     task: Task,
-    verifiedBy: string
+    _verifiedBy: string
   ): Promise<Coupon> {
     const couponData: Omit<Coupon, 'id'> = {
       userId: application.userId,
@@ -266,9 +291,7 @@ export const couponsRepository = {
       usedCount: 0,
       qrCode: `qr-${Date.now()}`,
       couponCode: generateCouponCode(),
-      expiresAt: Timestamp.fromDate(
-        new Date(Date.now() + 90 * 86400000)
-      ),
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + 90 * 86400000)),
       usageHistory: [],
       status: 'active',
       createdAt: Timestamp.now(),
@@ -281,71 +304,76 @@ export const couponsRepository = {
       return coupon;
     }
 
-    const ref = await addDoc(collection(db, COLLECTIONS.COUPONS), {
-      ...couponData,
-      createdAt: serverTimestamp(),
-      expiresAt: couponData.expiresAt,
-    });
-    await applicationsRepository.updateStatus(application.id, 'rewarded');
-    return { id: ref.id, ...couponData };
+    throw new Error('Kupon yalnızca Cloud Functions ile oluşturulabilir.');
   },
 
   async redeem(couponId: string, scannedBy: string): Promise<Coupon | null> {
     if (shouldUseDemoData()) {
       return demoStore.redeemCoupon(couponId, scannedBy);
     }
-    const coupon = await this.getById(couponId);
-    if (!coupon || coupon.status !== 'active') return null;
-    if (coupon.usedCount >= coupon.totalUses) return null;
 
-    const usedCount = coupon.usedCount + 1;
-    const status = usedCount >= coupon.totalUses ? 'exhausted' : 'active';
-
-    await updateDoc(doc(db, COLLECTIONS.COUPONS, couponId), {
-      usedCount,
-      status,
-      usageHistory: [
-        ...coupon.usageHistory,
-        { usedAt: serverTimestamp(), scannedBy },
-      ],
-    });
-
-    return {
-      ...coupon,
-      usedCount,
-      status,
-    };
+    const { cloudFunctions } = await import('../functions/cloudFunctions');
+    try {
+      return await cloudFunctions.redeemCoupon(couponId);
+    } catch {
+      return null;
+    }
   },
 };
 
-export async function approveApplicationAndIssueCoupon(
+/** pending → approved (kupon yok, kullanıcı teslim edecek) */
+export async function approveApplication(
+  applicationId: string,
+  reviewNote?: string
+): Promise<boolean> {
+  const application = await applicationsRepository.getById(applicationId);
+  if (!application || application.status !== 'pending') return false;
+
+  await applicationsRepository.updateStatus(applicationId, 'approved', reviewNote);
+
+  await notifyUser({
+    userId: application.userId,
+    title: 'Başvurun onaylandı',
+    body: 'Görevi tamamlayıp teslim edebilirsin. Başvurularım sekmesinden devam et.',
+    type: 'application_approved',
+    data: { applicationId },
+    showLocalForUserId: application.userId,
+  });
+
+  return true;
+}
+
+/** submission_approved → rewarded + kupon (admin + işletme onayı sonrası) */
+export async function issueCouponForSubmission(
   applicationId: string,
   businessOwnerUid: string,
   reviewNote?: string
 ): Promise<Coupon | null> {
   const application = await applicationsRepository.getById(applicationId);
-  if (!application) return null;
+  if (!application || application.status !== 'submission_approved') return null;
 
-  if (application.status === 'submitted') {
-    await applicationsRepository.updateStatus(
-      applicationId,
-      'approved',
-      reviewNote
+  if (shouldUseDemoData()) {
+    const task = await tasksRepository.getById(application.taskId);
+    if (!task) return null;
+
+    const coupon = await couponsRepository.createFromApplication(
+      application,
+      task,
+      businessOwnerUid
     );
-  } else if (application.status === 'pending') {
-    await applicationsRepository.updateStatus(
-      applicationId,
-      'approved',
-      reviewNote
-    );
+
+    await notifyUser({
+      userId: application.userId,
+      title: 'Tebrikler! Kuponun hazır',
+      body: `Görev teslimin onaylandı. Kupon kodun: ${coupon.couponCode}`,
+      type: 'coupon_issued',
+      data: { applicationId, couponId: coupon.id },
+      showLocalForUserId: application.userId,
+    });
+
+    return coupon;
   }
 
-  const task = await tasksRepository.getById(application.taskId);
-  if (!task) return null;
-
-  return couponsRepository.createFromApplication(
-    { ...application, status: 'approved' },
-    task,
-    businessOwnerUid
-  );
+  const { cloudFunctions } = await import('../functions/cloudFunctions');
+  return cloudFunctions.issueCouponForSubmission(applicationId, reviewNote);
 }

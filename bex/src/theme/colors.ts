@@ -1,49 +1,53 @@
 export const Colors = {
-  // Gün batımı paleti
-  primary: '#B87EA8',       // Alacakaranlık mor
-  primaryLight: '#F5DDE4',  // Gül pembesi — yumuşak vurgu
-  primaryDark: '#443C5D',   // Gece moru — metin & pressed
-  accent: '#FFB26B',        // Gün batımı turuncusu
-  accentLight: '#FFE8D1',   // Sıcak şeftali
+  // Marka paleti
+  primary: '#7C3AED',
+  primaryLight: '#EDE9FE',
+  primaryDark: '#6D28D9',
+  secondary: '#10B981',
+  accent: '#10B981',
+  accentLight: '#D1FAE5',
 
   // Arka planlar
-  background: '#FFF8F4',    // Sıcak krem — gökyüzü son ışık
-  surface: '#FDF0EB',
-  surfaceSecondary: '#F5E6EE',
-  card: '#FFFFFF',
+  background: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceSecondary: '#F1F5F9',
+  card: '#F8FAFC',
 
   // Metin
-  textPrimary: '#443C5D',
-  textSecondary: '#6B6280',
-  textTertiary: '#9A92A8',
+  text: '#0F172A',
+  textPrimary: '#0F172A',
+  textMuted: '#64748B',
+  textSecondary: '#64748B',
+  textTertiary: '#64748B',
   textInverse: '#FFFFFF',
   textOnPrimary: '#FFFFFF',
 
   // Sınır
-  border: '#E8D4DC',
-  borderLight: '#F3E8EE',
-  borderFocus: '#B87EA8',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  borderFocus: '#7C3AED',
 
   // Durum renkleri
-  success: '#22C55E',
-  successLight: '#DCFCE7',
-  error: '#E38D9D',
-  errorLight: '#FCE8ED',
-  warning: '#FFB26B',
-  warningLight: '#FFE8D1',
-  info: '#B87EA8',
-  infoLight: '#F5DDE4',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  error: '#EF4444',
+  errorLight: '#FEE2E2',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  info: '#7C3AED',
+  infoLight: '#EDE9FE',
 
   // Zorluk seviyeleri
-  difficultyEasy: '#22C55E',
-  difficultyMedium: '#FFB26B',
-  difficultyHard: '#E38D9D',
+  difficultyEasy: '#10B981',
+  difficultyMedium: '#F59E0B',
+  difficultyHard: '#EF4444',
 
   // Overlay
-  overlay: 'rgba(68, 60, 93, 0.5)',
-  overlayLight: 'rgba(184, 126, 168, 0.08)',
+  overlay: 'rgba(15, 23, 42, 0.5)',
+  overlayLight: 'rgba(124, 58, 237, 0.06)',
 
   transparent: 'transparent',
+  white: '#FFFFFF',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

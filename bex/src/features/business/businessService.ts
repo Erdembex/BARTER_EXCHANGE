@@ -9,16 +9,25 @@ export async function ensureBusinessForOwner(
   displayName: string
 ): Promise<Business> {
   const existing = await businessesRepository.getByOwner(ownerUid);
-  if (existing) return existing;
-
-  if (shouldUseDemoData()) {
-    const claimed = demoStore.claimDemoBusiness(ownerUid);
-    if (claimed) return claimed;
+  if (existing) {
+    // Eski demo ataması (Studio Cut) — kayıt adını kullan
+    if (
+      shouldUseDemoData() &&
+      displayName?.trim() &&
+      existing.id === 'demo-b1' &&
+      existing.name === 'Studio Cut'
+    ) {
+      const fixed =
+        demoStore.updateBusiness(existing.id, { name: displayName.trim() }) ??
+        existing;
+      return fixed;
+    }
+    return existing;
   }
 
   const data: CreateBusiness = {
     ownerUid,
-    name: displayName ? `${displayName} İşletmesi` : 'Yeni İşletme',
+    name: displayName?.trim() || 'Yeni İşletme',
     category: 'services' as BusinessCategory,
     logoUrl: '',
     address: 'İstanbul',

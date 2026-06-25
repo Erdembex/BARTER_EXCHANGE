@@ -10,6 +10,7 @@ import { auth, db } from '../../lib/firebase';
 import { AuthFormData, BexUser, COLLECTIONS } from '../../types';
 import {
   buildDevUser,
+  isAuthEmulatorActive,
   isFirestorePermissionError,
   shouldUseDemoData,
 } from '../../lib/devMode';
@@ -28,7 +29,9 @@ export function getAuthErrorMessage(code: string): string {
     'auth/wrong-password': 'Şifre hatalı.',
     'auth/invalid-credential': 'E-posta veya şifre hatalı.',
     'auth/too-many-requests': 'Çok fazla başarısız deneme. Lütfen bekleyin.',
-    'auth/network-request-failed': 'İnternet bağlantısı yok.',
+    'auth/network-request-failed': isAuthEmulatorActive()
+      ? 'Auth emulator\'a bağlanılamadı.\n\n1. Yeni terminal: cd bex && npm run emulators\n2. Emulator açıkken uygulamayı yenile\n3. Android emülatör kullanıyorsan bilgisayarda 9099 portunun açık olduğundan emin ol'
+      : 'Sunucuya bağlanılamadı. İnternet bağlantını kontrol et.',
     'auth/user-disabled': 'Bu hesap askıya alınmış.',
     'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
       'Firebase bağlantı hatası. Terminalde "npm run emulators" çalıştırıp tekrar dene.',
@@ -39,6 +42,8 @@ export function getAuthErrorMessage(code: string): string {
 export const authService = {
   async register(data: AuthFormData): Promise<void> {
     const { email, password, displayName, role = 'user' } = data;
+    const effectiveRole =
+      __DEV__ && email.trim().toLowerCase() === 'admin@bex.dev' ? 'admin' : role;
 
     let credential;
     try {
@@ -55,14 +60,14 @@ export const authService = {
 
     // Rol her zaman yerelde saklanır (emulator yeniden başlatınca kaybolmasın)
     await setDevProfile(user.uid, {
-      role,
+      role: effectiveRole,
       displayName: displayName ?? '',
       email,
     });
 
     const bexUser: Omit<BexUser, 'joinedAt'> & { joinedAt: ReturnType<typeof serverTimestamp> } = {
       uid: user.uid,
-      role,
+      role: effectiveRole,
       displayName: displayName ?? '',
       email,
       phone: '',

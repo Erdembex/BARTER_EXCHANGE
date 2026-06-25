@@ -12,7 +12,9 @@ export function OfflineBanner() {
 
   return (
     <View style={[styles.banner, { paddingTop: insets.top + Spacing[2] }]}>
-      <Text style={styles.text}>İnternet bağlantısı yok — çevrimdışı moddasın</Text>
+      <Text style={styles.text}>
+        Bağlantı yok — ağ ayarlarını kontrol et
+      </Text>
     </View>
   );
 }

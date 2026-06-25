@@ -1,6 +1,7 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Text } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Colors } from '@/theme';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -11,6 +12,7 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 
 export default function TabsLayout() {
   const { bexUser } = useAuthStore();
+  const { unreadCount } = useNotifications();
 
   if (bexUser?.role === 'business') {
     return <Redirect href="/(business)/panel" />;
@@ -21,9 +23,9 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textTertiary,
+        tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.card,
+          backgroundColor: Colors.background,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           paddingBottom: 8,
@@ -61,6 +63,14 @@ export default function TabsLayout() {
         options={{
           title: 'Kuponlarım',
           tabBarIcon: ({ focused }) => <TabIcon emoji="🎟️" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications/index"
+        options={{
+          title: 'Bildirimler',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} />,
         }}
       />
     </Tabs>

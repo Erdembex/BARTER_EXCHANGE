@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   approved: Colors.info,
   rejected: Colors.error,
   submitted: Colors.primary,
+  submission_approved: Colors.success,
   rewarded: Colors.success,
   cancelled: Colors.textTertiary,
 };
@@ -74,7 +75,7 @@ export default function MyApplicationsScreen() {
   };
 
   const activeCount = applications.filter((a) =>
-    ['pending', 'approved', 'submitted'].includes(a.status)
+    ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
   ).length;
 
   if (loading) {
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.accent,
+    borderLeftColor: Colors.primary,
   },
   cardHeader: {
     flexDirection: 'row',

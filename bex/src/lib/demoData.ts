@@ -49,6 +49,21 @@ export const DEMO_BUSINESSES: Business[] = [
     totalTasksPublished: 15,
     createdAt: ts(-10),
   },
+  {
+    id: 'demo-b-pending',
+    ownerUid: 'demo-pending-owner',
+    name: 'Yeni Açılan Kafe',
+    category: 'food',
+    logoUrl: '',
+    address: 'Beşiktaş, İstanbul',
+    location: loc,
+    isVerified: false,
+    verificationStatus: 'pending',
+    verificationDocumentUrl: 'https://example.com/demo-vergi-levhasi.pdf',
+    reputationScore: 0,
+    totalTasksPublished: 0,
+    createdAt: ts(-2),
+  },
 ];
 
 export const DEMO_TASKS: Task[] = [
@@ -131,16 +146,42 @@ export const DEMO_TASKS: Task[] = [
     approvedByAdmin: true,
     featured: false,
   },
+  {
+    id: 'demo-t-pending',
+    businessId: 'demo-b2',
+    title: 'Menü fotoğrafçılığı (onay bekliyor)',
+    description:
+      'Restoran menüsü için profesyonel yemek fotoğrafları çekin ve düzenleyin.',
+    category: 'photography',
+    difficulty: 'medium',
+    estimatedHours: 6,
+    rewardDescription: '2 ücretsiz öğle yemeği',
+    rewardQuantity: 2,
+    maxApplicants: 2,
+    currentApplicantCount: 0,
+    status: 'active',
+    location: loc,
+    deadline: ts(14),
+    createdAt: ts(-1),
+    approvedByAdmin: false,
+    featured: false,
+  },
 ];
 
 export function getDemoBusinessName(businessId: string): string {
   return DEMO_BUSINESSES.find((b) => b.id === businessId)?.name ?? 'İşletme';
 }
 
-export function enrichTasksWithBusiness(tasks: Task[]) {
+export function enrichTasksWithBusiness(
+  tasks: Task[],
+  businesses: Business[] = DEMO_BUSINESSES
+) {
   return tasks.map((t) => ({
     ...t,
-    businessName: getDemoBusinessName(t.businessId),
+    businessName:
+      businesses.find((b) => b.id === t.businessId)?.name ??
+      DEMO_BUSINESSES.find((b) => b.id === t.businessId)?.name ??
+      'İşletme',
   }));
 }
 

@@ -12,6 +12,7 @@ import {
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
+import { authService } from '@/features/auth/authService';
 import {
   tasksRepository,
   businessesRepository,
@@ -28,7 +29,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function HomeScreen() {
-  const { bexUser, firebaseUser } = useAuthStore();
+  const { bexUser, firebaseUser, signOut } = useAuthStore();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<TaskCategory | null>(null);
   const [featured, setFeatured] = useState<EnrichedTask[]>([]);
@@ -74,6 +75,12 @@ export default function HomeScreen() {
     loadData();
   };
 
+  const handleLogout = async () => {
+    await authService.logout();
+    signOut();
+    router.replace('/(auth)/onboarding');
+  };
+
   const filteredFeatured = featured.filter((t) => {
     if (category && t.category !== category) return false;
     if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
@@ -101,12 +108,19 @@ export default function HomeScreen() {
       >
         {/* Karşılama */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            {getGreeting(bexUser?.displayName)}
-          </Text>
-          <Text style={styles.subGreeting}>
-            Bugün hangi görevi tamamlayacaksın?
-          </Text>
+          <View style={styles.headerRow}>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>
+                {getGreeting(bexUser?.displayName)}
+              </Text>
+              <Text style={styles.subGreeting}>
+                Bugün hangi görevi tamamlayacaksın?
+              </Text>
+            </View>
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+              <Text style={styles.logoutText}>Çıkış</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Arama */}
@@ -182,6 +196,15 @@ const styles = StyleSheet.create({
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[5], paddingBottom: Spacing[10] },
   header: { gap: Spacing[1] },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: Spacing[3],
+  },
+  headerText: { flex: 1, gap: Spacing[1] },
+  logoutBtn: { paddingVertical: Spacing[1], paddingHorizontal: Spacing[2] },
+  logoutText: { ...Typography.labelMedium, color: Colors.textSecondary },
   greeting: { ...Typography.headingLarge, color: Colors.textPrimary },
   subGreeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
   section: { gap: Spacing[2] },

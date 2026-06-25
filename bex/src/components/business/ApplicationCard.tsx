@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   approved: Colors.info,
   rejected: Colors.error,
   submitted: Colors.primary,
+  submission_approved: Colors.success,
   rewarded: Colors.success,
   cancelled: Colors.textTertiary,
 };

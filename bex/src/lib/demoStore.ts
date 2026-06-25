@@ -2,6 +2,7 @@ import { GeoPoint, Timestamp } from 'firebase/firestore';
 import {
   Application,
   Business,
+  BexNotification,
   Coupon,
   CreateBusiness,
   CreateTask,
@@ -15,6 +16,7 @@ let tasks: Task[] = [...DEMO_TASKS];
 let businesses: Business[] = [...DEMO_BUSINESSES];
 let applications: Application[] = [...DEMO_APPLICATIONS];
 let coupons: Coupon[] = [];
+let notifications: BexNotification[] = [];
 
 let idCounter = 100;
 
@@ -28,18 +30,82 @@ export const demoStore = {
   getBusinesses: () => businesses,
   getApplications: () => applications,
   getCoupons: () => coupons,
+  getNotifications: () => notifications,
+
+  getNotificationsByUser(userId: string): BexNotification[] {
+    return notifications
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  },
+
+  addNotification(notification: Omit<BexNotification, 'id' | 'createdAt' | 'read'>): BexNotification {
+    const item: BexNotification = {
+      id: nextId('n'),
+      read: false,
+      createdAt: Timestamp.now(),
+      ...notification,
+    };
+    notifications = [item, ...notifications];
+    return item;
+  },
+
+  markNotificationRead(id: string, userId: string): boolean {
+    let updated = false;
+    notifications = notifications.map((n) => {
+      if (n.id !== id || n.userId !== userId) return n;
+      updated = true;
+      return { ...n, read: true };
+    });
+    return updated;
+  },
+
+  markAllNotificationsRead(userId: string) {
+    notifications = notifications.map((n) =>
+      n.userId === userId ? { ...n, read: true } : n
+    );
+  },
+
+  getUnreadNotificationCount(userId: string): number {
+    return notifications.filter((n) => n.userId === userId && !n.read).length;
+  },
 
   getBusinessByOwner(ownerUid: string): Business | null {
     return businesses.find((b) => b.ownerUid === ownerUid) ?? null;
   },
 
-  claimDemoBusiness(ownerUid: string): Business | null {
-    const demo = businesses.find((b) => b.id === 'demo-b1' && b.ownerUid === 'demo');
-    if (!demo) return null;
-    businesses = businesses.map((b) =>
-      b.id === 'demo-b1' ? { ...b, ownerUid } : b
+  getBusinessById(id: string): Business | null {
+    return businesses.find((b) => b.id === id) ?? null;
+  },
+
+  getTaskById(id: string): Task | null {
+    return tasks.find((t) => t.id === id) ?? null;
+  },
+
+  /** Kullanıcılara görünen onaylı görevler */
+  getVisibleTasks(): Task[] {
+    return tasks
+      .filter((t) => t.status === 'active' && t.approvedByAdmin)
+      .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  },
+
+  getFeaturedTasks(limit = 5): Task[] {
+    const featured = tasks.filter(
+      (t) => t.status === 'active' && t.approvedByAdmin && t.featured
     );
-    return businesses.find((b) => b.id === 'demo-b1') ?? null;
+    if (featured.length > 0) {
+      return featured.slice(0, limit);
+    }
+    return this.getVisibleTasks().slice(0, limit);
+  },
+
+  updateBusiness(id: string, patch: Partial<Business>): Business | null {
+    let updated: Business | null = null;
+    businesses = businesses.map((b) => {
+      if (b.id !== id) return b;
+      updated = { ...b, ...patch };
+      return updated;
+    });
+    return updated;
   },
 
   createBusiness(ownerUid: string, data: CreateBusiness): Business {
@@ -200,6 +266,45 @@ export const demoStore = {
       createdAt: Timestamp.now(),
     };
     coupons = [sample, ...coupons];
+  },
+
+  getPendingAdminTasks(): Task[] {
+    return tasks.filter((t) => t.status === 'active' && !t.approvedByAdmin);
+  },
+
+  getPendingSubmissions(): Application[] {
+    return applications
+      .filter((a) => a.status === 'submitted')
+      .sort((a, b) => (b.submittedAt?.toMillis() ?? 0) - (a.submittedAt?.toMillis() ?? 0));
+  },
+
+  setTaskAdminApproval(taskId: string, approved: boolean) {
+    tasks = tasks.map((t) => {
+      if (t.id !== taskId) return t;
+      if (approved) {
+        return { ...t, approvedByAdmin: true };
+      }
+      return { ...t, status: 'paused' as const, approvedByAdmin: false };
+    });
+  },
+
+  getPendingVerifications(): Business[] {
+    return businesses.filter((b) => b.verificationStatus === 'pending');
+  },
+
+  setBusinessVerification(
+    businessId: string,
+    status: 'verified' | 'rejected'
+  ): Business | null {
+    businesses = businesses.map((b) => {
+      if (b.id !== businessId) return b;
+      return {
+        ...b,
+        verificationStatus: status,
+        isVerified: status === 'verified',
+      };
+    });
+    return businesses.find((b) => b.id === businessId) ?? null;
   },
 
   getAnalytics(businessId: string) {

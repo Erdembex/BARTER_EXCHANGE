@@ -193,6 +193,12 @@ export default function RegisterScreen() {
               textContentType="emailAddress"
             />
 
+            {__DEV__ ? (
+              <Text style={styles.devHint}>
+                Admin paneli testi: admin@bex.dev ile kayıt ol
+              </Text>
+            ) : null}
+
             <Input
               label="Şifre"
               placeholder="En az 8 karakter"
@@ -344,6 +350,14 @@ const styles = StyleSheet.create({
   errorBannerText: {
     ...Typography.bodySmall,
     color: Colors.error,
+  },
+  devHint: {
+    ...Typography.caption,
+    color: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing[3],
+    borderRadius: Radius.md,
+    marginTop: -Spacing[2],
   },
   termsText: {
     ...Typography.caption,

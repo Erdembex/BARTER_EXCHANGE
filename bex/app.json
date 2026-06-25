@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#443C5D",
+        "backgroundColor": "#7C3AED",
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.bex.app"
@@ -29,7 +29,13 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#B87EA8"
+          "color": "#7C3AED"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "BEX, kupon QR kodlarını okutmak için kameraya erişim ister."
         }
       ],
       "expo-secure-store"

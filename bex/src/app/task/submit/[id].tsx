@@ -8,37 +8,63 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Image,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Href } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { applicationsRepository } from '@/features/data';
+import { uploadSubmissionFiles } from '@/features/applications/submissionService';
+import { useAuthStore } from '@/store/authStore';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function SubmitTaskScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { firebaseUser } = useAuthStore();
   const [submissionText, setSubmissionText] = useState('');
+  const [files, setFiles] = useState<{ uri: string; name: string; mimeType: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const pickImages = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 5,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const picked = result.assets.map((asset, index) => ({
+      uri: asset.uri,
+      name: asset.fileName ?? `photo-${index + 1}.jpg`,
+      mimeType: asset.mimeType ?? 'image/jpeg',
+    }));
+
+    setFiles((prev) => [...prev, ...picked].slice(0, 5));
+  };
+
+  const removeFile = (uri: string) => {
+    setFiles((prev) => prev.filter((f) => f.uri !== uri));
+  };
 
   const handleSubmit = async () => {
     if (!submissionText.trim() || submissionText.trim().length < 10) {
       setError('Lütfen çalışmanı en az 10 karakterle açıkla.');
       return;
     }
-    if (!id) return;
+    if (!id || !firebaseUser) return;
 
     setLoading(true);
     setError('');
 
     try {
-      if (id.startsWith('demo-')) {
-        router.replace('/(tabs)/home');
-        return;
-      }
-      await applicationsRepository.submit(id, submissionText.trim(), []);
-      router.replace('/(tabs)/home');
-    } catch (err: any) {
-      setError(err?.message ?? 'Teslim edilemedi.');
+      const fileUrls = await uploadSubmissionFiles(id, firebaseUser.uid, files);
+      await applicationsRepository.submit(id, submissionText.trim(), fileUrls);
+      router.replace('/(tabs)/applications' as Href);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Teslim edilemedi.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +83,7 @@ export default function SubmitTaskScreen() {
 
           <Text style={styles.title}>Görevi Teslim Et</Text>
           <Text style={styles.subtitle}>
-            Tamamladığın çalışmayı açıkla. Dosya yükleme FAZ 5'te eklenecek.
+            Tamamladığın çalışmayı açıkla ve kanıt fotoğrafları ekle.
           </Text>
 
           {error ? (
@@ -75,11 +101,30 @@ export default function SubmitTaskScreen() {
             numberOfLines={6}
           />
 
-          <View style={styles.uploadHint}>
-            <Text style={styles.uploadIcon}>📎</Text>
-            <Text style={styles.uploadText}>
-              Fotoğraf/dosya yükleme yakında aktif olacak
-            </Text>
+          <View style={styles.uploadSection}>
+            <Text style={styles.uploadLabel}>Kanıt fotoğrafları (en fazla 5)</Text>
+            <Button
+              title="Galeriden Seç"
+              variant="outline"
+              size="md"
+              onPress={pickImages}
+            />
+            {files.length > 0 ? (
+              <View style={styles.previewRow}>
+                {files.map((file) => (
+                  <TouchableOpacity
+                    key={file.uri}
+                    style={styles.thumbWrap}
+                    onPress={() => removeFile(file.uri)}
+                  >
+                    <Image source={{ uri: file.uri }} style={styles.thumb} />
+                    <Text style={styles.removeHint}>Kaldır</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.uploadHint}>Henüz fotoğraf eklenmedi.</Text>
+            )}
           </View>
 
           <Button title="Görevi Teslim Et" onPress={handleSubmit} loading={loading} />
@@ -104,17 +149,16 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.error,
   },
   errorText: { ...Typography.bodySmall, color: Colors.error },
-  uploadHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[3],
-    padding: Spacing[4],
-    backgroundColor: Colors.surface,
+  uploadSection: { gap: Spacing[3] },
+  uploadLabel: { ...Typography.labelMedium, color: Colors.textPrimary },
+  uploadHint: { ...Typography.bodySmall, color: Colors.textMuted },
+  previewRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[3] },
+  thumbWrap: { alignItems: 'center', gap: 4 },
+  thumb: {
+    width: 72,
+    height: 72,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
+    backgroundColor: Colors.surface,
   },
-  uploadIcon: { fontSize: 24 },
-  uploadText: { ...Typography.bodySmall, color: Colors.textTertiary, flex: 1 },
+  removeHint: { ...Typography.caption, color: Colors.error },
 });

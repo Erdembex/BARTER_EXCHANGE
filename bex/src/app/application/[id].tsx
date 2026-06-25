@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { applicationsRepository, tasksRepository } from '@/features/data';
 import { Application } from '@/types';
@@ -133,6 +133,21 @@ export default function ApplicationDetailScreen() {
           </>
         ) : null}
 
+        {application.status === 'submitted' && (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              Teslimin admin incelemesinde. Uygunsuz içerik kontrolü tamamlandığında bildirim
+              alacaksın.
+            </Text>
+          </View>
+        )}
+
+        {application.status === 'approved' && application.reviewNote ? (
+          <View style={[styles.infoBox, { borderLeftColor: Colors.warning }]}>
+            <Text style={styles.infoText}>{application.reviewNote}</Text>
+          </View>
+        ) : null}
+
         {canCancel && (
           <Button
             title="Başvuruyu İptal Et"
@@ -141,6 +156,14 @@ export default function ApplicationDetailScreen() {
             loading={cancelling}
             style={styles.cancelBtn}
             textStyle={{ color: Colors.error }}
+          />
+        )}
+
+        {application.status === 'approved' && (
+          <Button
+            title="Görevi Teslim Et"
+            onPress={() => router.push(`/task/submit/${application.id}` as Href)}
+            style={{ marginTop: Spacing[2] }}
           />
         )}
       </ScrollView>
@@ -175,4 +198,12 @@ const styles = StyleSheet.create({
   body: { ...Typography.bodyMedium, color: Colors.textSecondary, lineHeight: 22 },
   link: { ...Typography.bodySmall, color: Colors.info },
   cancelBtn: { marginTop: Spacing[4], borderColor: Colors.error },
+  infoBox: {
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing[4],
+    borderRadius: Radius.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  infoText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
 });

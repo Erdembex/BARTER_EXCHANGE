@@ -41,7 +41,9 @@ export default function BusinessDashboardScreen() {
       tasksRepository.getByBusiness(business.id),
     ]);
     setStats({
-      pendingApps: apps.filter((a) => ['pending', 'submitted'].includes(a.status)).length,
+      pendingApps: apps.filter((a) =>
+        ['pending', 'submitted', 'submission_approved'].includes(a.status)
+      ).length,
       activeTasks: tasks.filter((t) => t.status === 'active').length,
       pendingApproval: tasks.filter((t) => !t.approvedByAdmin).length,
     });
@@ -124,6 +126,11 @@ export default function BusinessDashboardScreen() {
             variant="outline"
             onPress={() => router.push('/(business)/coupons/index' as Href)}
           />
+          <Button
+            title="Bildirimler"
+            variant="ghost"
+            onPress={() => router.push('/notifications/index' as Href)}
+          />
           {business && business.verificationStatus !== 'verified' && (
             <Button
               title="İşletme Doğrulama (KYC)"
@@ -136,8 +143,8 @@ export default function BusinessDashboardScreen() {
         <View style={styles.note}>
           <Text style={styles.noteTitle}>Bilgi</Text>
           <Text style={styles.noteText}>
-            Yeni görevler admin onayından sonra yayına alınır. Başvuruları onayladığında
-            kullanıcıya otomatik kupon oluşturulur.
+            Yeni görevler admin onayından sonra yayına alınır. Başvuruyu onayladıktan sonra
+            kullanıcı görevi teslim eder; teslimi onaylayınca kupon oluşturulur.
           </Text>
         </View>
       </ScrollView>

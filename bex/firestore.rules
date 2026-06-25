@@ -143,7 +143,7 @@ service cloud.firestore {
             && request.resource.data.status == 'cancelled')
         || (isBusinessOwner(resource.data.businessId)
             && isNotBanned()
-            && resource.data.status in ['submitted', 'pending']
+            && resource.data.status == 'pending'
             && request.resource.data.status in ['approved', 'rejected']);
 
       // Kupon üretimi Cloud Function ile yapılır — client rewarded yapamaz
@@ -175,6 +175,21 @@ service cloud.firestore {
         && request.resource.data.status == 'pending';
 
       allow update, delete: if isAdmin();
+    }
+
+    // ─── notifications ───────────────────────────────────────
+    // Oluşturma yalnızca Cloud Functions / Admin SDK (FAZ 7)
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+
+      allow create: if false;
+
+      allow update: if isOwner(resource.data.userId)
+        && isNotBanned()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
   }
 }

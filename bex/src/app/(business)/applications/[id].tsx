@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,8 +17,10 @@ import { useAuthStore } from '@/store/authStore';
 import {
   applicationsRepository,
   tasksRepository,
-  approveApplicationAndIssueCoupon,
+  approveApplication,
+  issueCouponForSubmission,
 } from '@/features/data';
+import { notifyUser } from '@/features/notifications/notificationsRepository';
 import { Application, Task } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
@@ -50,20 +53,39 @@ export default function ApplicationDetailScreen() {
     }, [load])
   );
 
-  const handleApprove = async () => {
+  const handleApproveApplication = async () => {
+    if (!application) return;
+    setActionLoading(true);
+    try {
+      const ok = await approveApplication(application.id, reviewNote);
+      Alert.alert(
+        ok ? 'Başvuru onaylandı' : 'Onaylanamadı',
+        ok
+          ? 'Kullanıcı görevi teslim edebilir. Kupon, teslim onaylandıktan sonra oluşturulur.'
+          : 'Bu başvuru onaylanamaz.',
+        [{ text: 'Tamam', onPress: () => (ok ? router.back() : undefined) }]
+      );
+    } catch {
+      Alert.alert('Hata', 'İşlem tamamlanamadı.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleIssueCoupon = async () => {
     if (!application || !firebaseUser) return;
     setActionLoading(true);
     try {
-      const coupon = await approveApplicationAndIssueCoupon(
+      const coupon = await issueCouponForSubmission(
         application.id,
         firebaseUser.uid,
         reviewNote
       );
       Alert.alert(
-        'Onaylandı',
+        coupon ? 'Kupon oluşturuldu' : 'İşlem başarısız',
         coupon
-          ? `Kupon oluşturuldu: ${coupon.couponCode}`
-          : 'Başvuru onaylandı.',
+          ? `Kupon: ${coupon.couponCode}`
+          : 'Teslim onaylanamadı.',
         [{ text: 'Tamam', onPress: () => router.back() }]
       );
     } catch {
@@ -82,6 +104,14 @@ export default function ApplicationDetailScreen() {
         'rejected',
         reviewNote || 'Başvuru reddedildi.'
       );
+      await notifyUser({
+        userId: application.userId,
+        title: 'Başvurun reddedildi',
+        body: reviewNote || 'İşletme başvurunu maalesef kabul etmedi.',
+        type: 'application_rejected',
+        data: { applicationId: application.id },
+        showLocalForUserId: application.userId,
+      });
       Alert.alert('Reddedildi', 'Başvuru reddedildi.', [
         { text: 'Tamam', onPress: () => router.back() },
       ]);
@@ -108,7 +138,9 @@ export default function ApplicationDetailScreen() {
     );
   }
 
-  const canReview = ['pending', 'submitted'].includes(application.status);
+  const canApproveApplication = application.status === 'pending';
+  const awaitingAdminReview = application.status === 'submitted';
+  const canIssueCoupon = application.status === 'submission_approved';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -152,16 +184,60 @@ export default function ApplicationDetailScreen() {
 
         {application.submissionFiles.length > 0 ? (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>Dosyalar</Text>
-            {application.submissionFiles.map((url, i) => (
-              <Text key={i} style={styles.file}>
-                📎 {url}
-              </Text>
-            ))}
+            <Text style={styles.blockTitle}>Teslim dosyaları</Text>
+            <View style={styles.fileGrid}>
+              {application.submissionFiles.map((url, i) => {
+                const isImage =
+                  url.startsWith('file:') ||
+                  url.startsWith('content:') ||
+                  /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
+
+                if (isImage) {
+                  return (
+                    <Image key={i} source={{ uri: url }} style={styles.fileImage} />
+                  );
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => Linking.openURL(url)}
+                    style={styles.fileLink}
+                  >
+                    <Text style={styles.file}>📎 Dosyayı aç</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         ) : null}
 
-        {canReview && (
+        {awaitingAdminReview && (
+          <View style={styles.waitingBox}>
+            <Text style={styles.waitingText}>
+              Admin ekibi teslim içeriğini inceliyor (uygunsuz fotoğraf kontrolü). Onaylandıktan
+              sonra buradan kupon verebilirsin.
+            </Text>
+          </View>
+        )}
+
+        {application.status === 'submission_approved' && (
+          <View style={[styles.waitingBox, { backgroundColor: Colors.success + '18' }]}>
+            <Text style={styles.waitingText}>
+              Admin teslimi onayladı. Kupon oluşturmak için aşağıdaki butonu kullan.
+            </Text>
+          </View>
+        )}
+
+        {application.status === 'approved' && (
+          <View style={styles.waitingBox}>
+            <Text style={styles.waitingText}>
+              Kullanıcı görev teslimi bekleniyor. Teslim gelince burada onaylayıp kupon verebilirsin.
+            </Text>
+          </View>
+        )}
+
+        {canApproveApplication && (
           <>
             <Input
               label="Değerlendirme notu (opsiyonel)"
@@ -174,8 +250,8 @@ export default function ApplicationDetailScreen() {
             />
             <View style={styles.actions}>
               <Button
-                title="Onayla & Kupon Ver"
-                onPress={handleApprove}
+                title="Başvuruyu Onayla"
+                onPress={handleApproveApplication}
                 loading={actionLoading}
               />
               <Button
@@ -184,6 +260,27 @@ export default function ApplicationDetailScreen() {
                 onPress={handleReject}
                 loading={actionLoading}
                 disabled={actionLoading}
+              />
+            </View>
+          </>
+        )}
+
+        {canIssueCoupon && (
+          <>
+            <Input
+              label="Teslim değerlendirme notu (opsiyonel)"
+              value={reviewNote}
+              onChangeText={setReviewNote}
+              placeholder="Kupon notu..."
+              multiline
+              numberOfLines={3}
+              style={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
+            <View style={styles.actions}>
+              <Button
+                title="Teslimi Onayla & Kupon Ver"
+                onPress={handleIssueCoupon}
+                loading={actionLoading}
               />
             </View>
           </>
@@ -228,7 +325,27 @@ const styles = StyleSheet.create({
   blockTitle: { ...Typography.labelMedium, color: Colors.textPrimary, marginBottom: Spacing[2] },
   blockText: { ...Typography.bodyMedium, color: Colors.textSecondary, lineHeight: 22 },
   link: { ...Typography.labelMedium, color: Colors.primary, marginBottom: Spacing[4] },
-  file: { ...Typography.bodySmall, color: Colors.textSecondary, marginTop: Spacing[1] },
+  fileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2] },
+  fileImage: {
+    width: 88,
+    height: 88,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  fileLink: {
+    paddingVertical: Spacing[2],
+    paddingHorizontal: Spacing[3],
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+  },
+  file: { ...Typography.bodySmall, color: Colors.textSecondary },
+  waitingBox: {
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing[4],
+    borderRadius: Radius.lg,
+    marginBottom: Spacing[3],
+  },
+  waitingText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
   actions: { gap: Spacing[3], marginTop: Spacing[4] },
   errorText: { ...Typography.bodyMedium, color: Colors.error },
 });

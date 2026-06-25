@@ -9,13 +9,15 @@ export interface NetworkState {
 export function useNetwork(): NetworkState {
   const [state, setState] = useState<NetworkState>({
     isConnected: true,
-    isInternetReachable: true,
+    isInternetReachable: null,
   });
 
   useEffect(() => {
     const apply = (next: NetInfoState) => {
       setState({
-        isConnected: next.isConnected ?? false,
+        // isInternetReachable sık sık null/false döner (simülatör, localhost)
+        // — yalnızca gerçek bağlantı kopmasında offline göster
+        isConnected: next.isConnected !== false,
         isInternetReachable: next.isInternetReachable,
       });
     };
@@ -25,12 +27,5 @@ export function useNetwork(): NetworkState {
     return unsubscribe;
   }, []);
 
-  const offline =
-    !state.isConnected ||
-    state.isInternetReachable === false;
-
-  return {
-    isConnected: !offline,
-    isInternetReachable: state.isInternetReachable,
-  };
+  return state;
 }

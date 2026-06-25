@@ -54,7 +54,7 @@ export function Input({
 
         <TextInput
           style={[styles.input, leftIcon ? styles.inputWithLeft : null]}
-          placeholderTextColor={Colors.textTertiary}
+          placeholderTextColor={Colors.textMuted}
           secureTextEntry={isPassword && !showPassword}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     ...Typography.caption,
-    color: Colors.textTertiary,
+    color: Colors.textMuted,
     marginTop: 2,
   },
 });

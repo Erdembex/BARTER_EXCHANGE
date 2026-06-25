@@ -25,7 +25,16 @@ function getDevHost(): string {
     (Constants as { manifest?: { debuggerHost?: string } }).manifest?.debuggerHost;
 
   if (hostUri) {
-    return hostUri.split(':')[0];
+    const host = hostUri.split(':')[0];
+    // Fiziksel cihaz (Expo Go): Metro'nun verdiği LAN IP
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return host;
+    }
+  }
+
+  // Android emülatör: bilgisayarın localhost'u
+  if (Platform.OS === 'android') {
+    return '10.0.2.2';
   }
 
   return '127.0.0.1';

@@ -15,6 +15,7 @@ export interface BexUser {
   completedTaskCount: number;
   joinedAt: Timestamp;
   isBanned: boolean;
+  expoPushToken?: string;
 }
 
 export type CreateBexUser = Omit<BexUser, 'joinedAt'> & {
@@ -112,6 +113,7 @@ export type ApplicationStatus =
   | 'approved'
   | 'rejected'
   | 'submitted'
+  | 'submission_approved'
   | 'rewarded'
   | 'cancelled';
 
@@ -161,6 +163,26 @@ export interface Coupon {
   createdAt: Timestamp;
 }
 
+// ─── Bildirim ────────────────────────────────────────────────
+export type NotificationType =
+  | 'application_approved'
+  | 'application_rejected'
+  | 'coupon_issued'
+  | 'kyc_result'
+  | 'task_approved'
+  | 'general';
+
+export interface BexNotification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: NotificationType;
+  data?: Record<string, string>;
+  read: boolean;
+  createdAt: Timestamp;
+}
+
 // ─── Auth form ───────────────────────────────────────────────
 export interface AuthFormData {
   email: string;
@@ -178,4 +200,5 @@ export const COLLECTIONS = {
   APPLICATIONS: 'applications',
   COUPONS: 'coupons',
   BUSINESS_DOCUMENTS: 'business_documents',
+  NOTIFICATIONS: 'notifications',
 } as const;

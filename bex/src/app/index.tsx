@@ -31,6 +31,10 @@ export default function Index() {
     return <Redirect href="/(business)/panel" />;
   }
 
+  if (bexUser.role === 'admin') {
+    return <Redirect href="/(admin)/panel" />;
+  }
+
   return <Redirect href="/(tabs)/home" />;
 }
 

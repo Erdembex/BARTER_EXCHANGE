@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     left: Spacing[5],
     right: Spacing[5],
     zIndex: 9998,
-    backgroundColor: Colors.textPrimary,
+    backgroundColor: Colors.primary,
     paddingVertical: Spacing[3],
     paddingHorizontal: Spacing[4],
     borderRadius: Radius.lg,
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     ...Typography.labelMedium,
-    color: Colors.textInverse,
+    color: Colors.textOnPrimary,
     textAlign: 'center',
   },
 });

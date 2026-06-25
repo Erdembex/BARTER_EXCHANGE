@@ -3,5 +3,6 @@ export type { EnrichedTask } from './businessesRepository';
 export {
   applicationsRepository,
   couponsRepository,
-  approveApplicationAndIssueCoupon,
+  approveApplication,
+  issueCouponForSubmission,
 } from './applicationsRepository';

@@ -30,7 +30,7 @@ export type EnrichedTask = Task & { businessName: string };
 
 async function enrichTasks(tasks: Task[]): Promise<EnrichedTask[]> {
   if (shouldUseDemoData()) {
-    return enrichTasksWithBusiness(tasks);
+    return enrichTasksWithBusiness(tasks, demoStore.getBusinesses());
   }
 
   const cache = new Map<string, string>();
@@ -55,20 +55,26 @@ async function enrichTasks(tasks: Task[]): Promise<EnrichedTask[]> {
 
 export const tasksRepository = {
   async getById(id: string): Promise<Task | null> {
-    if (id.startsWith('demo-') || shouldUseDemoData()) {
-      return DEMO_TASKS.find((t) => t.id === id) ?? null;
+    if (shouldUseDemoData()) {
+      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
+    }
+    if (id.startsWith('demo-')) {
+      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
     }
     try {
       const snap = await getDoc(doc(db, COLLECTIONS.TASKS, id));
       return snap.exists() ? ({ id: snap.id, ...snap.data() } as Task) : null;
     } catch {
-      return DEMO_TASKS.find((t) => t.id === id) ?? null;
+      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
     }
   },
 
   async getFeatured(limitCount = 5): Promise<EnrichedTask[]> {
     if (shouldUseDemoData()) {
-      return enrichTasksWithBusiness(DEMO_TASKS.filter((t) => t.featured));
+      return enrichTasksWithBusiness(
+        demoStore.getFeaturedTasks(limitCount),
+        demoStore.getBusinesses()
+      );
     }
     try {
       const q = query(
@@ -84,7 +90,10 @@ export const tasksRepository = {
       const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Task);
       return enrichTasks(tasks);
     } catch {
-      return enrichTasksWithBusiness(DEMO_TASKS.filter((t) => t.featured));
+      return enrichTasksWithBusiness(
+        demoStore.getFeaturedTasks(limitCount),
+        demoStore.getBusinesses()
+      );
     }
   },
 
@@ -93,7 +102,11 @@ export const tasksRepository = {
     lastDoc?: QueryDocumentSnapshot<DocumentData>
   ): Promise<{ tasks: EnrichedTask[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
     if (shouldUseDemoData()) {
-      return { tasks: enrichTasksWithBusiness(DEMO_TASKS), lastDoc: null };
+      const visible = demoStore.getVisibleTasks();
+      return {
+        tasks: enrichTasksWithBusiness(visible, demoStore.getBusinesses()),
+        lastDoc: null,
+      };
     }
     try {
       let q = query(
@@ -120,8 +133,11 @@ export const tasksRepository = {
       const newLast = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
       return { tasks: enriched, lastDoc: newLast };
     } catch {
-      const all = enrichTasksWithBusiness(DEMO_TASKS);
-      return { tasks: all, lastDoc: null };
+      const visible = demoStore.getVisibleTasks();
+      return {
+        tasks: enrichTasksWithBusiness(visible, demoStore.getBusinesses()),
+        lastDoc: null,
+      };
     }
   },
 
@@ -142,8 +158,8 @@ export const tasksRepository = {
   async getEnrichedById(id: string): Promise<EnrichedTask | null> {
     const task = await this.getById(id);
     if (!task) return null;
-    if (id.startsWith('demo-')) {
-      return { ...task, businessName: getDemoBusinessName(task.businessId) };
+    if (shouldUseDemoData() || id.startsWith('demo-')) {
+      return enrichTasksWithBusiness([task], demoStore.getBusinesses())[0] ?? null;
     }
     const enriched = await enrichTasks([task]);
     return enriched[0] ?? null;
@@ -191,8 +207,19 @@ export const tasksRepository = {
 
 export const businessesRepository = {
   async getById(id: string): Promise<Business | null> {
-    if (id.startsWith('demo-') || shouldUseDemoData()) {
-      return DEMO_BUSINESSES.find((b) => b.id === id) ?? null;
+    if (shouldUseDemoData()) {
+      return (
+        demoStore.getBusinessById(id) ??
+        DEMO_BUSINESSES.find((b) => b.id === id) ??
+        null
+      );
+    }
+    if (id.startsWith('demo-')) {
+      return (
+        demoStore.getBusinessById(id) ??
+        DEMO_BUSINESSES.find((b) => b.id === id) ??
+        null
+      );
     }
     try {
       const snap = await getDoc(doc(db, COLLECTIONS.BUSINESSES, id));
@@ -210,7 +237,9 @@ export const businessesRepository = {
 
   async getPopular(limitCount = 10): Promise<Business[]> {
     if (shouldUseDemoData()) {
-      return DEMO_BUSINESSES;
+      return [...demoStore.getBusinesses()]
+        .sort((a, b) => b.reputationScore - a.reputationScore)
+        .slice(0, limitCount);
     }
     try {
       const q = query(

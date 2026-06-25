@@ -1,0 +1,27 @@
+import { Href } from 'expo-router';
+import { BexNotification, UserRole } from '@/types';
+
+export function getNotificationTarget(
+  item: BexNotification,
+  role?: UserRole
+): Href | null {
+  const applicationId = item.data?.applicationId;
+
+  if (applicationId) {
+    if (role === 'business') {
+      return `/(business)/applications/${applicationId}` as Href;
+    }
+    return `/application/${applicationId}` as Href;
+  }
+
+  switch (item.type) {
+    case 'coupon_issued':
+      return '/(tabs)/wallet' as Href;
+    case 'task_approved':
+      return role === 'business' ? ('/(business)/tasks' as Href) : null;
+    case 'kyc_result':
+      return role === 'business' ? ('/(business)/verification' as Href) : null;
+    default:
+      return null;
+  }
+}

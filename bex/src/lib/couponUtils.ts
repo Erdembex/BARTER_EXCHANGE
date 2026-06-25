@@ -24,6 +24,37 @@ export function encodeCouponQr(coupon: Coupon): string {
   return json;
 }
 
+export function decodeCouponQr(raw: string): CouponQrPayload | null {
+  try {
+    let json = raw.trim();
+    if (!json.startsWith('{')) {
+      if (typeof globalThis.atob !== 'function') return null;
+      json = decodeURIComponent(escape(globalThis.atob(json)));
+    }
+    const parsed = JSON.parse(json) as CouponQrPayload;
+    if (parsed.couponId && parsed.businessId && parsed.hash) {
+      return parsed;
+    }
+  } catch {
+    // Geçersiz QR
+  }
+  return null;
+}
+
+/** QR veya düz kupon kodundan lookup bilgisi çıkarır */
+export function parseCouponScan(raw: string): {
+  couponId?: string;
+  couponCode?: string;
+} | null {
+  const payload = decodeCouponQr(raw);
+  if (payload) return { couponId: payload.couponId };
+
+  const code = raw.trim().toUpperCase();
+  if (code.startsWith('BEX-')) return { couponCode: code };
+
+  return null;
+}
+
 export function getCouponRemainingUses(coupon: Coupon): number {
   return Math.max(0, coupon.totalUses - coupon.usedCount);
 }

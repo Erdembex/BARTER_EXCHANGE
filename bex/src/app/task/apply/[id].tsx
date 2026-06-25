@@ -12,12 +12,14 @@ import {
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { tasksRepository, applicationsRepository, EnrichedTask } from '@/features/data';
 import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/components/common/Toast';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser } = useAuthStore();
+  const { showToast } = useToast();
   const [task, setTask] = useState<EnrichedTask | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
@@ -39,19 +41,16 @@ export default function ApplyScreen() {
     setError('');
 
     try {
-      if (task.id.startsWith('demo-')) {
-        router.replace('/(tabs)/home');
-        return;
-      }
       await applicationsRepository.create(firebaseUser.uid, {
         taskId: task.id,
         businessId: task.businessId,
         coverLetter: coverLetter.trim(),
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
+      showToast('Başvurun gönderildi!');
       router.replace('/(tabs)/applications' as Href);
-    } catch (err: any) {
-      setError(err?.message ?? 'Başvuru gönderilemedi.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Başvuru gönderilemedi.');
     } finally {
       setLoading(false);
     }

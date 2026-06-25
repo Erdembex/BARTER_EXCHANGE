@@ -11,6 +11,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
 import { couponsRepository } from '@/features/data';
 import { Coupon } from '@/types';
+import { parseCouponScan } from '@/lib/couponUtils';
+import { CouponQrScanner } from '@/components/business/CouponQrScanner';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
@@ -20,18 +22,47 @@ export default function CouponVerifyScreen() {
   const [code, setCode] = useState('');
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const resolveCoupon = async (raw: string) => {
+    const parsed = parseCouponScan(raw);
+    if (!parsed) {
+      Alert.alert('Geçersiz kod', 'QR veya kupon kodu okunamadı.');
+      return null;
+    }
+
+    let found: Coupon | null = null;
+    if (parsed.couponId) {
+      found = await couponsRepository.getById(parsed.couponId);
+    } else if (parsed.couponCode) {
+      found = await couponsRepository.getByCode(parsed.couponCode);
+      if (found) setCode(found.couponCode);
+    }
+
+    if (!found) {
+      Alert.alert('Bulunamadı', 'Bu kupon geçersiz veya süresi dolmuş.');
+      return null;
+    }
+
+    if (found.businessId !== business?.id) {
+      Alert.alert('Uyarı', 'Bu kupon başka bir işletmeye ait.');
+      return null;
+    }
+
+    setCoupon(found);
+    return found;
+  };
 
   const handleLookup = async () => {
     if (!code.trim()) return;
     setLoading(true);
-    const found = await couponsRepository.getByCode(code.trim());
-    setCoupon(found);
-    if (!found) {
-      Alert.alert('Bulunamadı', 'Bu kupon kodu geçersiz.');
-    } else if (found.businessId !== business?.id) {
-      Alert.alert('Uyarı', 'Bu kupon başka bir işletmeye ait.');
-      setCoupon(null);
-    }
+    await resolveCoupon(code.trim());
+    setLoading(false);
+  };
+
+  const handleScan = async (data: string) => {
+    setLoading(true);
+    await resolveCoupon(data);
     setLoading(false);
   };
 
@@ -56,8 +87,14 @@ export default function CouponVerifyScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Kupon Doğrula</Text>
         <Text style={styles.subtitle}>
-          Müşterinin kupon kodunu gir veya QR kodu okut (FAZ 5).
+          Müşterinin QR kodunu okut veya kupon kodunu elle gir.
         </Text>
+
+        <Button
+          title="QR Kod Okut"
+          onPress={() => setScannerOpen(true)}
+          style={{ marginBottom: Spacing[4] }}
+        />
 
         <Input
           label="Kupon kodu"
@@ -67,11 +104,11 @@ export default function CouponVerifyScreen() {
           autoCapitalize="characters"
         />
 
-        <Button title="Kuponu Bul" onPress={handleLookup} loading={loading} />
+        <Button title="Kuponu Bul" onPress={handleLookup} loading={loading} variant="secondary" />
 
         {coupon && (
           <View style={styles.card}>
-            <Text style={styles.code}>{coupon.couponCode}</Text>
+            <Text style={styles.cardCode}>{coupon.couponCode}</Text>
             <Text style={styles.reward}>{coupon.rewardDescription}</Text>
             <View style={styles.row}>
               <Text style={styles.label}>Durum</Text>
@@ -93,13 +130,13 @@ export default function CouponVerifyScreen() {
             )}
           </View>
         )}
-
-        <View style={styles.hint}>
-          <Text style={styles.hintText}>
-            QR okuyucu FAZ 5 ile eklenecek. Şimdilik kupon kodu ile doğrulama yapabilirsin.
-          </Text>
-        </View>
       </ScrollView>
+
+      <CouponQrScanner
+        visible={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScan}
+      />
     </SafeAreaView>
   );
 }
@@ -117,7 +154,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-  code: {
+  cardCode: {
     ...Typography.headingMedium,
     color: Colors.primary,
     letterSpacing: 1,
@@ -133,11 +170,4 @@ const styles = StyleSheet.create({
   },
   label: { ...Typography.bodySmall, color: Colors.textTertiary },
   value: { ...Typography.labelMedium, color: Colors.textPrimary },
-  hint: {
-    marginTop: Spacing[6],
-    backgroundColor: Colors.surface,
-    padding: Spacing[4],
-    borderRadius: Radius.md,
-  },
-  hintText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
 });

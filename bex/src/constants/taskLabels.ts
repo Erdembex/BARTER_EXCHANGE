@@ -35,6 +35,7 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   approved: 'Onaylandı',
   rejected: 'Reddedildi',
   submitted: 'Teslim Edildi',
+  submission_approved: 'Admin Onayladı',
   rewarded: 'Ödül Kazanıldı',
   cancelled: 'İptal Edildi',
 };

@@ -2,19 +2,23 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { ThemeProvider } from '@shopify/restyle';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
-import { Colors } from '@/theme';
+import { Colors, theme } from '@/theme';
 import { loadDevProfiles } from '@/lib/devProfileStore';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { ToastProvider } from '@/components/common/Toast';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function RootLayout() {
   const { setFirebaseUser, setBexUser, setInitialized, isInitialized } =
     useAuthStore();
+
+  useNotifications();
 
   useEffect(() => {
     loadDevProfiles();
@@ -53,20 +57,24 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ToastProvider>
-        <StatusBar style="dark" backgroundColor={Colors.background} />
-        <OfflineBanner />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
+    <ThemeProvider theme={theme}>
+      <SafeAreaProvider>
+        <ToastProvider>
+          <StatusBar style="dark" backgroundColor={Colors.background} />
+          <OfflineBanner />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(business)" />
+          <Stack.Screen name="(admin)" />
           <Stack.Screen name="task" />
-          <Stack.Screen name="application" />
-        </Stack>
-      </ToastProvider>
-    </SafeAreaProvider>
+            <Stack.Screen name="application" />
+            <Stack.Screen name="notifications/index" />
+          </Stack>
+        </ToastProvider>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
 
