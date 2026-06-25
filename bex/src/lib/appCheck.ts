@@ -7,49 +7,41 @@ import { isAuthEmulatorActive } from '@/lib/devMode';
 let initialized = false;
 
 function getDebugToken(): string | undefined {
-  return (
-    process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN ??
-    (Constants.expoConfig?.extra as { appCheckDebugToken?: string } | undefined)
-      ?.appCheckDebugToken
-  );
+  const fromEnv = process.env.EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN?.trim();
+  if (fromEnv) return fromEnv;
+
+  const fromExtra = (
+    Constants.expoConfig?.extra as { appCheckDebugToken?: string } | undefined
+  )?.appCheckDebugToken?.trim();
+  return fromExtra || undefined;
 }
 
 function getRecaptchaSiteKey(): string | undefined {
-  return process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY;
+  return process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY?.trim() || undefined;
 }
 
-/** Auth emulator modunda App Check atlanır (yerel geliştirme). */
+/**
+ * App Check yalnızca bilinçli olarak yapılandırıldığında açılır.
+ * Emulator / günlük geliştirmede hiçbir şey yapmaz.
+ */
 export function initAppCheck(): void {
-  if (initialized || isAuthEmulatorActive()) {
+  if (initialized || isAuthEmulatorActive() || __DEV__) {
     return;
   }
 
   const debugToken = getDebugToken();
-
-  if (__DEV__) {
-    if (debugToken) {
-      initializeAppCheck(app, {
-        provider: new CustomProvider({
-          getToken: () =>
-            Promise.resolve({
-              token: debugToken,
-              expireTimeMillis: Date.now() + 60 * 60 * 1000,
-            }),
-        }),
-        isTokenAutoRefreshEnabled: true,
-      });
-      initialized = true;
-      return;
-    }
-
-    (
-      globalThis as typeof globalThis & { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }
-    ).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-
-    console.info(
-      '[AppCheck] Debug token yok. Firebase Console > App Check > Manage debug tokens bölümüne ' +
-        'konsoldaki tokeni ekle ve EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN olarak .env dosyana yaz.'
-    );
+  if (debugToken) {
+    initializeAppCheck(app, {
+      provider: new CustomProvider({
+        getToken: () =>
+          Promise.resolve({
+            token: debugToken,
+            expireTimeMillis: Date.now() + 60 * 60 * 1000,
+          }),
+      }),
+      isTokenAutoRefreshEnabled: true,
+    });
+    initialized = true;
     return;
   }
 
@@ -62,10 +54,7 @@ export function initAppCheck(): void {
       });
       initialized = true;
     }
-    return;
   }
-
-  // Production native: Play Integrity / DeviceCheck — EAS dev build + RN Firebase gerekir
 }
 
 export function isAppCheckReady(): boolean {

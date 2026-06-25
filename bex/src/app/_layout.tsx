@@ -73,6 +73,7 @@ export default function RootLayout() {
           <Stack.Screen name="task" />
             <Stack.Screen name="application" />
             <Stack.Screen name="notifications/index" />
+            <Stack.Screen name="setup-guide" />
           </Stack>
         </ToastProvider>
       </SafeAreaProvider>

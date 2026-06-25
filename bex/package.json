@@ -46,7 +46,7 @@
     "emulators:full": "firebase emulators:start --only auth,firestore,functions --project bexcursor",
     "functions:build": "npm --prefix functions run build",
     "deploy:functions": "npm run functions:build && firebase deploy --only functions --project bexcursor",
-    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes --project bexcursor",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage --project bexcursor",
     "build:preview": "eas build --profile preview --platform all",
     "build:production": "eas build --profile production --platform all"
   },

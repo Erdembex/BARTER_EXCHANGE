@@ -9,7 +9,6 @@ import { router, Href } from 'expo-router';
 import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
-import { isAppCheckReady } from '@/lib/appCheck';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
@@ -74,14 +73,19 @@ export default function ProfileScreen() {
           />
         )}
 
+        <Button
+          title="Yayın Checklist"
+          variant="outline"
+          onPress={() => router.push('/setup-guide' as Href)}
+        />
+
         <Button title="Çıkış Yap" variant="outline" onPress={handleLogout} />
 
         <View style={styles.meta}>
           <Text style={styles.metaText}>BEX v{appVersion}</Text>
           {__DEV__ && (
             <Text style={styles.metaText}>
-              {isAuthEmulatorActive() ? 'Emulator modu' : 'Production Firebase'}
-              {isAppCheckReady() ? ' · App Check aktif' : ''}
+              {isAuthEmulatorActive() ? 'Emulator · demo veri' : 'Canlı Firebase'}
             </Text>
           )}
         </View>
