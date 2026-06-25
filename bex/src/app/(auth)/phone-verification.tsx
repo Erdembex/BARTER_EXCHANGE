@@ -12,15 +12,23 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { AUTH_HOME_ROUTE } from '@/lib/authRouting';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { isAuthEmulatorActive } from '@/lib/firebase';
+import { authService } from '@/features/auth/authService';
+import {
+  sendPhoneVerificationCode,
+  verifyPhoneCode,
+  getPhoneAuthErrorMessage,
+  isPhoneAuthSupported,
+  clearPendingPhoneVerification,
+} from '@/features/auth/phoneAuthService';
+import { useAuthStore } from '@/store/authStore';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button } from '@/components/ui';
 
 const OTP_LENGTH = 6;
 
 export default function PhoneVerificationScreen() {
-  const goNext = () => {
-    router.replace(AUTH_HOME_ROUTE);
-  };
+  const { firebaseUser, setBexUser } = useAuthStore();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -29,6 +37,18 @@ export default function PhoneVerificationScreen() {
   const [error, setError] = useState('');
 
   const otpRefs = useRef<(TextInput | null)[]>([]);
+  const phoneSupported = isPhoneAuthSupported();
+
+  const goNext = async () => {
+    if (firebaseUser) {
+      const bexUser = await authService.getUserDocument(firebaseUser.uid, {
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+      });
+      setBexUser(bexUser);
+    }
+    router.replace(AUTH_HOME_ROUTE);
+  };
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -37,23 +57,24 @@ export default function PhoneVerificationScreen() {
     }
   }, [resendTimer]);
 
-  const handleSendOTP = async () => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 10) {
-      setError('Geçerli bir telefon numarası girin.');
-      return;
-    }
+  useEffect(() => {
+    return () => clearPendingPhoneVerification();
+  }, []);
 
+  const handleSendOTP = async () => {
     setLoading(true);
     setError('');
 
-    // TODO: Firebase Phone Auth entegrasyonu buraya gelecek
-    // Şimdilik simüle ediyoruz
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await sendPhoneVerificationCode(phone);
       setStep('otp');
       setResendTimer(60);
-    }, 1200);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? 'unknown';
+      setError(getPhoneAuthErrorMessage(code));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpChange = (value: string, index: number) => {
@@ -62,7 +83,6 @@ export default function PhoneVerificationScreen() {
     setOtp(newOtp);
     setError('');
 
-    // Sonraki kutuya geç
     if (value && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
@@ -84,14 +104,19 @@ export default function PhoneVerificationScreen() {
     setLoading(true);
     setError('');
 
-    // TODO: Firebase Phone Auth verification
-    setTimeout(() => {
+    try {
+      await verifyPhoneCode(code, phone);
+      await goNext();
+    } catch (err: unknown) {
+      const codeErr = (err as { code?: string })?.code ?? 'unknown';
+      setError(getPhoneAuthErrorMessage(codeErr));
+    } finally {
       setLoading(false);
-      goNext();
-    }, 1200);
+    }
   };
 
   const handleSkip = () => {
+    clearPendingPhoneVerification();
     goNext();
   };
 
@@ -106,19 +131,21 @@ export default function PhoneVerificationScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Geri butonu */}
           {step === 'phone' && (
             <TouchableOpacity onPress={handleSkip} style={styles.skip}>
               <Text style={styles.skipText}>Daha Sonra</Text>
             </TouchableOpacity>
           )}
 
-          {/* İkon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconBg}>
               <Text style={styles.icon}>📱</Text>
             </View>
           </View>
+
+          {Platform.OS === 'web' ? (
+            <View nativeID="bex-recaptcha" style={styles.recaptchaHost} />
+          ) : null}
 
           {step === 'phone' ? (
             <>
@@ -130,6 +157,22 @@ export default function PhoneVerificationScreen() {
                 </Text>
               </View>
 
+              {isAuthEmulatorActive() ? (
+                <View style={styles.hintBox}>
+                  <Text style={styles.hintText}>
+                    Emulator modu: Kod Auth Emulator arayüzünde görünür (localhost:4000 →
+                    Authentication). Test numarası: 555 555 0100
+                  </Text>
+                </View>
+              ) : !phoneSupported ? (
+                <View style={styles.hintBox}>
+                  <Text style={styles.hintText}>
+                    Telefon doğrulama Expo Go&apos;da production modunda henüz aktif değil.
+                    Şimdilik atlayabilirsin.
+                  </Text>
+                </View>
+              ) : null}
+
               <View style={styles.form}>
                 {error ? (
                   <View style={styles.errorBanner}>
@@ -137,7 +180,6 @@ export default function PhoneVerificationScreen() {
                   </View>
                 ) : null}
 
-                {/* Telefon input */}
                 <View style={styles.phoneContainer}>
                   <View style={styles.dialCode}>
                     <Text style={styles.dialCodeText}>🇹🇷 +90</Text>
@@ -150,6 +192,7 @@ export default function PhoneVerificationScreen() {
                     onChangeText={setPhone}
                     keyboardType="phone-pad"
                     maxLength={13}
+                    editable={phoneSupported}
                   />
                 </View>
 
@@ -157,13 +200,10 @@ export default function PhoneVerificationScreen() {
                   title="Kod Gönder"
                   onPress={handleSendOTP}
                   loading={loading}
+                  disabled={!phoneSupported}
                 />
 
-                <Button
-                  title="Şimdilik Atla"
-                  onPress={handleSkip}
-                  variant="ghost"
-                />
+                <Button title="Şimdilik Atla" onPress={handleSkip} variant="ghost" />
               </View>
             </>
           ) : (
@@ -171,10 +211,18 @@ export default function PhoneVerificationScreen() {
               <View style={styles.header}>
                 <Text style={styles.title}>Kodu Gir</Text>
                 <Text style={styles.subtitle}>
-                  <Text style={styles.phoneHighlight}>{phone}</Text>
-                  {' '}numarasına 6 haneli doğrulama kodu gönderdik.
+                  <Text style={styles.phoneHighlight}>{phone}</Text> numarasına 6 haneli
+                  doğrulama kodu gönderdik.
                 </Text>
               </View>
+
+              {isAuthEmulatorActive() ? (
+                <View style={styles.hintBox}>
+                  <Text style={styles.hintText}>
+                    Emulator kodu: Firebase Emulator UI → Authentication sekmesi
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.form}>
                 {error ? (
@@ -183,16 +231,14 @@ export default function PhoneVerificationScreen() {
                   </View>
                 ) : null}
 
-                {/* OTP kutuları */}
                 <View style={styles.otpRow}>
                   {otp.map((digit, i) => (
                     <TextInput
                       key={i}
-                      ref={(ref) => { otpRefs.current[i] = ref; }}
-                      style={[
-                        styles.otpBox,
-                        digit ? styles.otpBoxFilled : null,
-                      ]}
+                      ref={(ref) => {
+                        otpRefs.current[i] = ref;
+                      }}
+                      style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
                       value={digit}
                       onChangeText={(val) => handleOtpChange(val, i)}
                       onKeyPress={({ nativeEvent }) =>
@@ -206,13 +252,8 @@ export default function PhoneVerificationScreen() {
                   ))}
                 </View>
 
-                <Button
-                  title="Doğrula"
-                  onPress={handleVerifyOTP}
-                  loading={loading}
-                />
+                <Button title="Doğrula" onPress={handleVerifyOTP} loading={loading} />
 
-                {/* Tekrar gönder */}
                 <View style={styles.resendRow}>
                   <Text style={styles.resendText}>Kod gelmedi mi? </Text>
                   {resendTimer > 0 ? (
@@ -224,17 +265,15 @@ export default function PhoneVerificationScreen() {
                   )}
                 </View>
 
-                {/* Telefonu değiştir */}
                 <TouchableOpacity
                   style={styles.changePhone}
                   onPress={() => {
+                    clearPendingPhoneVerification();
                     setStep('phone');
                     setOtp(Array(OTP_LENGTH).fill(''));
                   }}
                 >
-                  <Text style={styles.changePhoneText}>
-                    Telefon numarasını değiştir
-                  </Text>
+                  <Text style={styles.changePhoneText}>Telefon numarasını değiştir</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -246,13 +285,8 @@ export default function PhoneVerificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  kav: {
-    flex: 1,
-  },
+  safe: { flex: 1, backgroundColor: Colors.background },
+  kav: { flex: 1 },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: Spacing[6],
@@ -260,17 +294,9 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing[8],
     gap: Spacing[6],
   },
-  skip: {
-    alignSelf: 'flex-end',
-  },
-  skipText: {
-    ...Typography.labelMedium,
-    color: Colors.textSecondary,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginTop: Spacing[6],
-  },
+  skip: { alignSelf: 'flex-end' },
+  skipText: { ...Typography.labelMedium, color: Colors.textSecondary },
+  iconContainer: { alignItems: 'center', marginTop: Spacing[6] },
   iconBg: {
     width: 100,
     height: 100,
@@ -279,28 +305,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    fontSize: 48,
+  icon: { fontSize: 48 },
+  header: { gap: Spacing[2] },
+  title: { ...Typography.headingLarge, color: Colors.textPrimary },
+  subtitle: { ...Typography.bodyLarge, color: Colors.textSecondary, lineHeight: 24 },
+  phoneHighlight: { color: Colors.textPrimary, fontWeight: '600' },
+  hintBox: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
-  header: {
-    gap: Spacing[2],
-  },
-  title: {
-    ...Typography.headingLarge,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    ...Typography.bodyLarge,
-    color: Colors.textSecondary,
-    lineHeight: 24,
-  },
-  phoneHighlight: {
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
-  form: {
-    gap: Spacing[5],
-  },
+  hintText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  form: { gap: Spacing[5] },
   errorBanner: {
     backgroundColor: Colors.errorLight,
     borderRadius: Radius.md,
@@ -308,10 +326,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: Colors.error,
   },
-  errorText: {
-    ...Typography.bodySmall,
-    color: Colors.error,
-  },
+  errorText: { ...Typography.bodySmall, color: Colors.error },
   phoneContainer: {
     height: 54,
     flexDirection: 'row',
@@ -330,21 +345,14 @@ const styles = StyleSheet.create({
     borderRightColor: Colors.border,
     backgroundColor: Colors.surfaceSecondary,
   },
-  dialCodeText: {
-    ...Typography.labelMedium,
-    color: Colors.textPrimary,
-  },
+  dialCodeText: { ...Typography.labelMedium, color: Colors.textPrimary },
   phoneInput: {
     flex: 1,
     paddingHorizontal: Spacing[4],
     ...Typography.bodyLarge,
     color: Colors.textPrimary,
   },
-  otpRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing[2],
-  },
+  otpRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing[2] },
   otpBox: {
     flex: 1,
     height: 58,
@@ -357,33 +365,16 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
   },
-  otpBoxFilled: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  resendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resendText: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-  },
-  resendLink: {
-    ...Typography.labelMedium,
-    color: Colors.primary,
-  },
-  resendTimer: {
-    ...Typography.labelMedium,
-    color: Colors.textTertiary,
-  },
-  changePhone: {
-    alignItems: 'center',
-  },
+  otpBoxFilled: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  resendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  resendText: { ...Typography.bodySmall, color: Colors.textSecondary },
+  resendLink: { ...Typography.labelMedium, color: Colors.primary },
+  resendTimer: { ...Typography.labelMedium, color: Colors.textTertiary },
+  changePhone: { alignItems: 'center' },
   changePhoneText: {
     ...Typography.bodySmall,
     color: Colors.textTertiary,
     textDecorationLine: 'underline',
   },
+  recaptchaHost: { height: 1, overflow: 'hidden', opacity: 0 },
 });

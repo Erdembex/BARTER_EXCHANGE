@@ -51,6 +51,7 @@ if (__DEV__) {
   if (!g.__bexAuthEmulator) {
     const host = getDevHost();
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+    auth.settings.appVerificationDisabledForTesting = true;
     g.__bexAuthEmulator = true;
   }
 }

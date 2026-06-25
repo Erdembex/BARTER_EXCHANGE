@@ -33,6 +33,10 @@ export function getAuthErrorMessage(code: string): string {
       ? 'Auth emulator\'a bağlanılamadı.\n\n1. Yeni terminal: cd bex && npm run emulators\n2. Emulator açıkken uygulamayı yenile\n3. Android emülatör kullanıyorsan bilgisayarda 9099 portunun açık olduğundan emin ol'
       : 'Sunucuya bağlanılamadı. İnternet bağlantını kontrol et.',
     'auth/user-disabled': 'Bu hesap askıya alınmış.',
+    'auth/invalid-phone-number': 'Geçersiz telefon numarası.',
+    'auth/invalid-verification-code': 'Doğrulama kodu hatalı.',
+    'auth/credential-already-in-use': 'Bu telefon başka bir hesaba bağlı.',
+    'auth/provider-already-linked': 'Telefon numaran zaten doğrulanmış.',
     'auth/api-key-not-valid.-please-pass-a-valid-api-key.':
       'Firebase bağlantı hatası. Terminalde "npm run emulators" çalıştırıp tekrar dene.',
   };
