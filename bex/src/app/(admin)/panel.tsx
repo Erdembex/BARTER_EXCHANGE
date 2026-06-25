@@ -12,15 +12,19 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { adminRepository } from '@/features/admin';
 import { authService } from '@/features/auth/authService';
+import { shouldUseDemoData } from '@/lib/devMode';
 import { Button } from '@/components/ui';
+import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function AdminPanelScreen() {
   const { bexUser, signOut } = useAuthStore();
+  const { showToast } = useToast();
   const [pendingTasks, setPendingTasks] = useState(0);
   const [pendingKyc, setPendingKyc] = useState(0);
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const load = useCallback(async () => {
     const [tasks, verifications, submissions] = await Promise.all([
@@ -49,6 +53,28 @@ export default function AdminPanelScreen() {
     await authService.logout();
     signOut();
     router.replace('/(auth)/onboarding');
+  };
+
+  const handleSeedCatalog = async () => {
+    if (shouldUseDemoData()) {
+      showToast('Emulator modunda demo veri zaten bellekte. Canlı Firestore için emulator kapalı test gerekir.');
+      return;
+    }
+
+    setSeeding(true);
+    try {
+      const result = await adminRepository.seedLiveCatalog();
+      showToast(`${result.businesses} işletme, ${result.tasks} görev yüklendi.`);
+    } catch (err: unknown) {
+      const code = (err as Error)?.message;
+      if (code === 'already-seeded') {
+        showToast('Firestore zaten dolu — seed atlandı.');
+      } else {
+        showToast('Demo içerik yüklenemedi.');
+      }
+    } finally {
+      setSeeding(false);
+    }
   };
 
   return (
@@ -101,6 +127,12 @@ export default function AdminPanelScreen() {
             title="Bildirimler"
             variant="outline"
             onPress={() => router.push('/notifications/index' as Href)}
+          />
+          <Button
+            title="Canlı Firestore'a Demo Yükle"
+            variant="outline"
+            onPress={handleSeedCatalog}
+            loading={seeding}
           />
         </View>
 

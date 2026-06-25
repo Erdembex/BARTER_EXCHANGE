@@ -9,7 +9,10 @@ import {
   updateDoc,
   serverTimestamp,
   Timestamp,
+  writeBatch,
+  limit,
 } from 'firebase/firestore';
+import { DEMO_BUSINESSES, DEMO_TASKS } from '@/lib/demoData';
 import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
@@ -285,5 +288,34 @@ export const adminRepository = {
       data: { applicationId },
       showLocalForUserId: app.userId,
     });
+  },
+
+  /** Canlı Firestore boşsa demo işletme + görev yükler (admin). */
+  async seedLiveCatalog(): Promise<{ businesses: number; tasks: number }> {
+    if (shouldUseDemoData()) {
+      throw new Error('demo-mode');
+    }
+
+    const existing = await getDocs(
+      query(collection(db, COLLECTIONS.TASKS), limit(1))
+    );
+    if (!existing.empty) {
+      throw new Error('already-seeded');
+    }
+
+    const batch = writeBatch(db);
+
+    for (const business of DEMO_BUSINESSES) {
+      const { id, ...data } = business;
+      batch.set(doc(db, COLLECTIONS.BUSINESSES, id), data);
+    }
+
+    for (const task of DEMO_TASKS) {
+      const { id, ...data } = task;
+      batch.set(doc(db, COLLECTIONS.TASKS, id), data);
+    }
+
+    await batch.commit();
+    return { businesses: DEMO_BUSINESSES.length, tasks: DEMO_TASKS.length };
   },
 };

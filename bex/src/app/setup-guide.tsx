@@ -34,22 +34,22 @@ const STEPS: Step[] = [
   {
     phase: '1',
     title: 'Firebase kurallarını yayınla',
+    done: true,
     items: [
-      'Firebase Console → Firestore Database oluştur (yoksa)',
-      'Terminal: cd bex && npm run deploy:rules',
+      '✓ Firestore kuralları + index deploy edildi',
+      'Güncellenmiş kurallar için tekrar: npm run deploy:rules',
       'KYC evrakları için: Console → Storage → Get Started, sonra npm run deploy:storage',
-      'Authentication → Email/Password açık olsun',
-      'Phone provider: production SMS için ileride açılır',
+      'Canlı Firestore boşsa: Admin panel → Demo içerik yükle',
     ],
   },
   {
     phase: '2',
     title: 'Cloud Functions (kupon üretimi)',
     items: [
-      'Firebase Console → Blaze (pay-as-you-go) plana geç',
-      'Bilgisayara Java JDK 17+ kur',
-      'Terminal: cd bex && npm run deploy:functions',
-      'İsteğe bağlı tam emulator: npm run emulators:full',
+      'Firebase Console → Blaze plana geç (ücretsiz kotanın üstü ücretli)',
+      'https://console.firebase.google.com/project/bexcursor/usage/details',
+      'Java JDK 17+ kur, sonra: npm run deploy:functions',
+      'Emulator ile test: npm run emulators:full (Java gerekir)',
     ],
   },
   {

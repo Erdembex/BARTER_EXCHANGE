@@ -76,13 +76,14 @@ service cloud.firestore {
     match /businesses/{businessId} {
       allow read: if true;
 
-      allow create: if isBusiness()
+      allow create: if isAdmin()
+        || (isBusiness()
         && isNotBanned()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.isVerified == false
         && request.resource.data.verificationStatus == 'none'
         && request.resource.data.reputationScore == 0
-        && request.resource.data.totalTasksPublished == 0;
+        && request.resource.data.totalTasksPublished == 0);
 
       allow update: if isAdmin()
         || (isBusinessOwner(businessId)
@@ -102,12 +103,13 @@ service cloud.firestore {
         || isBusinessOwner(resource.data.businessId)
         || isAdmin();
 
-      allow create: if isBusiness()
+      allow create: if isAdmin()
+        || (isBusiness()
         && isNotBanned()
         && isBusinessOwner(request.resource.data.businessId)
         && request.resource.data.status in ['draft', 'active']
         && request.resource.data.approvedByAdmin == false
-        && request.resource.data.currentApplicantCount == 0;
+        && request.resource.data.currentApplicantCount == 0);
 
       allow update: if isAdmin()
         || (isBusinessOwner(resource.data.businessId)
