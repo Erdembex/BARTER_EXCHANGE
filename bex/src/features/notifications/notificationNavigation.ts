@@ -11,6 +11,9 @@ export function getNotificationTarget(
     if (role === 'business') {
       return `/(business)/applications/${applicationId}` as Href;
     }
+    if (item.type === 'application_approved') {
+      return `/task/submit/${applicationId}` as Href;
+    }
     return `/application/${applicationId}` as Href;
   }
 

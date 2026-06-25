@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
 import { couponsRepository } from '@/features/data';
 import { Coupon } from '@/types';
-import { parseCouponScan } from '@/lib/couponUtils';
+import { parseCouponScan, getCouponDisplayStatus, COUPON_STATUS_LABELS } from '@/lib/couponUtils';
 import { CouponQrScanner } from '@/components/business/CouponQrScanner';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
@@ -112,7 +112,9 @@ export default function CouponVerifyScreen() {
             <Text style={styles.reward}>{coupon.rewardDescription}</Text>
             <View style={styles.row}>
               <Text style={styles.label}>Durum</Text>
-              <Text style={styles.value}>{coupon.status}</Text>
+              <Text style={styles.value}>
+                {COUPON_STATUS_LABELS[getCouponDisplayStatus(coupon)]}
+              </Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Kullanım</Text>

@@ -12,6 +12,7 @@ import {
   buildDevUser,
   isAuthEmulatorActive,
   isFirestorePermissionError,
+  resolveEffectiveRole,
   shouldUseDemoData,
 } from '../../lib/devMode';
 import { setDevProfile, loadDevProfiles, getDevProfile } from '../../lib/devProfileStore';
@@ -43,11 +44,33 @@ export function getAuthErrorMessage(code: string): string {
   return map[code] ?? `Bilinmeyen hata (${code})`;
 }
 
+async function finalizeUserProfile(
+  uid: string,
+  user: BexUser,
+  fallbackEmail?: string | null
+): Promise<BexUser> {
+  const email = user.email || fallbackEmail || '';
+  const role = resolveEffectiveRole(email, user.role);
+  if (role === user.role) return user;
+
+  const updated: BexUser = { ...user, role, email: email || user.email };
+  await setDevProfile(uid, { role, email: updated.email });
+
+  if (__DEV__) {
+    try {
+      await setDoc(doc(db, COLLECTIONS.USERS, uid), { role, email: updated.email }, { merge: true });
+    } catch {
+      // Emulator / izin — yerel profil yeterli
+    }
+  }
+
+  return updated;
+}
+
 export const authService = {
   async register(data: AuthFormData): Promise<void> {
     const { email, password, displayName, role = 'user' } = data;
-    const effectiveRole =
-      __DEV__ && email.trim().toLowerCase() === 'admin@bex.dev' ? 'admin' : role;
+    const effectiveRole = resolveEffectiveRole(email, role);
 
     let credential;
     try {
@@ -126,9 +149,9 @@ export const authService = {
           await setDevProfile(uid, {
             role: data.role,
             displayName: data.displayName,
-            email: data.email,
+            email: data.email || fallback?.email || '',
           });
-          return data;
+          return finalizeUserProfile(uid, data, fallback?.email);
         }
       } catch (err) {
         if (!isFirestorePermissionError(err)) throw err;
@@ -138,7 +161,11 @@ export const authService = {
     if (shouldUseDemoData()) {
       const profile = getDevProfile(uid);
       if (profile?.role) {
-        return buildDevUser(uid, fallback?.email, fallback?.displayName);
+        return finalizeUserProfile(
+          uid,
+          buildDevUser(uid, fallback?.email, fallback?.displayName),
+          fallback?.email
+        );
       }
 
       // Eski kayıtlar: Firestore'da rol varsa yerel profile yaz
@@ -149,23 +176,33 @@ export const authService = {
           await setDevProfile(uid, {
             role: data.role,
             displayName: data.displayName,
-            email: data.email,
+            email: data.email || fallback?.email || '',
           });
-          return data;
+          return finalizeUserProfile(uid, data, fallback?.email);
         }
       } catch {
         // Emulator + prod Firestore uyumsuzluğu — yerel profile'a düş
       }
 
-      return buildDevUser(uid, fallback?.email, fallback?.displayName);
+      return finalizeUserProfile(
+        uid,
+        buildDevUser(uid, fallback?.email, fallback?.displayName),
+        fallback?.email
+      );
     }
 
     try {
       const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-      return snap.exists() ? (snap.data() as BexUser) : null;
+      if (!snap.exists()) return null;
+      const data = snap.data() as BexUser;
+      return finalizeUserProfile(uid, data, fallback?.email);
     } catch (err) {
       if (isFirestorePermissionError(err) && fallback) {
-        return buildDevUser(uid, fallback.email, fallback.displayName);
+        return finalizeUserProfile(
+          uid,
+          buildDevUser(uid, fallback.email, fallback.displayName),
+          fallback.email
+        );
       }
       return null;
     }

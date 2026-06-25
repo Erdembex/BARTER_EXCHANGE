@@ -50,7 +50,14 @@ export default function ApplyScreen() {
       showToast('Başvurun gönderildi!');
       router.replace('/(tabs)/applications' as Href);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Başvuru gönderilemedi.');
+      const code = (err as { code?: string })?.code;
+      setError(
+        code === 'already-applied'
+          ? 'Bu göreve zaten başvurdun. Başvurularım sekmesinden takip edebilirsin.'
+          : err instanceof Error
+            ? err.message
+            : 'Başvuru gönderilemedi.'
+      );
     } finally {
       setLoading(false);
     }

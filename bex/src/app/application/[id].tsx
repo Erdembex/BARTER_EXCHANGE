@@ -8,15 +8,26 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
-import { applicationsRepository, tasksRepository } from '@/features/data';
-import { Application } from '@/types';
+import { applicationsRepository, tasksRepository, couponsRepository } from '@/features/data';
+import { Application, Coupon } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+
+const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
+  pending: 'İşletme başvurunu inceliyor. Onaylandığında teslim edebilirsin.',
+  approved: 'Görevi tamamlayıp teslim edebilirsin.',
+  submitted: 'Admin ekibimiz teslim içeriğini inceliyor.',
+  submission_approved: 'Admin onayladı. İşletme kuponunu oluşturduğunda bildirim alacaksın.',
+  rewarded: 'Tebrikler! Kuponun hazır — aşağıdan görüntüleyebilirsin.',
+  rejected: 'Bu başvuru reddedildi.',
+  cancelled: 'Bu başvuruyu iptal ettin.',
+};
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +35,7 @@ export default function ApplicationDetailScreen() {
   const { showToast } = useToast();
   const [application, setApplication] = useState<Application | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
+  const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
@@ -35,6 +47,12 @@ export default function ApplicationDetailScreen() {
     if (app) {
       const task = await tasksRepository.getById(app.taskId);
       setTaskTitle(task?.title ?? 'Görev');
+      if (app.status === 'rewarded') {
+        const c = await couponsRepository.getByApplicationId(app.id);
+        setCoupon(c);
+      } else {
+        setCoupon(null);
+      }
     }
     setLoading(false);
   }, [id]);
@@ -64,10 +82,7 @@ export default function ApplicationDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             setCancelling(true);
-            const ok = await applicationsRepository.cancel(
-              application.id,
-              firebaseUser.uid
-            );
+            const ok = await applicationsRepository.cancel(application.id, firebaseUser.uid);
             setCancelling(false);
             if (ok) {
               showToast('Başvurun iptal edildi.');
@@ -100,6 +115,8 @@ export default function ApplicationDetailScreen() {
     );
   }
 
+  const statusHint = STATUS_HINTS[application.status];
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -115,6 +132,19 @@ export default function ApplicationDetailScreen() {
             {APPLICATION_STATUS_LABELS[application.status]}
           </Text>
         </View>
+
+        {statusHint ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>{statusHint}</Text>
+          </View>
+        ) : null}
+
+        {application.status === 'approved' && application.reviewNote ? (
+          <View style={[styles.infoBox, { borderLeftColor: Colors.warning }]}>
+            <Text style={styles.infoLabel}>Admin / işletme notu</Text>
+            <Text style={styles.infoText}>{application.reviewNote}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.section}>Ön Yazı</Text>
         <Text style={styles.body}>{application.coverLetter || '—'}</Text>
@@ -133,18 +163,26 @@ export default function ApplicationDetailScreen() {
           </>
         ) : null}
 
-        {application.status === 'submitted' && (
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              Teslimin admin incelemesinde. Uygunsuz içerik kontrolü tamamlandığında bildirim
-              alacaksın.
-            </Text>
-          </View>
-        )}
+        {application.submissionFiles.length > 0 ? (
+          <>
+            <Text style={styles.section}>Teslim Fotoğrafları</Text>
+            <View style={styles.fileGrid}>
+              {application.submissionFiles.map((url, i) => (
+                <Image key={i} source={{ uri: url }} style={styles.fileImage} />
+              ))}
+            </View>
+          </>
+        ) : null}
 
-        {application.status === 'approved' && application.reviewNote ? (
-          <View style={[styles.infoBox, { borderLeftColor: Colors.warning }]}>
-            <Text style={styles.infoText}>{application.reviewNote}</Text>
+        {application.status === 'rewarded' && coupon ? (
+          <View style={styles.couponBox}>
+            <Text style={styles.couponLabel}>Kupon kodun</Text>
+            <Text style={styles.couponCode}>{coupon.couponCode}</Text>
+            <Button
+              title="Kuponlarım'da Aç"
+              variant="secondary"
+              onPress={() => router.push('/(tabs)/wallet' as Href)}
+            />
           </View>
         ) : null}
 
@@ -163,7 +201,6 @@ export default function ApplicationDetailScreen() {
           <Button
             title="Görevi Teslim Et"
             onPress={() => router.push(`/task/submit/${application.id}` as Href)}
-            style={{ marginTop: Spacing[2] }}
           />
         )}
       </ScrollView>
@@ -197,13 +234,36 @@ const styles = StyleSheet.create({
   section: { ...Typography.labelLarge, color: Colors.textPrimary, marginTop: Spacing[2] },
   body: { ...Typography.bodyMedium, color: Colors.textSecondary, lineHeight: 22 },
   link: { ...Typography.bodySmall, color: Colors.info },
-  cancelBtn: { marginTop: Spacing[4], borderColor: Colors.error },
+  cancelBtn: { marginTop: Spacing[2], borderColor: Colors.error },
   infoBox: {
     backgroundColor: Colors.primaryLight,
     padding: Spacing[4],
     borderRadius: Radius.lg,
     borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
+    gap: Spacing[1],
   },
+  infoLabel: { ...Typography.caption, color: Colors.textMuted, fontWeight: '600' },
   infoText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  fileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2] },
+  fileImage: {
+    width: 88,
+    height: 88,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  couponBox: {
+    backgroundColor: Colors.success + '14',
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.success,
+    gap: Spacing[3],
+  },
+  couponLabel: { ...Typography.caption, color: Colors.textMuted },
+  couponCode: {
+    ...Typography.headingMedium,
+    color: Colors.success,
+    letterSpacing: 1,
+  },
 });

@@ -17,19 +17,31 @@ export function shouldUseDemoData(): boolean {
   return __DEV__ && isAuthEmulatorActive();
 }
 
+/** Dev ortamında admin@bex.dev her zaman admin rolü alır */
+export function resolveEffectiveRole(
+  email?: string | null,
+  role: UserRole = 'user'
+): UserRole {
+  if (__DEV__ && email?.trim().toLowerCase() === 'admin@bex.dev') {
+    return 'admin';
+  }
+  return role;
+}
+
 export function buildDevUser(
   uid: string,
   email?: string | null,
   displayName?: string | null
 ) {
   const profile = getDevProfile(uid);
-  const role: UserRole = profile?.role ?? 'user';
+  const resolvedEmail = profile?.email ?? email ?? '';
+  const role = resolveEffectiveRole(resolvedEmail, profile?.role ?? 'user');
 
   return {
     uid,
     role,
     displayName: profile?.displayName ?? displayName ?? email?.split('@')[0] ?? 'Kullanıcı',
-    email: profile?.email ?? email ?? '',
+    email: resolvedEmail,
     phone: profile?.phone ?? '',
     phoneVerified: profile?.phoneVerified ?? false,
     avatarUrl: profile?.avatarUrl ?? '',

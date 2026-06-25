@@ -1,3 +1,4 @@
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { router, Href } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
@@ -20,7 +22,19 @@ const ROLE_LABELS = {
 } as const;
 
 export default function ProfileScreen() {
-  const { bexUser, firebaseUser, signOut } = useAuthStore();
+  const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!firebaseUser) return;
+      authService
+        .getUserDocument(firebaseUser.uid, {
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+        })
+        .then(setBexUser);
+    }, [firebaseUser, setBexUser])
+  );
 
   const handleLogout = async () => {
     await authService.logout();
@@ -64,6 +78,13 @@ export default function ProfileScreen() {
           <Row label="Tamamlanan görev" value={String(bexUser?.completedTaskCount ?? 0)} />
           <Row label="İtibar puanı" value={String(bexUser?.reputationScore ?? 0)} />
         </View>
+
+        {bexUser?.role === 'admin' && (
+          <Button
+            title="Admin Paneli"
+            onPress={() => router.push('/(admin)/panel' as Href)}
+          />
+        )}
 
         {!bexUser?.phoneVerified && (
           <Button

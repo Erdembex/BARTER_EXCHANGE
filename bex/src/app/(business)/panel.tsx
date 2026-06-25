@@ -144,7 +144,7 @@ export default function BusinessDashboardScreen() {
           <Text style={styles.noteTitle}>Bilgi</Text>
           <Text style={styles.noteText}>
             Yeni görevler admin onayından sonra yayına alınır. Başvuruyu onayladıktan sonra
-            kullanıcı görevi teslim eder; teslimi onaylayınca kupon oluşturulur.
+            kullanıcı görevi teslim eder; admin teslimi onaylar, ardından kupon verirsin.
           </Text>
         </View>
       </ScrollView>

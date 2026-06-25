@@ -17,6 +17,7 @@ import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Application, ApplicationStatus } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { getApplicationQuickAction, getApplicationTarget } from '@/lib/applicationNavigation';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -124,10 +125,11 @@ export default function MyApplicationsScreen() {
         }
         renderItem={({ item }) => {
           const statusColor = STATUS_COLORS[item.status];
+          const quickAction = getApplicationQuickAction(item);
           return (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => router.push(`/application/${item.id}` as Href)}
+              onPress={() => router.push(getApplicationTarget(item))}
               activeOpacity={0.85}
             >
               <View style={styles.cardHeader}>
@@ -145,7 +147,11 @@ export default function MyApplicationsScreen() {
               <Text style={styles.preview} numberOfLines={2}>
                 {item.coverLetter}
               </Text>
-              <Text style={styles.tapHint}>Detay & iptal →</Text>
+              <View style={styles.cardFooter}>
+                <Text style={styles.tapHint}>
+                  {quickAction ? quickAction.label : 'Detay →'}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -198,7 +204,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: Spacing[2],
   },
-  tapHint: { ...Typography.caption, color: Colors.textTertiary },
+  cardFooter: { flexDirection: 'row', justifyContent: 'flex-end' },
+  tapHint: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
   empty: { alignItems: 'center', paddingTop: Spacing[16] },
   emptyEmoji: { fontSize: 48, marginBottom: Spacing[3] },
   emptyTitle: { ...Typography.headingMedium, color: Colors.textPrimary },

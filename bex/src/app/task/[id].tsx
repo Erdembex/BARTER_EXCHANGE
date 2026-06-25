@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { tasksRepository, businessesRepository, EnrichedTask } from '@/features/data';
-import { Business } from '@/types';
+import { router, useLocalSearchParams, Href } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import {
+  tasksRepository,
+  businessesRepository,
+  applicationsRepository,
+  EnrichedTask,
+} from '@/features/data';
+import { useAuthStore } from '@/store/authStore';
+import { Application, Business } from '@/types';
+import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { formatDeadline, getDifficultyColor } from '@/lib/taskUtils';
 import { TaskCard } from '@/components/tasks';
@@ -19,25 +27,64 @@ import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { firebaseUser } = useAuthStore();
   const [task, setTask] = useState<EnrichedTask | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [similar, setSimilar] = useState<EnrichedTask[]>([]);
+  const [existingApp, setExistingApp] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadTask = useCallback(async () => {
     if (!id) return;
-    (async () => {
-      const t = await tasksRepository.getEnrichedById(id);
-      setTask(t);
-      if (t) {
-        const b = await businessesRepository.getById(t.businessId);
-        setBusiness(b);
-        const sim = await tasksRepository.getSimilar(t);
-        setSimilar(sim);
-      }
-      setLoading(false);
-    })();
-  }, [id]);
+    setLoading(true);
+    const t = await tasksRepository.getEnrichedById(id);
+    setTask(t);
+    if (t) {
+      const b = await businessesRepository.getById(t.businessId);
+      setBusiness(b);
+      const sim = await tasksRepository.getSimilar(t);
+      setSimilar(sim);
+    }
+    if (firebaseUser && t) {
+      const app = await applicationsRepository.getByUserAndTask(firebaseUser.uid, t.id);
+      setExistingApp(app);
+    } else {
+      setExistingApp(null);
+    }
+    setLoading(false);
+  }, [id, firebaseUser]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTask();
+    }, [loadTask])
+  );
+
+  const handlePrimaryAction = () => {
+    if (!task) return;
+
+    if (existingApp?.status === 'approved') {
+      router.push(`/task/submit/${existingApp.id}` as Href);
+      return;
+    }
+    if (existingApp?.status === 'rewarded') {
+      router.push('/(tabs)/wallet' as Href);
+      return;
+    }
+    if (existingApp) {
+      router.push(`/application/${existingApp.id}` as Href);
+      return;
+    }
+
+    router.push(`/task/apply/${task.id}`);
+  };
+
+  const primaryLabel = (() => {
+    if (!existingApp) return 'Başvur';
+    if (existingApp.status === 'rewarded') return 'Kuponumu Gör';
+    if (existingApp.status === 'approved') return 'Görevi Teslim Et';
+    return `Başvurum: ${APPLICATION_STATUS_LABELS[existingApp.status]}`;
+  })();
 
   if (loading) {
     return (
@@ -85,17 +132,14 @@ export default function TaskDetailScreen() {
           <Text style={styles.meta}>{formatDeadline(task.deadline)}</Text>
         </View>
 
-        {/* Ödül */}
         <View style={styles.rewardBox}>
           <Text style={styles.rewardLabel}>Kazanılacak Ödül</Text>
           <Text style={styles.rewardValue}>🎁 {task.rewardDescription}</Text>
         </View>
 
-        {/* Açıklama */}
         <Text style={styles.sectionTitle}>Görev Açıklaması</Text>
         <Text style={styles.description}>{task.description}</Text>
 
-        {/* İşletme */}
         {business && (
           <View style={[styles.businessCard, Shadow.sm]}>
             <View style={styles.businessLogo}>
@@ -111,7 +155,6 @@ export default function TaskDetailScreen() {
           </View>
         )}
 
-        {/* Detaylar */}
         <View style={styles.detailsGrid}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Başvuru</Text>
@@ -125,12 +168,14 @@ export default function TaskDetailScreen() {
           </View>
         </View>
 
-        <Button
-          title="Başvur"
-          onPress={() => router.push(`/task/apply/${task.id}`)}
-        />
+        {existingApp && existingApp.status !== 'approved' && existingApp.status !== 'rewarded' ? (
+          <Text style={styles.appHint}>
+            Bu göreve zaten başvurdun — durumunu takip edebilirsin.
+          </Text>
+        ) : null}
 
-        {/* Benzer görevler */}
+        <Button title={primaryLabel} onPress={handlePrimaryAction} />
+
         {similar.length > 0 && (
           <View style={styles.similarSection}>
             <Text style={styles.sectionTitle}>Benzer Görevler</Text>
@@ -216,5 +261,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: { ...Typography.caption, color: Colors.textTertiary },
   detailValue: { ...Typography.labelLarge, color: Colors.textPrimary },
+  appHint: {
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginBottom: -Spacing[2],
+  },
   similarSection: { gap: Spacing[3], marginTop: Spacing[2] },
 });

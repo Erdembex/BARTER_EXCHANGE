@@ -19,6 +19,7 @@ import {
   tasksRepository,
   approveApplication,
   issueCouponForSubmission,
+  usersRepository,
 } from '@/features/data';
 import { notifyUser } from '@/features/notifications/notificationsRepository';
 import { Application, Task } from '@/types';
@@ -31,6 +32,7 @@ export default function ApplicationDetailScreen() {
   const { firebaseUser } = useAuthStore();
   const [application, setApplication] = useState<Application | null>(null);
   const [task, setTask] = useState<Task | null>(null);
+  const [applicantName, setApplicantName] = useState('');
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -43,6 +45,7 @@ export default function ApplicationDetailScreen() {
     if (app) {
       const t = await tasksRepository.getById(app.taskId);
       setTask(t);
+      setApplicantName(await usersRepository.getDisplayName(app.userId));
     }
     setLoading(false);
   }, [id]);
@@ -160,7 +163,7 @@ export default function ApplicationDetailScreen() {
         </View>
 
         <Text style={styles.taskTitle}>{task?.title ?? 'Görev'}</Text>
-        <Text style={styles.meta}>Kullanıcı: {application.userId.slice(0, 8)}…</Text>
+        <Text style={styles.meta}>Başvuran: {applicantName || application.userId.slice(0, 8)}</Text>
 
         <View style={styles.block}>
           <Text style={styles.blockTitle}>Başvuru mesajı</Text>

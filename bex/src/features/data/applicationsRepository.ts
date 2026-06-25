@@ -24,6 +24,7 @@ import {
   Task,
 } from '../../types';
 import { tasksRepository } from './businessesRepository';
+import { usersRepository } from './usersRepository';
 import { notifyUser } from '../notifications/notificationsRepository';
 
 export const applicationsRepository = {
@@ -82,6 +83,38 @@ export const applicationsRepository = {
     }
   },
 
+  async getByUserAndTask(userId: string, taskId: string): Promise<Application | null> {
+    const inactive: ApplicationStatus[] = ['rejected', 'cancelled'];
+    if (shouldUseDemoData()) {
+      return (
+        demoStore
+          .getApplications()
+          .find(
+            (a) =>
+              a.userId === userId &&
+              a.taskId === taskId &&
+              !inactive.includes(a.status)
+          ) ?? null
+      );
+    }
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.APPLICATIONS),
+        where('userId', '==', userId),
+        where('taskId', '==', taskId),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
+      const snap = await getDocs(q);
+      const app = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as Application)
+        .find((a) => !inactive.includes(a.status));
+      return app ?? null;
+    } catch {
+      return null;
+    }
+  },
+
   async getByBusiness(businessId: string): Promise<Application[]> {
     if (shouldUseDemoData()) {
       return demoStore.getApplicationsByBusiness(businessId);
@@ -100,6 +133,11 @@ export const applicationsRepository = {
   },
 
   async create(userId: string, data: CreateApplication): Promise<string> {
+    const existing = await this.getByUserAndTask(userId, data.taskId);
+    if (existing) {
+      throw Object.assign(new Error('Bu göreve zaten başvurdun.'), { code: 'already-applied' });
+    }
+
     if (shouldUseDemoData()) {
       const id = `demo-a${Date.now()}`;
       const app: Application = {
@@ -212,6 +250,25 @@ export const couponsRepository = {
     return snap.exists() ? ({ id: snap.id, ...snap.data() } as Coupon) : null;
   },
 
+  async getByApplicationId(applicationId: string): Promise<Coupon | null> {
+    if (shouldUseDemoData()) {
+      return demoStore.getCoupons().find((c) => c.applicationId === applicationId) ?? null;
+    }
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.COUPONS),
+        where('applicationId', '==', applicationId),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      const d = snap.docs[0];
+      return { id: d.id, ...d.data() } as Coupon;
+    } catch {
+      return demoStore.getCoupons().find((c) => c.applicationId === applicationId) ?? null;
+    }
+  },
+
   async getByCode(code: string): Promise<Coupon | null> {
     const normalized = code.trim().toUpperCase();
     if (shouldUseDemoData()) {
@@ -301,6 +358,7 @@ export const couponsRepository = {
       const coupon: Coupon = { id: `demo-c${Date.now()}`, ...couponData };
       demoStore.addCoupon(coupon);
       await applicationsRepository.updateStatus(application.id, 'rewarded');
+      await usersRepository.incrementCompletedTasks(application.userId);
       return coupon;
     }
 

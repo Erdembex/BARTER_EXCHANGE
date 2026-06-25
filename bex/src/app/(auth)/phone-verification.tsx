@@ -61,16 +61,29 @@ export default function PhoneVerificationScreen() {
   }, [resendTimer]);
 
   useEffect(() => {
+    if (step === 'otp') {
+      const t = setTimeout(() => otpRefs.current[0]?.focus(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  useEffect(() => {
     return () => clearPendingPhoneVerification();
   }, []);
 
   const handleSendOTP = async () => {
+    if (!phone.trim()) {
+      setError('Telefon numarası gir.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
       await sendPhoneVerificationCode(phone);
       setDevCode(getLastDevVerificationCode());
+      setOtp(Array(OTP_LENGTH).fill(''));
       setStep('otp');
       setResendTimer(60);
     } catch (err: unknown) {
@@ -83,13 +96,32 @@ export default function PhoneVerificationScreen() {
     }
   };
 
+  const applyOtpDigits = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, OTP_LENGTH);
+    const next = Array(OTP_LENGTH)
+      .fill('')
+      .map((_, i) => digits[i] ?? '');
+    setOtp(next);
+    setError('');
+    return digits;
+  };
+
   const handleOtpChange = (value: string, index: number) => {
+    const digits = value.replace(/\D/g, '');
+
+    if (digits.length > 1) {
+      applyOtpDigits(digits);
+      const focusIndex = Math.min(digits.length, OTP_LENGTH - 1);
+      otpRefs.current[focusIndex]?.focus();
+      return;
+    }
+
     const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
+    newOtp[index] = digits.slice(-1);
     setOtp(newOtp);
     setError('');
 
-    if (value && index < OTP_LENGTH - 1) {
+    if (digits && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
   };
@@ -255,9 +287,11 @@ export default function PhoneVerificationScreen() {
                         handleOtpKeyPress(nativeEvent.key, i)
                       }
                       keyboardType="number-pad"
-                      maxLength={1}
+                      maxLength={i === 0 ? OTP_LENGTH : 1}
                       textAlign="center"
                       selectionColor={Colors.primary}
+                      textContentType={i === 0 ? 'oneTimeCode' : 'none'}
+                      autoComplete={i === 0 && Platform.OS === 'android' ? 'sms-otp' : 'off'}
                     />
                   ))}
                 </View>

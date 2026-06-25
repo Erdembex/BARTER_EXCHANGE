@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +19,10 @@ import { BUSINESS_CATEGORY_LABELS, VERIFICATION_STATUS_LABELS } from '@/constant
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+
+function isLocalDocumentUrl(url: string): boolean {
+  return url.startsWith('file://') || url.startsWith('content://');
+}
 
 export default function AdminVerificationsScreen() {
   const { showToast } = useToast();
@@ -107,11 +112,19 @@ export default function AdminVerificationsScreen() {
             </Text>
             <Text style={styles.address}>📍 {item.address}</Text>
             {item.verificationDocumentUrl ? (
-              <TouchableOpacity
-                onPress={() => Linking.openURL(item.verificationDocumentUrl!)}
-              >
-                <Text style={styles.docLink}>Evrakı görüntüle →</Text>
-              </TouchableOpacity>
+              isLocalDocumentUrl(item.verificationDocumentUrl) ? (
+                <Image
+                  source={{ uri: item.verificationDocumentUrl }}
+                  style={styles.docPreview}
+                  resizeMode="contain"
+                />
+              ) : (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(item.verificationDocumentUrl!)}
+                >
+                  <Text style={styles.docLink}>Evrakı görüntüle →</Text>
+                </TouchableOpacity>
+              )
             ) : null}
             <View style={styles.actions}>
               <Button
@@ -157,6 +170,13 @@ const styles = StyleSheet.create({
   meta: { ...Typography.caption, color: Colors.textMuted, marginBottom: Spacing[1] },
   address: { ...Typography.bodySmall, color: Colors.textSecondary, marginBottom: Spacing[2] },
   docLink: { ...Typography.labelMedium, color: Colors.primary, marginBottom: Spacing[4] },
+  docPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    marginBottom: Spacing[4],
+  },
   actions: { flexDirection: 'row', gap: Spacing[3] },
   empty: { alignItems: 'center', paddingTop: Spacing[10] },
   emptyText: { ...Typography.bodyMedium, color: Colors.textMuted },

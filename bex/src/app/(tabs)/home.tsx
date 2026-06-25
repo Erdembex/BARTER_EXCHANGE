@@ -23,9 +23,14 @@ import { getGreeting } from '@/lib/taskUtils';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { getApplicationTarget } from '@/lib/applicationNavigation';
 import { SearchBar, CategoryFilter, TaskCard, BusinessCard } from '@/components/tasks';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { Colors, Typography, Spacing } from '@/theme';
+
+interface HomeApplication extends Application {
+  taskTitle: string;
+}
 
 export default function HomeScreen() {
   const { bexUser, firebaseUser } = useAuthStore();
@@ -33,7 +38,7 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<TaskCategory | null>(null);
   const [featured, setFeatured] = useState<EnrichedTask[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [myApplications, setMyApplications] = useState<Application[]>([]);
+  const [myApplications, setMyApplications] = useState<HomeApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -52,7 +57,12 @@ export default function HomeScreen() {
             demoStore.ensureSampleApplicationsForUser(firebaseUser.uid);
           }
           const apps = await applicationsRepository.getActiveByUser(firebaseUser.uid);
-          setMyApplications(apps);
+          const enriched: HomeApplication[] = [];
+          for (const app of apps) {
+            const task = await tasksRepository.getById(app.taskId);
+            enriched.push({ ...app, taskTitle: task?.title ?? 'Görev' });
+          }
+          setMyApplications(enriched);
         } catch {
           setMyApplications([]);
         }
@@ -137,14 +147,14 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={app.id}
                 style={styles.appRow}
-                onPress={() => router.push(`/application/${app.id}` as Href)}
+                onPress={() => router.push(getApplicationTarget(app))}
                 activeOpacity={0.85}
               >
                 <Text style={styles.appStatus}>
                   {APPLICATION_STATUS_LABELS[app.status]}
                 </Text>
                 <Text style={styles.appTask} numberOfLines={1}>
-                  Görev #{app.taskId.slice(0, 8)}
+                  {app.taskTitle}
                 </Text>
               </TouchableOpacity>
             ))}
