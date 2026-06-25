@@ -18,6 +18,8 @@ import {
   sendPhoneVerificationCode,
   verifyPhoneCode,
   getPhoneAuthErrorMessage,
+  getPhoneAuthErrorCode,
+  getLastDevVerificationCode,
   isPhoneAuthSupported,
   clearPendingPhoneVerification,
 } from '@/features/auth/phoneAuthService';
@@ -35,6 +37,7 @@ export default function PhoneVerificationScreen() {
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [error, setError] = useState('');
+  const [devCode, setDevCode] = useState<string | null>(null);
 
   const otpRefs = useRef<(TextInput | null)[]>([]);
   const phoneSupported = isPhoneAuthSupported();
@@ -67,11 +70,14 @@ export default function PhoneVerificationScreen() {
 
     try {
       await sendPhoneVerificationCode(phone);
+      setDevCode(getLastDevVerificationCode());
       setStep('otp');
       setResendTimer(60);
     } catch (err: unknown) {
-      const code = (err as { code?: string })?.code ?? 'unknown';
-      setError(getPhoneAuthErrorMessage(code));
+      if (__DEV__) {
+        console.error('[phone-verification] send OTP failed:', err);
+      }
+      setError(getPhoneAuthErrorMessage(getPhoneAuthErrorCode(err)));
     } finally {
       setLoading(false);
     }
@@ -108,8 +114,10 @@ export default function PhoneVerificationScreen() {
       await verifyPhoneCode(code, phone);
       await goNext();
     } catch (err: unknown) {
-      const codeErr = (err as { code?: string })?.code ?? 'unknown';
-      setError(getPhoneAuthErrorMessage(codeErr));
+      if (__DEV__) {
+        console.error('[phone-verification] verify OTP failed:', err);
+      }
+      setError(getPhoneAuthErrorMessage(getPhoneAuthErrorCode(err)));
     } finally {
       setLoading(false);
     }
@@ -219,7 +227,9 @@ export default function PhoneVerificationScreen() {
               {isAuthEmulatorActive() ? (
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    Emulator kodu: Firebase Emulator UI → Authentication sekmesi
+                    Emulator modu: Kod Auth Emulator arayüzünde görünür (localhost:4000 →
+                    Authentication).
+                    {devCode ? `\n\nTest kodu: ${devCode}` : ''}
                   </Text>
                 </View>
               ) : null}
@@ -269,6 +279,7 @@ export default function PhoneVerificationScreen() {
                   style={styles.changePhone}
                   onPress={() => {
                     clearPendingPhoneVerification();
+                    setDevCode(null);
                     setStep('phone');
                     setOtp(Array(OTP_LENGTH).fill(''));
                   }}

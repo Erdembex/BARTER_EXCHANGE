@@ -14,7 +14,7 @@ const firebaseConfig = {
   appId: '1:671290008734:web:f7ead50594a01d28dfc78f',
 };
 
-function getDevHost(): string {
+export function getAuthEmulatorHost(): string {
   if (Platform.OS === 'web') {
     return '127.0.0.1';
   }
@@ -26,13 +26,11 @@ function getDevHost(): string {
 
   if (hostUri) {
     const host = hostUri.split(':')[0];
-    // Fiziksel cihaz (Expo Go): Metro'nun verdiği LAN IP
     if (host !== 'localhost' && host !== '127.0.0.1') {
       return host;
     }
   }
 
-  // Android emülatör: bilgisayarın localhost'u
   if (Platform.OS === 'android') {
     return '10.0.2.2';
   }
@@ -45,11 +43,10 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Geliştirmede yerel Auth emulator (telefon + tarayıcı)
 if (__DEV__) {
   const g = globalThis as typeof globalThis & { __bexAuthEmulator?: boolean };
   if (!g.__bexAuthEmulator) {
-    const host = getDevHost();
+    const host = getAuthEmulatorHost();
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
     auth.settings.appVerificationDisabledForTesting = true;
     g.__bexAuthEmulator = true;
