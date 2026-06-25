@@ -7,16 +7,28 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "bex",
+    "description": "Görev yap, ödül kazan. BEX ile işletmelerden görev al, tamamla ve kupon kazan.",
+    "primaryColor": "#7C3AED",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bex.app"
+      "bundleIdentifier": "com.bex.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "BEX, görev teslimi için fotoğraf seçmeni sağlar.",
+        "NSCameraUsageDescription": "BEX, görev teslimi ve kupon QR okuma için kamerayı kullanır.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#7C3AED",
         "foregroundImage": "./assets/icon.png"
       },
-      "package": "com.bex.app"
+      "package": "com.bex.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +54,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "appCheckDebugToken": "",
+      "privacyPolicyUrl": "https://bex.app/gizlilik"
     }
   }
 }

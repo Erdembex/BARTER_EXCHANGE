@@ -10,6 +10,7 @@ import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
 import { Colors, theme } from '@/theme';
 import { loadDevProfiles } from '@/lib/devProfileStore';
+import { initAppCheck } from '@/lib/appCheck';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { ToastProvider } from '@/components/common/Toast';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -22,6 +23,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     loadDevProfiles();
+    initAppCheck();
   }, []);
 
   useEffect(() => {

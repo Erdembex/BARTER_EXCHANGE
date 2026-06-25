@@ -12,7 +12,6 @@ import {
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/features/auth/authService';
 import {
   tasksRepository,
   businessesRepository,
@@ -29,7 +28,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function HomeScreen() {
-  const { bexUser, firebaseUser, signOut } = useAuthStore();
+  const { bexUser, firebaseUser } = useAuthStore();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<TaskCategory | null>(null);
   const [featured, setFeatured] = useState<EnrichedTask[]>([]);
@@ -75,12 +74,6 @@ export default function HomeScreen() {
     loadData();
   };
 
-  const handleLogout = async () => {
-    await authService.logout();
-    signOut();
-    router.replace('/(auth)/onboarding');
-  };
-
   const filteredFeatured = featured.filter((t) => {
     if (category && t.category !== category) return false;
     if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
@@ -117,8 +110,11 @@ export default function HomeScreen() {
                 Bugün hangi görevi tamamlayacaksın?
               </Text>
             </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-              <Text style={styles.logoutText}>Çıkış</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/profile' as Href)}
+              style={styles.profileBtn}
+            >
+              <Text style={styles.profileText}>👤</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -203,8 +199,8 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
   },
   headerText: { flex: 1, gap: Spacing[1] },
-  logoutBtn: { paddingVertical: Spacing[1], paddingHorizontal: Spacing[2] },
-  logoutText: { ...Typography.labelMedium, color: Colors.textSecondary },
+  profileBtn: { paddingVertical: Spacing[1], paddingHorizontal: Spacing[2] },
+  profileText: { fontSize: 22 },
   greeting: { ...Typography.headingLarge, color: Colors.textPrimary },
   subGreeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
   section: { gap: Spacing[2] },
