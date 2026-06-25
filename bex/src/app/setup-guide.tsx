@@ -37,6 +37,7 @@ const STEPS: Step[] = [
     items: [
       'Firebase Console → Firestore Database oluştur (yoksa)',
       'Terminal: cd bex && npm run deploy:rules',
+      'KYC evrakları için: Console → Storage → Get Started, sonra npm run deploy:storage',
       'Authentication → Email/Password açık olsun',
       'Phone provider: production SMS için ileride açılır',
     ],
