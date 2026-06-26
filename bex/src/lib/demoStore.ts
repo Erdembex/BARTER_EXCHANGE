@@ -161,6 +161,14 @@ export const demoStore = {
     applications = [app, ...applications];
   },
 
+  incrementTaskApplicantCount(taskId: string) {
+    tasks = tasks.map((t) =>
+      t.id === taskId
+        ? { ...t, currentApplicantCount: t.currentApplicantCount + 1 }
+        : t
+    );
+  },
+
   addCoupon(coupon: Coupon) {
     coupons = [coupon, ...coupons];
   },

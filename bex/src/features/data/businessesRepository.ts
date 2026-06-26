@@ -26,29 +26,42 @@ import {
 } from '../../lib/demoData';
 import { demoStore } from '../../lib/demoStore';
 
-export type EnrichedTask = Task & { businessName: string };
+export type EnrichedTask = Task & { businessName: string; businessVerified?: boolean };
 
 async function enrichTasks(tasks: Task[]): Promise<EnrichedTask[]> {
   if (shouldUseDemoData()) {
     return enrichTasksWithBusiness(tasks, demoStore.getBusinesses());
   }
 
-  const cache = new Map<string, string>();
+  const cache = new Map<string, { name: string; isVerified: boolean }>();
   const result: EnrichedTask[] = [];
 
   for (const task of tasks) {
     if (!cache.has(task.businessId)) {
       try {
         const snap = await getDoc(doc(db, COLLECTIONS.BUSINESSES, task.businessId));
-        cache.set(
-          task.businessId,
-          snap.exists() ? (snap.data() as Business).name : getDemoBusinessName(task.businessId)
-        );
+        if (snap.exists()) {
+          const biz = snap.data() as Business;
+          cache.set(task.businessId, { name: biz.name, isVerified: biz.isVerified });
+        } else {
+          cache.set(task.businessId, {
+            name: getDemoBusinessName(task.businessId),
+            isVerified: false,
+          });
+        }
       } catch {
-        cache.set(task.businessId, getDemoBusinessName(task.businessId));
+        cache.set(task.businessId, {
+          name: getDemoBusinessName(task.businessId),
+          isVerified: false,
+        });
       }
     }
-    result.push({ ...task, businessName: cache.get(task.businessId)! });
+    const biz = cache.get(task.businessId)!;
+    result.push({
+      ...task,
+      businessName: biz.name,
+      businessVerified: biz.isVerified,
+    });
   }
   return result;
 }

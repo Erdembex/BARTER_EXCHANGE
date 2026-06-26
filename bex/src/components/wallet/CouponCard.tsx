@@ -30,7 +30,7 @@ export function CouponCard({ coupon, businessName, onPress }: CouponCardProps) {
       style={[styles.card, displayStatus !== 'active' && styles.cardMuted]}
       onPress={onPress}
       activeOpacity={0.85}
-      disabled={displayStatus !== 'active'}
+      disabled={!onPress}
     >
       <View style={styles.header}>
         <Text style={styles.reward} numberOfLines={2}>

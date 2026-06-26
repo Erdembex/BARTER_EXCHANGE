@@ -97,6 +97,7 @@ export default function BusinessDetailScreen() {
               <TaskCard
                 task={task}
                 businessName={business.name}
+                businessVerified={business.isVerified}
                 compact
                 onPress={() => router.push(`/task/${task.id}` as Href)}
               />

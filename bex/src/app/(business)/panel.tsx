@@ -92,6 +92,9 @@ export default function BusinessDashboardScreen() {
           <View>
             <Text style={styles.greeting}>Merhaba,</Text>
             <Text style={styles.name}>{business?.name ?? bexUser?.displayName}</Text>
+            {business?.isVerified ? (
+              <Text style={styles.verified}>✓ Doğrulanmış işletme</Text>
+            ) : null}
           </View>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
             <Text style={styles.logoutText}>Çıkış</Text>
@@ -169,6 +172,12 @@ const styles = StyleSheet.create({
   },
   greeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
   name: { ...Typography.headingLarge, color: Colors.textPrimary, marginTop: 2 },
+  verified: {
+    ...Typography.caption,
+    color: Colors.success,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   logoutBtn: {
     paddingHorizontal: Spacing[3],
     paddingVertical: Spacing[2],

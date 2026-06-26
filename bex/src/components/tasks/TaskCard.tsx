@@ -8,6 +8,7 @@ import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
 export interface TaskCardProps {
   task: Task;
   businessName?: string;
+  businessVerified?: boolean;
   compact?: boolean;
   onPress?: () => void;
 }
@@ -15,6 +16,7 @@ export interface TaskCardProps {
 export function TaskCard({
   task,
   businessName,
+  businessVerified = false,
   compact = false,
   onPress,
 }: TaskCardProps) {
@@ -42,6 +44,7 @@ export function TaskCard({
         <View style={styles.headerText}>
           <Text style={styles.businessName} numberOfLines={1}>
             {businessName ?? 'İşletme'}
+            {businessVerified ? ' ✓' : ''}
           </Text>
           <Text style={styles.category}>
             {CATEGORY_LABELS[task.category]}

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Coupon } from '@/types';
-import { encodeCouponQr, getCouponRemainingUses } from '@/lib/couponUtils';
+import { encodeCouponQr, getCouponDisplayStatus, getCouponRemainingUses, COUPON_STATUS_LABELS } from '@/lib/couponUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 interface CouponQrModalProps {
@@ -29,6 +29,8 @@ export function CouponQrModal({
 
   const qrValue = encodeCouponQr(coupon);
   const remaining = getCouponRemainingUses(coupon);
+  const displayStatus = getCouponDisplayStatus(coupon);
+  const isActive = displayStatus === 'active';
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -41,26 +43,43 @@ export function CouponQrModal({
         </View>
 
         <View style={styles.content}>
+          <View style={[styles.statusBadge, !isActive && styles.statusBadgeMuted]}>
+            <Text style={styles.statusText}>{COUPON_STATUS_LABELS[displayStatus]}</Text>
+          </View>
+
           <Text style={styles.reward}>{coupon.rewardDescription}</Text>
           {businessName ? (
             <Text style={styles.business}>{businessName}</Text>
           ) : null}
           <Text style={styles.code}>{coupon.couponCode}</Text>
 
-          <View style={styles.qrWrap}>
-            <QRCode
-              value={qrValue}
-              size={220}
-              color={Colors.textPrimary}
-              backgroundColor={Colors.card}
-            />
-          </View>
+          {isActive ? (
+            <View style={styles.qrWrap}>
+              <QRCode
+                value={qrValue}
+                size={220}
+                color={Colors.textPrimary}
+                backgroundColor={Colors.card}
+              />
+            </View>
+          ) : (
+            <View style={styles.qrWrapMuted}>
+              <Text style={styles.qrMutedText}>
+                {displayStatus === 'exhausted'
+                  ? 'Tüm haklar kullanıldı'
+                  : 'Kuponun süresi doldu'}
+              </Text>
+            </View>
+          )}
 
           <Text style={styles.hint}>
-            İşletme bu kodu okutarak kuponunu doğrular.
+            {isActive
+              ? 'İşletme bu kodu okutarak kuponunu doğrular.'
+              : 'Bu kupon artık kullanılamaz.'}
           </Text>
           <Text style={styles.uses}>
-            Kalan kullanım: {remaining}/{coupon.totalUses}
+            Kullanım: {coupon.usedCount}/{coupon.totalUses}
+            {remaining > 0 ? ` · Kalan: ${remaining}` : ''}
           </Text>
         </View>
       </SafeAreaView>
@@ -79,6 +98,15 @@ const styles = StyleSheet.create({
   },
   title: { ...Typography.headingMedium, color: Colors.textPrimary },
   close: { ...Typography.labelLarge, color: Colors.primary },
+  statusBadge: {
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    borderRadius: Radius.full,
+    marginBottom: Spacing[3],
+  },
+  statusBadgeMuted: { backgroundColor: Colors.surface },
+  statusText: { ...Typography.caption, color: Colors.success, fontWeight: '700' },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -109,6 +137,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
     marginBottom: Spacing[5],
+  },
+  qrWrapMuted: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    marginBottom: Spacing[5],
+    padding: Spacing[4],
+  },
+  qrMutedText: {
+    ...Typography.bodyMedium,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
   hint: {
     ...Typography.bodySmall,

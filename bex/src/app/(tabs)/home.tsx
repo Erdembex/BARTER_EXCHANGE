@@ -86,8 +86,22 @@ export default function HomeScreen() {
 
   const filteredFeatured = featured.filter((t) => {
     if (category && t.category !== category) return false;
-    if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesTitle = t.title.toLowerCase().includes(q);
+      const matchesBusiness = t.businessName?.toLowerCase().includes(q);
+      if (!matchesTitle && !matchesBusiness) return false;
+    }
     return true;
+  });
+
+  const filteredBusinesses = businesses.filter((b) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      b.name.toLowerCase().includes(q) ||
+      b.address.toLowerCase().includes(q)
+    );
   });
 
   const goToTask = (id: string) => router.push(`/task/${id}`);
@@ -174,6 +188,7 @@ export default function HomeScreen() {
                 key={task.id}
                 task={task}
                 businessName={task.businessName}
+                businessVerified={task.businessVerified}
                 onPress={() => goToTask(task.id)}
               />
             ))}
@@ -187,7 +202,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <SectionHeader title="Popüler İşletmeler" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-            {businesses.map((b) => (
+            {filteredBusinesses.map((b) => (
               <BusinessCard
                 key={b.id}
                 business={b}

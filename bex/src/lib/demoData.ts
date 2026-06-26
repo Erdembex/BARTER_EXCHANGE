@@ -176,13 +176,16 @@ export function enrichTasksWithBusiness(
   tasks: Task[],
   businesses: Business[] = DEMO_BUSINESSES
 ) {
-  return tasks.map((t) => ({
-    ...t,
-    businessName:
-      businesses.find((b) => b.id === t.businessId)?.name ??
-      DEMO_BUSINESSES.find((b) => b.id === t.businessId)?.name ??
-      'İşletme',
-  }));
+  return tasks.map((t) => {
+    const biz =
+      businesses.find((b) => b.id === t.businessId) ??
+      DEMO_BUSINESSES.find((b) => b.id === t.businessId);
+    return {
+      ...t,
+      businessName: biz?.name ?? 'İşletme',
+      businessVerified: biz?.isVerified ?? false,
+    };
+  });
 }
 
 export const DEMO_APPLICATIONS: Application[] = [

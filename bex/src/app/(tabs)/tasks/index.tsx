@@ -126,6 +126,7 @@ export default function TasksScreen() {
             <TaskCard
               task={item}
               businessName={item.businessName}
+              businessVerified={item.businessVerified}
               compact
               onPress={() => router.push(`/task/${item.id}`)}
             />

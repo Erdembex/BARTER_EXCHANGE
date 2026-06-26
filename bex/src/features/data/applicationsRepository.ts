@@ -25,7 +25,7 @@ import {
 } from '../../types';
 import { tasksRepository } from './businessesRepository';
 import { usersRepository } from './usersRepository';
-import { notifyUser } from '../notifications/notificationsRepository';
+import { notifyUser, notifyAdmins } from '../notifications/notificationsRepository';
 
 export const applicationsRepository = {
   async getById(id: string): Promise<Application | null> {
@@ -150,6 +150,7 @@ export const applicationsRepository = {
         createdAt: Timestamp.now(),
       };
       demoStore.addApplication(app);
+      demoStore.incrementTaskApplicantCount(data.taskId);
 
       const business = demoStore.getBusinessById(data.businessId);
       if (business?.ownerUid) {
@@ -193,6 +194,12 @@ export const applicationsRepository = {
           type: 'general',
           data: { applicationId: id },
           showLocalForUserId: app.userId,
+        });
+        await notifyAdmins({
+          title: 'Yeni teslim incelemesi',
+          body: 'Kullanıcı görev teslimi yükledi. Moderasyon bekliyor.',
+          type: 'general',
+          data: { applicationId: id },
         });
       }
       return;
