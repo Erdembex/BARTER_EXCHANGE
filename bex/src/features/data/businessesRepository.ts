@@ -189,6 +189,14 @@ export const tasksRepository = {
     }
   },
 
+  async getPublicActiveByBusiness(businessId: string): Promise<EnrichedTask[]> {
+    const tasks = await this.getByBusiness(businessId);
+    const publicTasks = tasks.filter(
+      (t) => t.status === 'active' && t.approvedByAdmin
+    );
+    return enrichTasks(publicTasks);
+  },
+
   async create(businessId: string, data: CreateTask): Promise<string> {
     if (shouldUseDemoData()) {
       const task = demoStore.createTask(businessId, data);

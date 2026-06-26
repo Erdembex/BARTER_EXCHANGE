@@ -71,9 +71,11 @@ export default function RootLayout() {
           <Stack.Screen name="(business)" />
           <Stack.Screen name="(admin)" />
           <Stack.Screen name="task" />
+            <Stack.Screen name="business" />
             <Stack.Screen name="application" />
             <Stack.Screen name="notifications/index" />
             <Stack.Screen name="setup-guide" />
+            <Stack.Screen name="settings" />
           </Stack>
         </ToastProvider>
       </SafeAreaProvider>

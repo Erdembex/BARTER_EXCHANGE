@@ -129,6 +129,11 @@ export default function AdminPanelScreen() {
             onPress={() => router.push('/notifications/index' as Href)}
           />
           <Button
+            title="Hesap Ayarları"
+            variant="ghost"
+            onPress={() => router.push('/settings' as Href)}
+          />
+          <Button
             title="Canlı Firestore'a Demo Yükle"
             variant="outline"
             onPress={handleSeedCatalog}

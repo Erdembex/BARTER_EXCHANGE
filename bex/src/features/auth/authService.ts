@@ -5,7 +5,7 @@ import {
   updateProfile,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { AuthFormData, BexUser, COLLECTIONS } from '../../types';
 import {
@@ -133,6 +133,31 @@ export const authService = {
 
   async resetPassword(email: string) {
     return sendPasswordResetEmail(auth, email);
+  },
+
+  async updateDisplayName(uid: string, displayName: string): Promise<BexUser | null> {
+    const trimmed = displayName.trim();
+    if (trimmed.length < 2) {
+      throw Object.assign(new Error('Ad en az 2 karakter olmalı.'), { code: 'invalid-name' });
+    }
+
+    const user = auth.currentUser;
+    if (!user || user.uid !== uid) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'not-authenticated' });
+    }
+
+    await updateProfile(user, { displayName: trimmed });
+    await setDevProfile(uid, { displayName: trimmed });
+
+    if (!shouldUseDemoData()) {
+      try {
+        await updateDoc(doc(db, COLLECTIONS.USERS, uid), { displayName: trimmed });
+      } catch {
+        // Yerel profil yeterli
+      }
+    }
+
+    return this.getUserDocument(uid, { email: user.email, displayName: trimmed });
   },
 
   async getUserDocument(

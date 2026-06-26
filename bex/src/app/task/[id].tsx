@@ -147,6 +147,9 @@ export default function TaskDetailScreen() {
             </View>
             <View style={styles.businessInfo}>
               <Text style={styles.businessName}>{business.name}</Text>
+              {business.isVerified ? (
+                <Text style={styles.businessVerified}>✓ Doğrulanmış işletme</Text>
+              ) : null}
               <Text style={styles.businessAddr}>📍 {business.address}</Text>
               <Text style={styles.businessScore}>
                 ⭐ {business.reputationScore} · {CATEGORY_LABELS[task.category]}
@@ -249,6 +252,7 @@ const styles = StyleSheet.create({
   businessLogoText: { fontSize: 22, fontWeight: '800', color: Colors.textOnPrimary },
   businessInfo: { flex: 1, gap: 4 },
   businessName: { ...Typography.labelLarge, color: Colors.textPrimary },
+  businessVerified: { ...Typography.caption, color: Colors.success, fontWeight: '600' },
   businessAddr: { ...Typography.caption, color: Colors.textTertiary },
   businessScore: { ...Typography.caption, color: Colors.textSecondary },
   detailsGrid: { flexDirection: 'row', gap: Spacing[3] },

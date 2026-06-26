@@ -188,7 +188,11 @@ export default function HomeScreen() {
           <SectionHeader title="Popüler İşletmeler" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
             {businesses.map((b) => (
-              <BusinessCard key={b.id} business={b} />
+              <BusinessCard
+                key={b.id}
+                business={b}
+                onPress={() => router.push(`/business/${b.id}` as Href)}
+              />
             ))}
           </ScrollView>
         </View>

@@ -131,6 +131,11 @@ export default function BusinessDashboardScreen() {
             variant="ghost"
             onPress={() => router.push('/notifications/index' as Href)}
           />
+          <Button
+            title="Hesap Ayarları"
+            variant="ghost"
+            onPress={() => router.push('/settings' as Href)}
+          />
           {business && business.verificationStatus !== 'verified' && (
             <Button
               title="İşletme Doğrulama (KYC)"

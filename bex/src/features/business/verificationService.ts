@@ -11,6 +11,7 @@ import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { businessesRepository } from '@/features/data/businessesRepository';
 import { COLLECTIONS, Business } from '@/types';
+import { notifyAdmins } from '@/features/notifications/notificationsRepository';
 
 export interface VerificationUpload {
   uri: string;
@@ -23,7 +24,14 @@ export async function submitBusinessVerification(
   file: VerificationUpload
 ): Promise<Business> {
   if (shouldUseDemoData()) {
-    return demoStore.submitVerification(business.id, file.uri, file.name);
+    const updated = demoStore.submitVerification(business.id, file.uri, file.name);
+    await notifyAdmins({
+      title: 'Yeni KYC evrakı',
+      body: `${business.name} doğrulama evrakı yükledi. İnceleme bekliyor.`,
+      type: 'general',
+      data: { businessId: business.id },
+    });
+    return updated;
   }
 
   const path = `business-documents/${business.id}/${Date.now()}-${file.name}`;

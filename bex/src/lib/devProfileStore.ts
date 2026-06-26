@@ -46,3 +46,11 @@ export function getDevProfile(uid: string): Partial<BexUser> | undefined {
 export function getDevRole(uid: string): UserRole {
   return profiles.get(uid)?.role ?? 'user';
 }
+
+export function getUidsByRole(role: UserRole): string[] {
+  const uids: string[] = [];
+  profiles.forEach((profile, uid) => {
+    if (profile.role === role) uids.push(uid);
+  });
+  return uids;
+}

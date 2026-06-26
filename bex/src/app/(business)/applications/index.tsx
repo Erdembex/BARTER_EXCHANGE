@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useBusiness } from '@/features/business/useBusiness';
 import { applicationsRepository, tasksRepository, usersRepository } from '@/features/data';
@@ -27,6 +27,7 @@ const FILTERS: { key: FilterKey; label: string; statuses?: ApplicationStatus[] }
 ];
 
 export default function BusinessApplicationsScreen() {
+  const { taskId } = useLocalSearchParams<{ taskId?: string }>();
   const { business, loading: bizLoading } = useBusiness();
   const [applications, setApplications] = useState<Application[]>([]);
   const [taskTitles, setTaskTitles] = useState<Record<string, string>>({});
@@ -68,10 +69,18 @@ export default function BusinessApplicationsScreen() {
   };
 
   const filtered = useMemo(() => {
+    let list = applications;
+    if (taskId) {
+      list = list.filter((a) => a.taskId === taskId);
+    }
     const active = FILTERS.find((f) => f.key === filter);
-    if (!active?.statuses) return applications;
-    return applications.filter((a) => active.statuses!.includes(a.status));
-  }, [applications, filter]);
+    if (active?.statuses) {
+      list = list.filter((a) => active.statuses!.includes(a.status));
+    }
+    return list;
+  }, [applications, filter, taskId]);
+
+  const taskFilterTitle = taskId ? taskTitles[taskId] : null;
 
   if (bizLoading || loading) {
     return (
@@ -88,6 +97,15 @@ export default function BusinessApplicationsScreen() {
         <Text style={styles.subtitle}>
           {filtered.length} gösteriliyor · {applications.length} toplam
         </Text>
+        {taskFilterTitle ? (
+          <TouchableOpacity
+            onPress={() => router.replace('/(business)/applications/index' as Href)}
+          >
+            <Text style={styles.taskFilter}>
+              Görev: {taskFilterTitle} · Filtreyi kaldır ✕
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={styles.filters}>
@@ -153,6 +171,12 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[4], paddingBottom: Spacing[2] },
   title: { ...Typography.headingLarge, color: Colors.textPrimary },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary, marginTop: 2 },
+  taskFilter: {
+    ...Typography.caption,
+    color: Colors.primary,
+    marginTop: Spacing[1],
+    fontWeight: '600',
+  },
   filters: {
     flexDirection: 'row',
     flexWrap: 'wrap',

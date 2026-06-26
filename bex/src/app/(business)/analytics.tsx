@@ -10,54 +10,23 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useBusiness } from '@/features/business/useBusiness';
-import { demoStore } from '@/lib/demoStore';
-import { shouldUseDemoData } from '@/lib/devMode';
+import {
+  getBusinessAnalytics,
+  BusinessAnalytics,
+} from '@/features/business/businessAnalyticsService';
 import { CATEGORY_LABELS } from '@/constants/taskLabels';
 import { StatCard } from '@/components/business';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-import { TaskCategory } from '@/types';
-
-type BusinessAnalytics = {
-  publishedTasks: number;
-  activeTasks: number;
-  pendingApproval: number;
-  totalApplications: number;
-  pendingApplications: number;
-  submittedApplications: number;
-  completedTasks: number;
-  couponsDistributed: number;
-  couponsUsed: number;
-  couponUseRate: number;
-  topCategory: TaskCategory | null;
-  topCategoryCount: number;
-};
 
 export default function BusinessAnalyticsScreen() {
   const { business, loading: bizLoading, reload } = useBusiness();
   const [stats, setStats] = useState<BusinessAnalytics | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!business) return;
-    if (shouldUseDemoData()) {
-      setStats(demoStore.getAnalytics(business.id) as BusinessAnalytics);
-    } else {
-      setStats({
-        publishedTasks: 0,
-        activeTasks: 0,
-        pendingApproval: 0,
-        totalApplications: 0,
-        pendingApplications: 0,
-        submittedApplications: 0,
-        completedTasks: 0,
-        couponsDistributed: 0,
-        couponsUsed: 0,
-        couponUseRate: 0,
-        topCategory: null,
-        topCategoryCount: 0,
-      });
-    }
+    const data = await getBusinessAnalytics(business.id);
+    setStats(data);
   }, [business]);
 
   useFocusEffect(
@@ -69,7 +38,7 @@ export default function BusinessAnalyticsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await reload();
-    load();
+    await load();
     setRefreshing(false);
   };
 
@@ -124,8 +93,7 @@ export default function BusinessAnalyticsScreen() {
           <View style={styles.insight}>
             <Text style={styles.insightTitle}>En popüler kategori</Text>
             <Text style={styles.insightValue}>
-              {CATEGORY_LABELS[stats.topCategory]} (
-              {stats.topCategoryCount} görev)
+              {CATEGORY_LABELS[stats.topCategory]} ({stats.topCategoryCount} görev)
             </Text>
           </View>
         )}

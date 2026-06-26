@@ -19,7 +19,8 @@ import { demoStore } from '@/lib/demoStore';
 import { COLLECTIONS, Business, Task, Application } from '@/types';
 import { enrichTasksWithBusiness, getDemoBusinessName } from '@/lib/demoData';
 import type { EnrichedTask } from '@/features/data/businessesRepository';
-import { notifyUser } from '@/features/notifications/notificationsRepository';
+import { tasksRepository, businessesRepository } from '@/features/data/businessesRepository';
+import { notifyUser, notifyAdmins } from '@/features/notifications/notificationsRepository';
 
 async function notifyBusinessOwner(
   businessId: string,
@@ -51,7 +52,7 @@ export type EnrichedSubmission = Application & {
   businessName: string;
 };
 
-function enrichSubmissions(apps: Application[]): EnrichedSubmission[] {
+function enrichSubmissionsSync(apps: Application[]): EnrichedSubmission[] {
   if (shouldUseDemoData()) {
     const tasks = demoStore.getTasks();
     const businesses = demoStore.getBusinesses();
@@ -66,6 +67,34 @@ function enrichSubmissions(apps: Application[]): EnrichedSubmission[] {
     taskTitle: 'Görev',
     businessName: getDemoBusinessName(app.businessId),
   }));
+}
+
+async function enrichSubmissions(apps: Application[]): Promise<EnrichedSubmission[]> {
+  if (shouldUseDemoData()) {
+    return enrichSubmissionsSync(apps);
+  }
+
+  const taskCache = new Map<string, string>();
+  const bizCache = new Map<string, string>();
+  const result: EnrichedSubmission[] = [];
+
+  for (const app of apps) {
+    if (!taskCache.has(app.taskId)) {
+      const task = await tasksRepository.getById(app.taskId);
+      taskCache.set(app.taskId, task?.title ?? 'Görev');
+    }
+    if (!bizCache.has(app.businessId)) {
+      const biz = await businessesRepository.getById(app.businessId);
+      bizCache.set(app.businessId, biz?.name ?? 'İşletme');
+    }
+    result.push({
+      ...app,
+      taskTitle: taskCache.get(app.taskId)!,
+      businessName: bizCache.get(app.businessId)!,
+    });
+  }
+
+  return result;
 }
 
 export const adminRepository = {
@@ -193,7 +222,7 @@ export const adminRepository = {
 
   async getPendingSubmissions(): Promise<EnrichedSubmission[]> {
     if (shouldUseDemoData()) {
-      return enrichSubmissions(demoStore.getPendingSubmissions());
+      return enrichSubmissionsSync(demoStore.getPendingSubmissions());
     }
     try {
       const q = query(
@@ -205,7 +234,7 @@ export const adminRepository = {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Application);
       return enrichSubmissions(list);
     } catch {
-      return enrichSubmissions(demoStore.getPendingSubmissions());
+      return enrichSubmissionsSync(demoStore.getPendingSubmissions());
     }
   },
 

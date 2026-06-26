@@ -6,8 +6,9 @@ import {
   SafeAreaView,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useBusiness } from '@/features/business/useBusiness';
 import { tasksRepository } from '@/features/data';
@@ -73,7 +74,13 @@ export default function BusinessTasksScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() =>
+              router.push(`/(business)/applications/index?taskId=${item.id}` as Href)
+            }
+          >
             <View style={styles.cardTop}>
               <Text style={styles.cardTitle} numberOfLines={2}>
                 {item.title}
@@ -105,7 +112,8 @@ export default function BusinessTasksScreen() {
             <Text style={styles.applicants}>
               {item.currentApplicantCount}/{item.maxApplicants} başvuru
             </Text>
-          </View>
+            <Text style={styles.tapHint}>Başvuruları gör →</Text>
+          </TouchableOpacity>
         )}
       />
     </SafeAreaView>
@@ -154,6 +162,12 @@ const styles = StyleSheet.create({
   meta: { ...Typography.caption, color: Colors.textSecondary, marginBottom: Spacing[1] },
   reward: { ...Typography.bodySmall, color: Colors.primaryDark, fontWeight: '600' },
   applicants: { ...Typography.caption, color: Colors.textTertiary, marginTop: Spacing[2] },
+  tapHint: {
+    ...Typography.caption,
+    color: Colors.primary,
+    marginTop: Spacing[2],
+    fontWeight: '600',
+  },
   empty: { alignItems: 'center', paddingTop: Spacing[16] },
   emptyEmoji: { fontSize: 48, marginBottom: Spacing[3] },
   emptyTitle: { ...Typography.headingMedium, color: Colors.textPrimary },

@@ -5,6 +5,10 @@ export function getNotificationTarget(
   item: BexNotification,
   role?: UserRole
 ): Href | null {
+  if (item.data?.businessId && role === 'admin') {
+    return '/(admin)/verifications' as Href;
+  }
+
   const applicationId = item.data?.applicationId;
 
   if (applicationId) {

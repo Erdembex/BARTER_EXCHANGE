@@ -5,6 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,7 +17,7 @@ import { AccountSettings } from '@/components/profile/AccountSettings';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
 
   useFocusEffect(
@@ -42,12 +43,16 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Profil</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+          <Text style={styles.backText}>← Geri</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Hesap Ayarları</Text>
 
         <AccountSettings
           bexUser={bexUser}
           onUserUpdated={setBexUser}
-          showAdminLink
+          showAdminLink={bexUser?.role === 'admin'}
         />
 
         <Button
@@ -79,6 +84,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing[4],
   },
+  back: { alignSelf: 'flex-start' },
+  backText: { ...Typography.labelMedium, color: Colors.textSecondary },
   title: {
     ...Typography.headingLarge,
     color: Colors.textPrimary,

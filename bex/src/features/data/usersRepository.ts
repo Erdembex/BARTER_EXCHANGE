@@ -38,15 +38,19 @@ export const usersRepository = {
     return result;
   },
 
-  async incrementCompletedTasks(uid: string): Promise<void> {
+  async incrementCompletedTasks(uid: string, reputationGain = 10): Promise<void> {
     await loadDevProfiles();
     const profile = getDevProfile(uid);
     const count = (profile?.completedTaskCount ?? 0) + 1;
-    await setDevProfile(uid, { completedTaskCount: count });
+    const reputationScore = (profile?.reputationScore ?? 0) + reputationGain;
+    await setDevProfile(uid, { completedTaskCount: count, reputationScore });
 
     if (!shouldUseDemoData()) {
       try {
-        await updateDoc(doc(db, COLLECTIONS.USERS, uid), { completedTaskCount: count });
+        await updateDoc(doc(db, COLLECTIONS.USERS, uid), {
+          completedTaskCount: count,
+          reputationScore,
+        });
       } catch {
         // Dev / izin hatası
       }

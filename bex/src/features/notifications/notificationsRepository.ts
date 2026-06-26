@@ -103,3 +103,15 @@ export async function notifyUser(params: NotifyParams): Promise<void> {
     await notificationService.presentLocal(params.title, params.body, params.data);
   }
 }
+
+export async function notifyAdmins(
+  params: Omit<NotifyParams, 'userId' | 'showLocalForUserId'>
+): Promise<void> {
+  const { loadDevProfiles, getUidsByRole } = await import('@/lib/devProfileStore');
+  await loadDevProfiles();
+  const adminUids = getUidsByRole('admin');
+
+  for (const userId of adminUids) {
+    await notifyUser({ ...params, userId });
+  }
+}
