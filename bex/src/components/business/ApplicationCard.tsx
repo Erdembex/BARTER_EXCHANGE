@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Application, ApplicationStatus } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
@@ -8,6 +8,7 @@ interface ApplicationCardProps {
   application: Application;
   taskTitle: string;
   applicantName?: string;
+  portfolioThumbs?: string[];
   onPress: () => void;
 }
 
@@ -25,9 +26,11 @@ export function ApplicationCard({
   application,
   taskTitle,
   applicantName = 'Kullanıcı',
+  portfolioThumbs = [],
   onPress,
 }: ApplicationCardProps) {
   const statusColor = STATUS_COLORS[application.status];
+  const thumbs = portfolioThumbs.slice(0, 3);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -42,6 +45,18 @@ export function ApplicationCard({
         </View>
       </View>
       <Text style={styles.applicant}>{applicantName}</Text>
+      {thumbs.length > 0 ? (
+        <View style={styles.thumbRow}>
+          {thumbs.map((url, i) => (
+            <Image key={`${url}-${i}`} source={{ uri: url }} style={styles.thumb} />
+          ))}
+          <Text style={styles.thumbHint}>
+            {thumbs.length} onaylı çalışma
+          </Text>
+        </View>
+      ) : application.status === 'pending' ? (
+        <Text style={styles.portfolioHint}>Portföy detayda — başvuruyu aç</Text>
+      ) : null}
       <Text style={styles.preview} numberOfLines={2}>
         {application.submissionText || application.coverLetter}
       </Text>
@@ -83,6 +98,29 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     color: Colors.textSecondary,
     marginBottom: Spacing[1],
+  },
+  portfolioHint: {
+    ...Typography.caption,
+    color: Colors.primary,
+    marginBottom: Spacing[1],
+    fontWeight: '600',
+  },
+  thumbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    marginBottom: Spacing[2],
+  },
+  thumb: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.borderLight,
+  },
+  thumbHint: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    flex: 1,
   },
   preview: {
     ...Typography.bodySmall,

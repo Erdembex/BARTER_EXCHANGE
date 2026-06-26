@@ -38,17 +38,19 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
+    "start": "expo start --port 8083",
+    "android": "expo start --android --port 8083",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "emulators": "firebase emulators:start --only auth --project bexcursor",
-    "emulators:full": "firebase emulators:start --only auth,firestore,functions --project bexcursor",
+    "emulators:storage": "firebase emulators:start --only auth,storage --project bexcursor",
+    "emulators:full": "firebase emulators:start --only auth,firestore,storage,functions --project bexcursor",
     "functions:build": "npm --prefix functions run build",
     "deploy:functions": "npm run functions:build && firebase deploy --only functions --project bexcursor",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes --project bexcursor",
     "deploy:storage": "firebase deploy --only storage --project bexcursor",
     "build:preview": "eas build --profile preview --platform all",
+    "build:preview:android": "eas build --profile preview --platform android",
     "build:production": "eas build --profile production --platform all"
   },
   "private": true

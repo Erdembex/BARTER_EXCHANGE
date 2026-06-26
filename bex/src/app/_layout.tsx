@@ -12,6 +12,7 @@ import { Colors, theme } from '@/theme';
 import { loadDevProfiles } from '@/lib/devProfileStore';
 import { initAppCheck } from '@/lib/appCheck';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { ToastProvider } from '@/components/common/Toast';
 import { useNotifications } from '@/hooks/useNotifications';
 
@@ -61,10 +62,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider theme={theme}>
       <SafeAreaProvider>
-        <ToastProvider>
-          <StatusBar style="dark" backgroundColor={Colors.background} />
-          <OfflineBanner />
-          <Stack screenOptions={{ headerShown: false }}>
+        <ErrorBoundary>
+          <ToastProvider>
+            <StatusBar style="light" backgroundColor={Colors.background} />
+            <OfflineBanner />
+            <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
@@ -76,8 +78,10 @@ export default function RootLayout() {
             <Stack.Screen name="notifications/index" />
             <Stack.Screen name="setup-guide" />
             <Stack.Screen name="settings" />
+            <Stack.Screen name="user/[id]" />
           </Stack>
-        </ToastProvider>
+          </ToastProvider>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </ThemeProvider>
   );

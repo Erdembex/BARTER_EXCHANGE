@@ -27,6 +27,10 @@ export default function Index() {
     );
   }
 
+  if (bexUser.isBanned) {
+    return <Redirect href="/(auth)/banned" />;
+  }
+
   if (bexUser.role === 'business') {
     return <Redirect href="/(business)/panel" />;
   }

@@ -25,6 +25,7 @@ import {
   getDemoBusinessName,
 } from '../../lib/demoData';
 import { demoStore } from '../../lib/demoStore';
+import { notifyAdmins } from '../notifications/notificationsRepository';
 
 export type EnrichedTask = Task & { businessName: string; businessVerified?: boolean };
 
@@ -213,6 +214,12 @@ export const tasksRepository = {
   async create(businessId: string, data: CreateTask): Promise<string> {
     if (shouldUseDemoData()) {
       const task = demoStore.createTask(businessId, data);
+      await notifyAdmins({
+        title: 'Yeni görev onayı bekliyor',
+        body: `"${data.title}" admin moderasyonuna düştü.`,
+        type: 'general',
+        data: { taskId: task.id },
+      });
       return task.id;
     }
     const ref = await addDoc(collection(db, COLLECTIONS.TASKS), {
@@ -222,7 +229,65 @@ export const tasksRepository = {
       approvedByAdmin: false,
       createdAt: serverTimestamp(),
     });
+    await notifyAdmins({
+      title: 'Yeni görev onayı bekliyor',
+      body: `"${data.title}" admin moderasyonuna düştü.`,
+      type: 'general',
+      data: { taskId: ref.id },
+    });
     return ref.id;
+  },
+
+  async update(
+    taskId: string,
+    businessId: string,
+    data: Partial<Omit<Task, 'id' | 'businessId' | 'createdAt' | 'currentApplicantCount'>>
+  ): Promise<void> {
+    if (shouldUseDemoData()) {
+      const task = demoStore.getTaskById(taskId);
+      if (!task || task.businessId !== businessId) {
+        throw new Error('Görev bulunamadı');
+      }
+      if (task.approvedByAdmin) {
+        throw new Error('Onaylanmış görev düzenlenemez');
+      }
+      demoStore.updateTask(taskId, data);
+      return;
+    }
+    const task = await this.getById(taskId);
+    if (!task || task.businessId !== businessId) {
+      throw new Error('Görev bulunamadı');
+    }
+    if (task.approvedByAdmin) {
+      throw new Error('Onaylanmış görev düzenlenemez');
+    }
+    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), data);
+  },
+
+  async setStatus(
+    taskId: string,
+    businessId: string,
+    status: Task['status']
+  ): Promise<void> {
+    if (shouldUseDemoData()) {
+      const task = demoStore.getTaskById(taskId);
+      if (!task || task.businessId !== businessId) {
+        throw new Error('Görev bulunamadı');
+      }
+      if (!task.approvedByAdmin && status !== 'active') {
+        throw new Error('Onay bekleyen görev duraklatılamaz');
+      }
+      demoStore.updateTask(taskId, { status });
+      return;
+    }
+    const task = await this.getById(taskId);
+    if (!task || task.businessId !== businessId) {
+      throw new Error('Görev bulunamadı');
+    }
+    if (!task.approvedByAdmin && status !== 'active') {
+      throw new Error('Onay bekleyen görev duraklatılamaz');
+    }
+    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), { status });
   },
 };
 

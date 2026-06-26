@@ -32,6 +32,7 @@ export default function BusinessApplicationsScreen() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [taskTitles, setTaskTitles] = useState<Record<string, string>>({});
   const [applicantNames, setApplicantNames] = useState<Record<string, string>>({});
+  const [portfolioThumbs, setPortfolioThumbs] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -53,6 +54,16 @@ export default function BusinessApplicationsScreen() {
 
     const names = await usersRepository.getDisplayNames(apps.map((a) => a.userId));
     setApplicantNames(names);
+
+    const uniqueUserIds = [...new Set(apps.map((a) => a.userId))];
+    const thumbs: Record<string, string[]> = {};
+    await Promise.all(
+      uniqueUserIds.map(async (uid) => {
+        const items = await usersRepository.getPortfolio(uid);
+        thumbs[uid] = items.map((item) => item.imageUrl);
+      })
+    );
+    setPortfolioThumbs(thumbs);
     setLoading(false);
   }, [business]);
 
@@ -152,6 +163,7 @@ export default function BusinessApplicationsScreen() {
             application={item}
             taskTitle={taskTitles[item.taskId] ?? 'Görev'}
             applicantName={applicantNames[item.userId] ?? `Kullanıcı ${item.userId.slice(-4)}`}
+            portfolioThumbs={portfolioThumbs[item.userId]}
             onPress={() =>
               router.push({
                 pathname: '/(business)/applications/[id]',

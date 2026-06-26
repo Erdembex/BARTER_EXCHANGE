@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDinx7Ufj8QSFlztCI410kzWb-bfSNf8JU',
@@ -44,12 +44,20 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 if (__DEV__) {
-  const g = globalThis as typeof globalThis & { __bexAuthEmulator?: boolean };
+  const g = globalThis as typeof globalThis & {
+    __bexAuthEmulator?: boolean;
+    __bexStorageEmulator?: boolean;
+  };
   if (!g.__bexAuthEmulator) {
     const host = getAuthEmulatorHost();
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
     auth.settings.appVerificationDisabledForTesting = true;
     g.__bexAuthEmulator = true;
+
+    if (!g.__bexStorageEmulator) {
+      connectStorageEmulator(storage, host, 9199);
+      g.__bexStorageEmulator = true;
+    }
   }
 }
 

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   SafeAreaView,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
@@ -18,6 +17,8 @@ import { shouldUseDemoData } from '@/lib/devMode';
 import { Application, ApplicationStatus } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { getApplicationQuickAction, getApplicationTarget } from '@/lib/applicationNavigation';
+import { formatRelativeTime } from '@/lib/dateUtils';
+import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -81,9 +82,12 @@ export default function MyApplicationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Başvurularım</Text>
+        </View>
+        <TaskListSkeleton count={3} />
+      </SafeAreaView>
     );
   }
 
@@ -148,6 +152,9 @@ export default function MyApplicationsScreen() {
                 {item.coverLetter}
               </Text>
               <View style={styles.cardFooter}>
+                <Text style={styles.timeText}>
+                  {formatRelativeTime(item.createdAt) || '—'}
+                </Text>
                 <Text style={styles.tapHint}>
                   {quickAction ? quickAction.label : 'Detay →'}
                 </Text>
@@ -204,7 +211,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: Spacing[2],
   },
-  cardFooter: { flexDirection: 'row', justifyContent: 'flex-end' },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  timeText: { ...Typography.caption, color: Colors.textMuted },
   tapHint: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
   empty: { alignItems: 'center', paddingTop: Spacing[16] },
   emptyEmoji: { fontSize: 48, marginBottom: Spacing[3] },

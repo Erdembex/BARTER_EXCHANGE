@@ -48,20 +48,21 @@ service cloud.firestore {
 
     // Kullanıcının kendi profilinde değiştiremeyeceği alanlar
     function userProtectedFields() {
-      return ['role', 'isBanned', 'reputationScore', 'completedTaskCount'];
+      return ['role', 'isBanned', 'reputationScore', 'completedTaskCount', 'portfolioItems'];
     }
 
     // ─── users ───────────────────────────────────────────────
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin() || (isBusiness() && isNotBanned());
 
       allow create: if isOwner(userId)
         && request.resource.data.uid == userId
         && request.resource.data.role in ['user', 'business']
         && request.resource.data.isBanned == false
         && request.resource.data.reputationScore == 0
-        && request.resource.data.completedTaskCount == 0;
+        && request.resource.data.completedTaskCount == 0
+        && request.resource.data.portfolioItems == [];
 
       allow update: if isAdmin()
         || (isOwner(userId)
@@ -150,6 +151,28 @@ service cloud.firestore {
 
       // Kupon üretimi Cloud Function ile yapılır — client rewarded yapamaz
       allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        function parentApp() {
+          return get(/databases/$(database)/documents/applications/$(applicationId)).data;
+        }
+
+        allow read: if isOwner(parentApp().userId)
+          || isBusinessOwner(parentApp().businessId)
+          || isAdmin();
+
+        allow create: if isNotBanned()
+          && request.resource.data.applicationId == applicationId
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && (
+            (isOwner(parentApp().userId) && userRole() == 'user')
+            || isBusinessOwner(parentApp().businessId)
+            || isAdmin()
+          );
+      }
     }
 
     // ─── coupons ─────────────────────────────────────────────
@@ -177,6 +200,178 @@ service cloud.firestore {
         && request.resource.data.status == 'pending';
 
       allow update, delete: if isAdmin();
+    }
+
+    // ─── trade_listings / trade_offers ───────────────────────
+    // couponCode ana belgede tutulmaz; private alt koleksiyonda saklanır.
+
+    function isRegularUser() {
+      return userExists() && userRole() == 'user' && isNotBanned();
+    }
+
+    function tradeListingPath(listingId) {
+      return /databases/$(database)/documents/trade_listings/$(listingId);
+    }
+
+    function tradeListingData(listingId) {
+      return get(tradeListingPath(listingId)).data;
+    }
+
+    function isTradeListingOwner(listingId) {
+      return isAuthenticated()
+        && tradeListingData(listingId).ownerId == request.auth.uid;
+    }
+
+    function tradeListingCouponRevealed(listingId) {
+      let listing = tradeListingData(listingId);
+      return listing.status == 'completed'
+        && listing.keys().hasAll(['acceptedFromUserId', 'acceptedOfferId'])
+        && (listing.ownerId == request.auth.uid
+            || listing.acceptedFromUserId == request.auth.uid);
+    }
+
+    function tradeOfferPath(offerId) {
+      return /databases/$(database)/documents/trade_offers/$(offerId);
+    }
+
+    function tradeOfferData(offerId) {
+      return get(tradeOfferPath(offerId)).data;
+    }
+
+    function tradeOfferCouponRevealed(offerId) {
+      let offer = tradeOfferData(offerId);
+      return offer.status == 'accepted'
+        && (offer.fromUserId == request.auth.uid
+            || isTradeListingOwner(offer.listingId));
+    }
+
+    function tradeListingFieldsValid() {
+      return request.resource.data.keys().hasAll([
+          'ownerId', 'ownerName', 'ownerAvatarInitial', 'title', 'description',
+          'suggestedTrade', 'rewardLabel', 'couponId', 'status', 'offerCount', 'createdAt'
+        ])
+        && !request.resource.data.keys().hasAny(['couponCode', 'acceptedOfferId', 'acceptedFromUserId', 'tradeCompletedAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.suggestedTrade is string
+        && request.resource.data.suggestedTrade.size() <= 300
+        && request.resource.data.rewardLabel is string
+        && request.resource.data.rewardLabel.size() <= 120
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerAvatarInitial is string;
+    }
+
+    function ownedActiveCoupon(couponId) {
+      let coupon = get(/databases/$(database)/documents/coupons/$(couponId)).data;
+      return coupon.userId == request.auth.uid && coupon.status == 'active';
+    }
+
+    match /trade_listings/{listingId} {
+      allow read: if isAdmin()
+        || (isRegularUser() && resource.data.status == 'active')
+        || (isAuthenticated()
+            && isNotBanned()
+            && resource.data.ownerId == request.auth.uid)
+        || (isRegularUser()
+            && resource.data.status == 'completed'
+            && resource.data.acceptedFromUserId == request.auth.uid);
+
+      allow create: if isRegularUser()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.offerCount == 0
+        && tradeListingFieldsValid()
+        && ownedActiveCoupon(request.resource.data.couponId);
+
+      allow update: if isAdmin()
+        || (isTradeListingOwner(listingId)
+            && isNotBanned()
+            && resource.data.status in ['active', 'paused']
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['couponCode']))
+        || (isRegularUser()
+            && resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['offerCount'])
+            && request.resource.data.offerCount == resource.data.offerCount + 1);
+
+      allow delete: if isAdmin()
+        || (isTradeListingOwner(listingId) && resource.data.offerCount == 0);
+    }
+
+    match /trade_listings/{listingId}/private/{privateDocId} {
+      allow read: if isAdmin()
+        || (isTradeListingOwner(listingId) && isNotBanned())
+        || (isRegularUser() && tradeListingCouponRevealed(listingId));
+
+      allow create: if isTradeListingOwner(listingId)
+        && isNotBanned()
+        && privateDocId == 'coupon'
+        && request.resource.data.keys().hasOnly(['couponCode', 'ownerId'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.couponCode is string
+        && request.resource.data.couponCode.size() >= 4
+        && request.resource.data.couponCode.size() <= 64;
+
+      allow update, delete: if false;
+    }
+
+    match /trade_offers/{offerId} {
+      allow read: if isAdmin()
+        || (isAuthenticated()
+            && isNotBanned()
+            && (resource.data.fromUserId == request.auth.uid
+                || isTradeListingOwner(resource.data.listingId)));
+
+      allow create: if isRegularUser()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 200
+        && request.resource.data.listingId is string
+        && request.resource.data.counterCouponId is string
+        && request.resource.data.counterRewardLabel is string
+        && tradeListingData(request.resource.data.listingId).status == 'active'
+        && tradeListingData(request.resource.data.listingId).ownerId != request.auth.uid
+        && !request.resource.data.keys().hasAny(['couponCode'])
+        && request.resource.data.keys().hasAll([
+          'listingId', 'listingTitle', 'fromUserId', 'fromUserName',
+          'counterCouponId', 'counterRewardLabel', 'message', 'status', 'createdAt'
+        ])
+        && ownedActiveCoupon(request.resource.data.counterCouponId);
+
+      allow update: if isAdmin()
+        || (isTradeListingOwner(resource.data.listingId)
+            && isNotBanned()
+            && resource.data.status == 'pending'
+            && request.resource.data.status in ['accepted', 'rejected'])
+        || (isOwner(resource.data.fromUserId)
+            && isNotBanned()
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'cancelled');
+
+      allow delete: if isAdmin();
+    }
+
+    match /trade_offers/{offerId}/private/{privateDocId} {
+      allow read: if isAdmin()
+        || (isAuthenticated()
+            && isNotBanned()
+            && resource.data.fromUserId == request.auth.uid)
+        || (isRegularUser() && tradeOfferCouponRevealed(offerId));
+
+      allow create: if isRegularUser()
+        && privateDocId == 'coupon'
+        && request.resource.data.keys().hasOnly(['couponCode', 'fromUserId'])
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.couponCode is string
+        && request.resource.data.couponCode.size() >= 4
+        && request.resource.data.couponCode.size() <= 64
+        && exists(tradeOfferPath(offerId))
+        && tradeOfferData(offerId).fromUserId == request.auth.uid;
+
+      allow update, delete: if false;
     }
 
     // ─── notifications ───────────────────────────────────────

@@ -13,6 +13,7 @@ import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { tasksRepository, EnrichedTask } from '@/features/data';
 import { TaskCategory, TaskDifficulty } from '@/types';
 import { SearchBar, CategoryFilter, TaskCard } from '@/components/tasks';
+import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Colors, Typography, Spacing } from '@/theme';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
@@ -104,7 +105,7 @@ export default function TasksScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={Colors.primary} />
+        <TaskListSkeleton count={5} />
       ) : (
         <FlatList
           data={displayed}

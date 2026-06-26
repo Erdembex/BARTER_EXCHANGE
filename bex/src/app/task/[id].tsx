@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +21,7 @@ import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { formatDeadline, getDifficultyColor } from '@/lib/taskUtils';
 import { TaskCard } from '@/components/tasks';
+import { TaskDetailSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
@@ -88,9 +88,9 @@ export default function TaskDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <TaskDetailSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -141,7 +141,11 @@ export default function TaskDetailScreen() {
         <Text style={styles.description}>{task.description}</Text>
 
         {business && (
-          <View style={[styles.businessCard, Shadow.sm]}>
+          <TouchableOpacity
+            style={[styles.businessCard, Shadow.sm]}
+            activeOpacity={0.85}
+            onPress={() => router.push(`/business/${business.id}` as Href)}
+          >
             <View style={styles.businessLogo}>
               <Text style={styles.businessLogoText}>{business.name.charAt(0)}</Text>
             </View>
@@ -154,8 +158,9 @@ export default function TaskDetailScreen() {
               <Text style={styles.businessScore}>
                 ⭐ {business.reputationScore} · {CATEGORY_LABELS[task.category]}
               </Text>
+              <Text style={styles.businessLink}>İşletme profilini gör →</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         <View style={styles.detailsGrid}>
@@ -256,6 +261,12 @@ const styles = StyleSheet.create({
   businessVerified: { ...Typography.caption, color: Colors.success, fontWeight: '600' },
   businessAddr: { ...Typography.caption, color: Colors.textTertiary },
   businessScore: { ...Typography.caption, color: Colors.textSecondary },
+  businessLink: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   detailsGrid: { flexDirection: 'row', gap: Spacing[3] },
   detailItem: {
     flex: 1,

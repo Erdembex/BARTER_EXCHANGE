@@ -84,6 +84,12 @@ export default function BusinessTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="edit-task/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="verification"
         options={{
           href: null,

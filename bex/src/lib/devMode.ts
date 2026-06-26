@@ -47,6 +47,7 @@ export function buildDevUser(
     avatarUrl: profile?.avatarUrl ?? '',
     reputationScore: profile?.reputationScore ?? 0,
     completedTaskCount: profile?.completedTaskCount ?? 0,
+    portfolioItems: profile?.portfolioItems ?? [],
     joinedAt: Timestamp.now(),
     isBanned: profile?.isBanned ?? false,
   };

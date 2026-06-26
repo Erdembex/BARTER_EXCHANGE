@@ -15,6 +15,7 @@ import { notificationsRepository, getNotificationTarget } from '@/features/notif
 import { useNotifications } from '@/hooks/useNotifications';
 import { BexNotification } from '@/types';
 import { Button } from '@/components/ui';
+import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 interface NotificationListScreenProps {
@@ -101,7 +102,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
             <Text style={styles.emptyEmoji}>🔔</Text>
             <Text style={styles.emptyTitle}>Henüz bildirim yok</Text>
             <Text style={styles.emptyText}>
-              Başvuru, kupon ve doğrulama güncellemeleri burada görünür.
+              Başvuru, kupon, takas ve doğrulama güncellemeleri burada görünür.
             </Text>
           </View>
         }
@@ -114,7 +115,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardBody}>{item.body}</Text>
             <Text style={styles.cardTime}>
-              {item.read ? 'Okundu' : 'Yeni'}
+              {formatRelativeTime(item.createdAt) || (item.read ? 'Okundu' : 'Yeni')}
             </Text>
           </TouchableOpacity>
         )}

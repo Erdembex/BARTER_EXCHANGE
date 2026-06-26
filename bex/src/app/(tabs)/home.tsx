@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
 import { router, Href } from 'expo-router';
@@ -26,6 +25,7 @@ import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { getApplicationTarget } from '@/lib/applicationNavigation';
 import { SearchBar, CategoryFilter, TaskCard, BusinessCard } from '@/components/tasks';
 import { SectionHeader } from '@/components/common/SectionHeader';
+import { HomeScreenSkeleton } from '@/components/common/HomeScreenSkeleton';
 import { Colors, Typography, Spacing } from '@/theme';
 
 interface HomeApplication extends Application {
@@ -107,11 +107,7 @@ export default function HomeScreen() {
   const goToTask = (id: string) => router.push(`/task/${id}`);
 
   if (loading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
+    return <HomeScreenSkeleton />;
   }
 
   return (
@@ -148,6 +144,21 @@ export default function HomeScreen() {
 
         {/* Kategoriler */}
         <CategoryFilter selected={category} onSelect={setCategory} />
+
+        <TouchableOpacity
+          style={styles.tradeBanner}
+          activeOpacity={0.88}
+          onPress={() => router.push('/(tabs)/trade' as Href)}
+        >
+          <Text style={styles.tradeBannerEmoji}>🔄</Text>
+          <View style={styles.tradeBannerText}>
+            <Text style={styles.tradeBannerTitle}>Takas Pazarı</Text>
+            <Text style={styles.tradeBannerSub}>
+              Kuponlarını takas et — alt sekmeden de ulaşabilirsin.
+            </Text>
+          </View>
+          <Text style={styles.tradeBannerArrow}>→</Text>
+        </TouchableOpacity>
 
         {/* Aktif görevlerim */}
         {myApplications.length > 0 && (
@@ -218,7 +229,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[5], paddingBottom: Spacing[10] },
   header: { gap: Spacing[1] },
   headerRow: {
@@ -233,6 +243,23 @@ const styles = StyleSheet.create({
   greeting: { ...Typography.headingLarge, color: Colors.textPrimary },
   subGreeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
   section: { gap: Spacing[2] },
+  tradeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[4],
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#6B4C9A55',
+    borderLeftWidth: 4,
+    borderLeftColor: '#6B4C9A',
+  },
+  tradeBannerEmoji: { fontSize: 28 },
+  tradeBannerText: { flex: 1, gap: 4 },
+  tradeBannerTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
+  tradeBannerSub: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 18 },
+  tradeBannerArrow: { ...Typography.labelLarge, color: '#6B4C9A' },
   hScroll: { gap: Spacing[3], paddingRight: Spacing[2] },
   empty: { ...Typography.bodySmall, color: Colors.textTertiary, paddingVertical: Spacing[4] },
   appRow: {

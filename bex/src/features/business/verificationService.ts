@@ -5,11 +5,11 @@ import {
   collection,
   serverTimestamp,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { businessesRepository } from '@/features/data/businessesRepository';
+import { uploadLocalFiles } from '@/lib/storageUpload';
 import { COLLECTIONS, Business } from '@/types';
 import { notifyAdmins } from '@/features/notifications/notificationsRepository';
 
@@ -23,8 +23,13 @@ export async function submitBusinessVerification(
   business: Business,
   file: VerificationUpload
 ): Promise<Business> {
+  const [fileUrl] = await uploadLocalFiles(
+    `business-documents/${business.id}`,
+    [file]
+  );
+
   if (shouldUseDemoData()) {
-    const updated = demoStore.submitVerification(business.id, file.uri, file.name);
+    const updated = demoStore.submitVerification(business.id, fileUrl, file.name);
     await notifyAdmins({
       title: 'Yeni KYC evrakı',
       body: `${business.name} doğrulama evrakı yükledi. İnceleme bekliyor.`,
@@ -33,13 +38,6 @@ export async function submitBusinessVerification(
     });
     return updated;
   }
-
-  const path = `business-documents/${business.id}/${Date.now()}-${file.name}`;
-  const storageRef = ref(storage, path);
-  const response = await fetch(file.uri);
-  const blob = await response.blob();
-  await uploadBytes(storageRef, blob, { contentType: file.mimeType });
-  const fileUrl = await getDownloadURL(storageRef);
 
   await addDoc(collection(db, COLLECTIONS.BUSINESS_DOCUMENTS), {
     businessId: business.id,

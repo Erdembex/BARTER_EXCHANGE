@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
+import { usersRepository } from '@/features/data';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { AccountSettings } from '@/components/profile/AccountSettings';
+import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
 import { Button } from '@/components/ui';
+import { PortfolioItem } from '@/types';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function ProfileScreen() {
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,7 +31,14 @@ export default function ProfileScreen() {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
         })
-        .then(setBexUser);
+        .then((user) => {
+          setBexUser(user);
+          if (user?.role === 'user') {
+            usersRepository.getPortfolio(firebaseUser.uid).then(setPortfolio);
+          } else {
+            setPortfolio([]);
+          }
+        });
     }, [firebaseUser, setBexUser])
   );
 
@@ -49,6 +60,13 @@ export default function ProfileScreen() {
           onUserUpdated={setBexUser}
           showAdminLink
         />
+
+        {bexUser?.role === 'user' ? (
+          <UserPortfolioGallery
+            items={portfolio}
+            emptyText="Admin onaylı teslim görsellerin burada görünür. Görev teslim edip onay aldıkça portföyün büyür."
+          />
+        ) : null}
 
         <Button
           title="Yayın Checklist"

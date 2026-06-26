@@ -13,9 +13,19 @@ export interface BexUser {
   avatarUrl: string;
   reputationScore: number;
   completedTaskCount: number;
+  portfolioItems: PortfolioItem[];
   joinedAt: Timestamp;
   isBanned: boolean;
   expoPushToken?: string;
+}
+
+/** Admin onaylı teslim görselleri — işletmeler başvuru öncesi görür */
+export interface PortfolioItem {
+  id: string;
+  imageUrl: string;
+  taskTitle: string;
+  applicationId: string;
+  approvedAt: Timestamp;
 }
 
 export type CreateBexUser = Omit<BexUser, 'joinedAt'> & {
@@ -139,7 +149,7 @@ export type CreateApplication = Pick<
 >;
 
 // ─── Kupon ───────────────────────────────────────────────────
-export type CouponStatus = 'active' | 'exhausted' | 'expired';
+export type CouponStatus = 'active' | 'exhausted' | 'expired' | 'traded';
 
 export interface CouponUsage {
   usedAt: Timestamp;
@@ -170,7 +180,11 @@ export type NotificationType =
   | 'coupon_issued'
   | 'kyc_result'
   | 'task_approved'
-  | 'general';
+  | 'message'
+  | 'general'
+  | 'trade_offer_received'
+  | 'trade_offer_accepted'
+  | 'trade_offer_rejected';
 
 export interface BexNotification {
   id: string;
@@ -180,6 +194,16 @@ export interface BexNotification {
   type: NotificationType;
   data?: Record<string, string>;
   read: boolean;
+  createdAt: Timestamp;
+}
+
+// ─── Başvuru mesajları (FAZ 7) ───────────────────────────────
+export interface ApplicationMessage {
+  id: string;
+  applicationId: string;
+  senderId: string;
+  senderRole: UserRole;
+  text: string;
   createdAt: Timestamp;
 }
 
@@ -201,4 +225,6 @@ export const COLLECTIONS = {
   COUPONS: 'coupons',
   BUSINESS_DOCUMENTS: 'business_documents',
   NOTIFICATIONS: 'notifications',
+  TRADE_LISTINGS: 'trade_listings',
+  TRADE_OFFERS: 'trade_offers',
 } as const;

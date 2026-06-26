@@ -102,6 +102,7 @@ export const authService = {
       avatarUrl: '',
       reputationScore: 0,
       completedTaskCount: 0,
+      portfolioItems: [],
       joinedAt: serverTimestamp() as any,
       isBanned: false,
     };
@@ -175,6 +176,7 @@ export const authService = {
             role: data.role,
             displayName: data.displayName,
             email: data.email || fallback?.email || '',
+            isBanned: data.isBanned,
           });
           return finalizeUserProfile(uid, data, fallback?.email);
         }
@@ -202,6 +204,7 @@ export const authService = {
             role: data.role,
             displayName: data.displayName,
             email: data.email || fallback?.email || '',
+            isBanned: data.isBanned,
           });
           return finalizeUserProfile(uid, data, fallback?.email);
         }

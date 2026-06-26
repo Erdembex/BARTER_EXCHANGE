@@ -16,11 +16,15 @@ import { DEMO_BUSINESSES, DEMO_TASKS } from '@/lib/demoData';
 import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
-import { COLLECTIONS, Business, Task, Application } from '@/types';
+import { COLLECTIONS, Business, Task, Application, BexUser } from '@/types';
 import { enrichTasksWithBusiness, getDemoBusinessName } from '@/lib/demoData';
 import type { EnrichedTask } from '@/features/data/businessesRepository';
 import { tasksRepository, businessesRepository } from '@/features/data/businessesRepository';
+import { usersRepository } from '@/features/data/usersRepository';
+import { appendApprovedWorkToPortfolio } from '@/features/portfolio';
 import { notifyUser, notifyAdmins } from '@/features/notifications/notificationsRepository';
+import { getAllDevProfiles, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
+import { buildDevUser } from '@/lib/devMode';
 
 async function notifyBusinessOwner(
   businessId: string,
@@ -50,6 +54,7 @@ async function notifyBusinessOwner(
 export type EnrichedSubmission = Application & {
   taskTitle: string;
   businessName: string;
+  applicantName: string;
 };
 
 function enrichSubmissionsSync(apps: Application[]): EnrichedSubmission[] {
@@ -60,18 +65,25 @@ function enrichSubmissionsSync(apps: Application[]): EnrichedSubmission[] {
       ...app,
       taskTitle: tasks.find((t) => t.id === app.taskId)?.title ?? 'Görev',
       businessName: businesses.find((b) => b.id === app.businessId)?.name ?? 'İşletme',
+      applicantName: `Kullanıcı ${app.userId.slice(-4)}`,
     }));
   }
   return apps.map((app) => ({
     ...app,
     taskTitle: 'Görev',
     businessName: getDemoBusinessName(app.businessId),
+    applicantName: `Kullanıcı ${app.userId.slice(-4)}`,
   }));
 }
 
 async function enrichSubmissions(apps: Application[]): Promise<EnrichedSubmission[]> {
   if (shouldUseDemoData()) {
-    return enrichSubmissionsSync(apps);
+    const base = enrichSubmissionsSync(apps);
+    const names = await usersRepository.getDisplayNames(apps.map((a) => a.userId));
+    return base.map((app) => ({
+      ...app,
+      applicantName: names[app.userId] ?? app.applicantName,
+    }));
   }
 
   const taskCache = new Map<string, string>();
@@ -91,10 +103,15 @@ async function enrichSubmissions(apps: Application[]): Promise<EnrichedSubmissio
       ...app,
       taskTitle: taskCache.get(app.taskId)!,
       businessName: bizCache.get(app.businessId)!,
+      applicantName: `Kullanıcı ${app.userId.slice(-4)}`,
     });
   }
 
-  return result;
+  const names = await usersRepository.getDisplayNames(apps.map((a) => a.userId));
+  return result.map((app) => ({
+    ...app,
+    applicantName: names[app.userId] ?? app.applicantName,
+  }));
 }
 
 export const adminRepository = {
@@ -274,11 +291,23 @@ export const adminRepository = {
     await notifyUser({
       userId: app.userId,
       title: 'Teslimin onaylandı',
-      body: 'Admin içeriği onayladı. İşletme kuponunu oluşturduğunda bildirim alacaksın.',
+      body: 'Admin içeriği onayladı. Görsellerin portföyünde görünür; işletmeler başvuru öncesi inceleyebilir.',
       type: 'general',
       data: { applicationId },
       showLocalForUserId: app.userId,
     });
+
+    const task = await tasksRepository.getById(app.taskId);
+    await appendApprovedWorkToPortfolio(
+      app.userId,
+      {
+        ...app,
+        status: 'submission_approved',
+        reviewNote: reviewNote ?? '',
+        reviewedAt: Timestamp.now(),
+      },
+      task?.title ?? 'Görev'
+    );
   },
 
   async rejectSubmission(applicationId: string, reviewNote: string): Promise<void> {
@@ -346,5 +375,47 @@ export const adminRepository = {
 
     await batch.commit();
     return { businesses: DEMO_BUSINESSES.length, tasks: DEMO_TASKS.length };
+  },
+
+  async searchUsers(search: string, max = 40): Promise<BexUser[]> {
+    const q = search.trim().toLowerCase();
+
+    if (shouldUseDemoData()) {
+      await loadDevProfiles();
+      const list = getAllDevProfiles()
+        .map(({ uid, profile }) => buildDevUser(uid, profile.email, profile.displayName))
+        .filter((u) => {
+          if (!q) return true;
+          return (
+            u.displayName.toLowerCase().includes(q) ||
+            u.email.toLowerCase().includes(q) ||
+            u.uid.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, max);
+      return list;
+    }
+
+    const snap = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(100)));
+    return snap.docs
+      .map((d) => ({ uid: d.id, ...d.data() }) as BexUser)
+      .filter((u) => {
+        if (!q) return true;
+        return (
+          u.displayName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q) ||
+          u.uid.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, max);
+  },
+
+  async setUserBanned(uid: string, banned: boolean): Promise<void> {
+    await loadDevProfiles();
+    await setDevProfile(uid, { isBanned: banned });
+
+    if (!shouldUseDemoData()) {
+      await updateDoc(doc(db, COLLECTIONS.USERS, uid), { isBanned: banned });
+    }
   },
 };

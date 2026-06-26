@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     ...Typography.bodySmall,
     color: Colors.textInverse,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backgroundColor: Colors.overlay,
     paddingVertical: Spacing[3],
   },
 });

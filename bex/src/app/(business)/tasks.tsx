@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,12 +16,15 @@ import { tasksRepository } from '@/features/data';
 import { Task } from '@/types';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
+import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessTasksScreen() {
   const { business, loading: bizLoading } = useBusiness();
+  const { showToast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!business) return;
@@ -35,6 +39,43 @@ export default function BusinessTasksScreen() {
       load();
     }, [load])
   );
+
+  const handlePauseToggle = (task: Task) => {
+    if (!business) return;
+    const pausing = task.status === 'active';
+    if (!task.approvedByAdmin && pausing) {
+      showToast('Onay bekleyen görev duraklatılamaz.');
+      return;
+    }
+    Alert.alert(
+      pausing ? 'Görevi Duraklat' : 'Görevi Yeniden Başlat',
+      pausing
+        ? 'Görev kullanıcılara geçici olarak görünmez olur.'
+        : 'Görev tekrar kullanıcılara görünür olur.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: pausing ? 'Duraklat' : 'Başlat',
+          onPress: async () => {
+            setActionId(task.id);
+            try {
+              await tasksRepository.setStatus(
+                task.id,
+                business.id,
+                pausing ? 'paused' : 'active'
+              );
+              showToast(pausing ? 'Görev duraklatıldı.' : 'Görev yeniden aktif.');
+              await load();
+            } catch (err: unknown) {
+              showToast(err instanceof Error ? err.message : 'İşlem başarısız.');
+            } finally {
+              setActionId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (bizLoading || loading) {
     return (
@@ -112,6 +153,30 @@ export default function BusinessTasksScreen() {
             <Text style={styles.applicants}>
               {item.currentApplicantCount}/{item.maxApplicants} başvuru
             </Text>
+            {item.status === 'paused' ? (
+              <Text style={styles.pausedLabel}>⏸ Duraklatıldı</Text>
+            ) : null}
+            <View style={styles.actions}>
+              {!item.approvedByAdmin ? (
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => router.push(`/(business)/edit-task/${item.id}` as Href)}
+                >
+                  <Text style={styles.actionText}>Düzenle</Text>
+                </TouchableOpacity>
+              ) : null}
+              {item.approvedByAdmin ? (
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => handlePauseToggle(item)}
+                  disabled={actionId === item.id}
+                >
+                  <Text style={styles.actionText}>
+                    {item.status === 'paused' ? 'Yeniden Başlat' : 'Duraklat'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
             <Text style={styles.tapHint}>Başvuruları gör →</Text>
           </TouchableOpacity>
         )}
@@ -162,6 +227,21 @@ const styles = StyleSheet.create({
   meta: { ...Typography.caption, color: Colors.textSecondary, marginBottom: Spacing[1] },
   reward: { ...Typography.bodySmall, color: Colors.primaryDark, fontWeight: '600' },
   applicants: { ...Typography.caption, color: Colors.textTertiary, marginTop: Spacing[2] },
+  pausedLabel: {
+    ...Typography.caption,
+    color: Colors.warning,
+    fontWeight: '600',
+    marginTop: Spacing[1],
+  },
+  actions: { flexDirection: 'row', gap: Spacing[3], marginTop: Spacing[2] },
+  actionBtn: {
+    paddingVertical: Spacing[1],
+    paddingHorizontal: Spacing[2],
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  actionText: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
   tapHint: {
     ...Typography.caption,
     color: Colors.primary,

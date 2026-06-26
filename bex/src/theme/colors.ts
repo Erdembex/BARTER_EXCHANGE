@@ -1,50 +1,50 @@
 export const Colors = {
-  // Marka paleti
-  primary: '#7C3AED',
-  primaryLight: '#EDE9FE',
-  primaryDark: '#6D28D9',
-  secondary: '#10B981',
-  accent: '#10B981',
-  accentLight: '#D1FAE5',
+  // Monokrom marka — koyu mod, siyah & beyaz
+  primary: '#FFFFFF',
+  primaryLight: '#1A1A1A',
+  primaryDark: '#E5E5E5',
+  secondary: '#404040',
+  accent: '#FFFFFF',
+  accentLight: '#262626',
 
   // Arka planlar
-  background: '#FFFFFF',
-  surface: '#F8FAFC',
-  surfaceSecondary: '#F1F5F9',
-  card: '#F8FAFC',
+  background: '#000000',
+  surface: '#0A0A0A',
+  surfaceSecondary: '#141414',
+  card: '#111111',
 
   // Metin
-  text: '#0F172A',
-  textPrimary: '#0F172A',
-  textMuted: '#64748B',
-  textSecondary: '#64748B',
-  textTertiary: '#64748B',
-  textInverse: '#FFFFFF',
-  textOnPrimary: '#FFFFFF',
+  text: '#FFFFFF',
+  textPrimary: '#FFFFFF',
+  textMuted: '#737373',
+  textSecondary: '#A3A3A3',
+  textTertiary: '#525252',
+  textInverse: '#000000',
+  textOnPrimary: '#000000',
 
   // Sınır
-  border: '#E2E8F0',
-  borderLight: '#F1F5F9',
-  borderFocus: '#7C3AED',
+  border: '#2A2A2A',
+  borderLight: '#1A1A1A',
+  borderFocus: '#FFFFFF',
 
-  // Durum renkleri
-  success: '#10B981',
-  successLight: '#D1FAE5',
-  error: '#EF4444',
-  errorLight: '#FEE2E2',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  info: '#7C3AED',
-  infoLight: '#EDE9FE',
+  // Durum — gri tonları (monokrom)
+  success: '#E5E5E5',
+  successLight: '#1A1A1A',
+  error: '#F5F5F5',
+  errorLight: '#1A1A1A',
+  warning: '#D4D4D4',
+  warningLight: '#1A1A1A',
+  info: '#FFFFFF',
+  infoLight: '#1A1A1A',
 
   // Zorluk seviyeleri
-  difficultyEasy: '#10B981',
-  difficultyMedium: '#F59E0B',
-  difficultyHard: '#EF4444',
+  difficultyEasy: '#E5E5E5',
+  difficultyMedium: '#A3A3A3',
+  difficultyHard: '#525252',
 
   // Overlay
-  overlay: 'rgba(15, 23, 42, 0.5)',
-  overlayLight: 'rgba(124, 58, 237, 0.06)',
+  overlay: 'rgba(0, 0, 0, 0.75)',
+  overlayLight: 'rgba(255, 255, 255, 0.06)',
 
   transparent: 'transparent',
   white: '#FFFFFF',

@@ -16,6 +16,7 @@ export const theme = createTheme({
     error: Colors.error,
     errorLight: Colors.errorLight,
     primaryLight: Colors.primaryLight,
+    textOnPrimary: Colors.textOnPrimary,
     success: Colors.success,
   },
   spacing: {
@@ -82,7 +83,7 @@ export const theme = createTheme({
       fontSize: FontSize.base,
     },
     buttonPrimary: {
-      color: 'white',
+      color: 'textOnPrimary',
       fontFamily: FontFamily.semiBold,
       fontSize: FontSize.base,
     },
@@ -97,7 +98,7 @@ export const theme = createTheme({
       fontSize: FontSize.base,
     },
     buttonDanger: {
-      color: 'white',
+      color: 'textOnPrimary',
       fontFamily: FontFamily.semiBold,
       fontSize: FontSize.base,
     },

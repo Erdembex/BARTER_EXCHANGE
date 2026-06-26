@@ -32,8 +32,11 @@ export default function TabsLayout() {
           height: 64,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
         },
       }}
     >
@@ -56,6 +59,13 @@ export default function TabsLayout() {
         options={{
           title: 'Başvurularım',
           tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trade"
+        options={{
+          title: 'Takas',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔄" focused={focused} />,
         }}
       />
       <Tabs.Screen

@@ -6,6 +6,7 @@ import {
   getCouponDisplayStatus,
   COUPON_STATUS_LABELS,
 } from '@/lib/couponUtils';
+import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 interface CouponCardProps {
@@ -55,6 +56,12 @@ export function CouponCard({ coupon, businessName, onPress }: CouponCardProps) {
           </Text>
         )}
       </View>
+
+      <Text style={styles.expiry}>
+        {displayStatus === 'expired'
+          ? `Süresi doldu · ${formatShortDate(coupon.expiresAt)}`
+          : formatDaysUntil(coupon.expiresAt)}
+      </Text>
 
       {displayStatus === 'active' && (
         <Text style={styles.tapHint}>QR görmek için dokun →</Text>
@@ -118,9 +125,14 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '600',
   },
+  expiry: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginTop: Spacing[2],
+  },
   tapHint: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    marginTop: Spacing[2],
+    marginTop: Spacing[1],
   },
 });

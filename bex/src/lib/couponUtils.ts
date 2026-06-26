@@ -65,7 +65,8 @@ export function isCouponExpired(coupon: Coupon): boolean {
 
 export function getCouponDisplayStatus(
   coupon: Coupon
-): 'active' | 'exhausted' | 'expired' {
+): 'active' | 'exhausted' | 'expired' | 'traded' {
+  if (coupon.status === 'traded') return 'traded';
   if (coupon.status === 'exhausted') return 'exhausted';
   if (coupon.status === 'expired' || isCouponExpired(coupon)) return 'expired';
   return 'active';
@@ -75,4 +76,5 @@ export const COUPON_STATUS_LABELS = {
   active: 'Aktif',
   exhausted: 'Tükendi',
   expired: 'Süresi doldu',
+  traded: 'Takas edildi',
 } as const;

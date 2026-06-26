@@ -72,6 +72,20 @@ export function AccountSettings({
         ) : null}
       </View>
 
+      {bexUser?.role === 'user' ? (
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{bexUser.completedTaskCount ?? 0}</Text>
+            <Text style={styles.statLabel}>Tamamlanan görev</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{bexUser.reputationScore ?? 0}</Text>
+            <Text style={styles.statLabel}>İtibar puanı</Text>
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         {editingName ? (
           <View style={styles.editBlock}>
@@ -118,6 +132,14 @@ export function AccountSettings({
           </>
         )}
       </View>
+
+      {bexUser?.role === 'user' && firebaseUser ? (
+        <Button
+          title="Herkese Açık Profilim"
+          variant="outline"
+          onPress={() => router.push(`/user/${firebaseUser.uid}` as Href)}
+        />
+      ) : null}
 
       {showAdminLink && bexUser?.role === 'admin' && (
         <Button
@@ -179,6 +201,22 @@ const styles = StyleSheet.create({
   },
   badgeText: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '600' },
   badgeSuccessText: { color: Colors.success },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    width: '100%',
+  },
+  statBox: { flex: 1, alignItems: 'center', gap: 2 },
+  statValue: { ...Typography.headingMedium, color: Colors.primaryDark },
+  statLabel: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center' },
+  statDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: Colors.border,
+  },
   card: {
     width: '100%',
     backgroundColor: Colors.surface,

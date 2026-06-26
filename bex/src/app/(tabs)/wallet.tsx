@@ -5,7 +5,6 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,7 +14,10 @@ import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { getCouponDisplayStatus } from '@/lib/couponUtils';
 import { Coupon } from '@/types';
+import { router, Href } from 'expo-router';
 import { CouponCard, CouponQrModal } from '@/components/wallet';
+import { WalletSkeleton } from '@/components/tasks/TaskCardSkeleton';
+import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function WalletScreen() {
@@ -65,9 +67,9 @@ export default function WalletScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <WalletSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -93,6 +95,11 @@ export default function WalletScreen() {
             <Text style={styles.emptyText}>
               Görev tamamlayıp işletme onayı aldığında kuponlar burada görünür.
             </Text>
+            <Button
+              title="Görevlere Göz At"
+              onPress={() => router.push('/(tabs)/home' as Href)}
+              style={{ marginTop: Spacing[5], alignSelf: 'stretch' }}
+            />
           </View>
         ) : (
           <>

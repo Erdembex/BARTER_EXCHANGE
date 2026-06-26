@@ -23,6 +23,9 @@ export function useNotifications() {
   useEffect(() => {
     if (!userId) return;
     notificationService.initialize(userId).then(refreshUnread);
+
+    const interval = setInterval(refreshUnread, 15000);
+    return () => clearInterval(interval);
   }, [userId, refreshUnread]);
 
   return { unreadCount, refreshUnread };

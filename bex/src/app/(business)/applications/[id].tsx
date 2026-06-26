@@ -11,7 +11,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -22,17 +22,21 @@ import {
   usersRepository,
 } from '@/features/data';
 import { notifyUser } from '@/features/notifications/notificationsRepository';
-import { Application, Task } from '@/types';
+import { Application, Task, PortfolioItem } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
+import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
+import { canUseApplicationMessages } from '@/features/messages';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, bexUser } = useAuthStore();
   const [application, setApplication] = useState<Application | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [applicantName, setApplicantName] = useState('');
+  const [applicantPortfolio, setApplicantPortfolio] = useState<PortfolioItem[]>([]);
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -46,6 +50,7 @@ export default function ApplicationDetailScreen() {
       const t = await tasksRepository.getById(app.taskId);
       setTask(t);
       setApplicantName(await usersRepository.getDisplayName(app.userId));
+      setApplicantPortfolio(await usersRepository.getPortfolio(app.userId));
     }
     setLoading(false);
   }, [id]);
@@ -165,6 +170,25 @@ export default function ApplicationDetailScreen() {
         <Text style={styles.taskTitle}>{task?.title ?? 'Görev'}</Text>
         <Text style={styles.meta}>Başvuran: {applicantName || application.userId.slice(0, 8)}</Text>
 
+        <UserPortfolioGallery
+          items={applicantPortfolio}
+          title="Başvuranın onaylı portföyü"
+          subtitle="Admin tarafından onaylanmış geçmiş çalışmalar. Başvuruyu değerlendirmeden önce inceleyin."
+          emptyText="Henüz onaylı portföy görseli yok. İlk teslim admin onayından sonra burada görünür."
+        />
+
+        {applicantPortfolio.length > 0 ? (
+          <Button
+            title="Portföyün tamamını gör"
+            variant="ghost"
+            size="sm"
+            onPress={() =>
+              router.push({ pathname: '/user/[id]', params: { id: application.userId } } as Href)
+            }
+            style={{ alignSelf: 'flex-start' }}
+          />
+        ) : null}
+
         <View style={styles.block}>
           <Text style={styles.blockTitle}>Başvuru mesajı</Text>
           <Text style={styles.blockText}>{application.coverLetter || '—'}</Text>
@@ -176,6 +200,16 @@ export default function ApplicationDetailScreen() {
           >
             <Text style={styles.link}>Portfolio linkini aç →</Text>
           </TouchableOpacity>
+        ) : null}
+
+        {firebaseUser &&
+        bexUser &&
+        canUseApplicationMessages(application.status) ? (
+          <ApplicationMessageThread
+            applicationId={application.id}
+            currentUserId={firebaseUser.uid}
+            currentUserRole={bexUser.role}
+          />
         ) : null}
 
         {application.submissionText ? (

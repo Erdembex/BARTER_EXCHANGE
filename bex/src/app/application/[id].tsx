@@ -16,7 +16,11 @@ import { applicationsRepository, tasksRepository, couponsRepository } from '@/fe
 import { Application, Coupon } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
+import { ApplicationProgress } from '@/components/application/ApplicationProgress';
+import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
 import { useToast } from '@/components/common/Toast';
+import { getApplicationTimeline } from '@/lib/applicationTimeline';
+import { canUseApplicationMessages } from '@/features/messages';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
@@ -31,7 +35,7 @@ const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, bexUser } = useAuthStore();
   const { showToast } = useToast();
   const [application, setApplication] = useState<Application | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
@@ -133,11 +137,28 @@ export default function ApplicationDetailScreen() {
           </Text>
         </View>
 
+        <ApplicationProgress status={application.status} />
+
         {statusHint ? (
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>{statusHint}</Text>
           </View>
         ) : null}
+
+        <Text style={styles.section}>Süreç</Text>
+        <View style={styles.timeline}>
+          {getApplicationTimeline(application).map((event, index) => (
+            <View key={`${event.label}-${index}`} style={styles.timelineRow}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>{event.label}</Text>
+                {event.relative ? (
+                  <Text style={styles.timelineTime}>{event.relative}</Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </View>
 
         {application.status === 'approved' && application.reviewNote ? (
           <View style={[styles.infoBox, { borderLeftColor: Colors.warning }]}>
@@ -184,6 +205,26 @@ export default function ApplicationDetailScreen() {
               onPress={() => router.push('/(tabs)/wallet' as Href)}
             />
           </View>
+        ) : null}
+
+        {['submission_approved', 'rewarded'].includes(application.status) &&
+        application.submissionFiles.length > 0 ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              Teslim görsellerin profilindeki onaylı portföyde görünür — işletmeler yeni
+              başvurularında inceleyebilir.
+            </Text>
+          </View>
+        ) : null}
+
+        {firebaseUser &&
+        bexUser &&
+        canUseApplicationMessages(application.status) ? (
+          <ApplicationMessageThread
+            applicationId={application.id}
+            currentUserId={firebaseUser.uid}
+            currentUserRole={bexUser.role}
+          />
         ) : null}
 
         {canCancel && (
@@ -266,4 +307,23 @@ const styles = StyleSheet.create({
     color: Colors.success,
     letterSpacing: 1,
   },
+  timeline: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: Spacing[3],
+  },
+  timelineRow: { flexDirection: 'row', gap: Spacing[3], alignItems: 'flex-start' },
+  timelineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginTop: 6,
+  },
+  timelineContent: { flex: 1, gap: 2 },
+  timelineLabel: { ...Typography.bodySmall, color: Colors.textPrimary },
+  timelineTime: { ...Typography.caption, color: Colors.textMuted },
 });

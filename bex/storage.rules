@@ -2,17 +2,43 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isBusinessOwner(businessId) {
+      return isAuthenticated()
+        && firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.ownerUid == request.auth.uid;
+    }
+
+    function applicationBusinessId(applicationId) {
+      return firestore.get(/databases/(default)/documents/applications/$(applicationId)).data.businessId;
+    }
+
     match /business-documents/{businessId}/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && firestore.get(
-          /databases/(default)/documents/businesses/$(businessId)
-        ).data.ownerUid == request.auth.uid;
+      allow read: if isAdmin() || isBusinessOwner(businessId);
+      allow write: if isBusinessOwner(businessId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
     }
 
     match /submissions/{userId}/{applicationId}/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated()
+        && (
+          request.auth.uid == userId
+          || isAdmin()
+          || isBusinessOwner(applicationBusinessId(applicationId))
+        );
+      allow write: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
   }
 }

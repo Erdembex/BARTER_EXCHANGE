@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { getDevProfile, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
 import { COLLECTIONS } from '@/types';
+import { getUserPortfolio } from '@/features/portfolio';
 
 export const usersRepository = {
   async getDisplayName(uid: string): Promise<string> {
@@ -25,6 +26,10 @@ export const usersRepository = {
     }
 
     return `Kullanıcı ${uid.slice(-4)}`;
+  },
+
+  async getPortfolio(userId: string) {
+    return getUserPortfolio(userId);
   },
 
   async getDisplayNames(uids: string[]): Promise<Record<string, string>> {

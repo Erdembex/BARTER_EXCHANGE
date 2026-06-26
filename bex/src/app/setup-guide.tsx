@@ -6,11 +6,18 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Button } from '@/components/ui';
+
+const STORAGE_CONSOLE =
+  'https://console.firebase.google.com/project/bexcursor/storage';
+const BLAZE_CONSOLE =
+  'https://console.firebase.google.com/project/bexcursor/usage/details';
 
 type Step = {
   phase: string;
@@ -27,6 +34,7 @@ const STEPS: Step[] = [
     items: [
       'Terminal 1: cd bex && npm run emulators',
       'Terminal 2: cd bex && npx expo start',
+      'Storage emülatörü için Java gerekir — npm run emulators:storage',
       'Kayıt ol, görev al, teslim et, admin onayı, kupon akışını test et',
       'App Check şu an gerekmez — atla',
     ],
@@ -36,20 +44,30 @@ const STEPS: Step[] = [
     title: 'Firebase kurallarını yayınla',
     done: true,
     items: [
-      '✓ Firestore kuralları + index deploy edildi',
-      'Güncellenmiş kurallar için tekrar: npm run deploy:rules',
+      '✓ Firestore kuralları + indeksler canlıya alındı (portföy dahil)',
+      'İşletmeler kullanıcı portföyünü okuyabilir — kurallar güncel',
       'KYC evrakları için: Console → Storage → Get Started, sonra npm run deploy:storage',
       'Canlı Firestore boşsa: Admin panel → Demo içerik yükle',
     ],
   },
   {
-    phase: '2',
-    title: 'Cloud Functions (kupon üretimi)',
+    phase: '1b',
+    title: 'Storage (KYC + teslim fotoğrafları)',
     items: [
-      'Firebase Console → Blaze plana geç (ücretsiz kotanın üstü ücretli)',
+      'Yerel: npm run emulators (Auth, Java gerekmez)',
+      'Foto/KYC emülatörü: Java kur + npm run emulators:storage',
+      'Canlı: Console → Storage → Get Started, sonra npm run deploy:storage',
+      'Kurallar hazır — işletme/admin okur, sahte yükleme engelli',
+    ],
+  },
+  {
+    phase: '2',
+    title: 'Cloud Functions (kupon güvenliği)',
+    items: [
+      'Firebase Console → Blaze plana geç',
       'https://console.firebase.google.com/project/bexcursor/usage/details',
       'Java JDK 17+ kur, sonra: npm run deploy:functions',
-      'Emulator ile test: npm run emulators:full (Java gerekir)',
+      'Emulator: npm run emulators:full (Java gerekir)',
     ],
   },
   {
@@ -86,7 +104,8 @@ export default function SetupGuideScreen() {
 
         <Text style={styles.title}>Yayın Checklist</Text>
         <Text style={styles.subtitle}>
-          Sırayla ilerle. App Check en sona — şimdilik hiçbir şey yapmana gerek yok.
+          Önce uygulama fazlarını bitir. Storage ve Blaze en sona — canlı foto/KYC ve kupon
+          güvenliği için gerekli.
         </Text>
 
         <View style={styles.statusCard}>
@@ -123,6 +142,26 @@ export default function SetupGuideScreen() {
             Sorun yaşarsan önce emulators terminalinin açık olduğundan emin ol, sonra uygulamayı
             yenile (r).
           </Text>
+        </View>
+
+        <View style={styles.actionCard}>
+          <Text style={styles.actionTitle}>Sonra: Firebase altyapısı</Text>
+          <Text style={styles.actionText}>
+            Uygulama fazları bittiğinde Storage (foto/KYC) ve Blaze + Functions (canlı kupon
+            güvenliği) açılır. Hazır olunca «storage açıldı» veya «blaze açıldı» yazman yeterli.
+          </Text>
+          <Button
+            title="Firebase Storage"
+            variant="outline"
+            size="md"
+            onPress={() => Linking.openURL(STORAGE_CONSOLE)}
+          />
+          <Button
+            title="Blaze Plan"
+            variant="ghost"
+            size="md"
+            onPress={() => Linking.openURL(BLAZE_CONSOLE)}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -176,4 +215,14 @@ const styles = StyleSheet.create({
     padding: Spacing[4],
   },
   noteText: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
+  actionCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing[3],
+  },
+  actionTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
+  actionText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
 });

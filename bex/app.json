@@ -5,10 +5,16 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "scheme": "bex",
     "description": "Görev yap, ödül kazan. BEX ile işletmelerden görev al, tamamla ve kupon kazan.",
-    "primaryColor": "#7C3AED",
+    "primaryColor": "#FFFFFF",
+    "backgroundColor": "#000000",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bex.app",
@@ -21,7 +27,7 @@
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#7C3AED",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.bex.app",
@@ -41,7 +47,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#7C3AED"
+          "color": "#FFFFFF"
         }
       ],
       [

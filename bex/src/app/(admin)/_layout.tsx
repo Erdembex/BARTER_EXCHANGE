@@ -14,6 +14,7 @@ export default function AdminLayout() {
       <Stack.Screen name="tasks" />
       <Stack.Screen name="verifications" />
       <Stack.Screen name="submissions" />
+      <Stack.Screen name="users" />
     </Stack>
   );
 }

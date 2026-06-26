@@ -11,16 +11,20 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { tasksRepository, applicationsRepository, EnrichedTask } from '@/features/data';
+import { usersRepository } from '@/features/data/usersRepository';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/common/Toast';
+import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { PortfolioItem } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { firebaseUser } = useAuthStore();
+  const { firebaseUser, bexUser } = useAuthStore();
   const { showToast } = useToast();
   const [task, setTask] = useState<EnrichedTask | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [coverLetter, setCoverLetter] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +33,11 @@ export default function ApplyScreen() {
   useEffect(() => {
     if (id) tasksRepository.getEnrichedById(id).then(setTask);
   }, [id]);
+
+  useEffect(() => {
+    if (!firebaseUser) return;
+    usersRepository.getPortfolio(firebaseUser.uid).then(setPortfolio);
+  }, [firebaseUser]);
 
   const handleSubmit = async () => {
     if (!coverLetter.trim() || coverLetter.trim().length < 20) {
@@ -82,6 +91,24 @@ export default function ApplyScreen() {
             </View>
           )}
 
+          {bexUser && bexUser.role === 'user' ? (
+            <View style={styles.statsRow}>
+              <Text style={styles.statText}>
+                ⭐ {bexUser.reputationScore ?? 0} itibar · {bexUser.completedTaskCount ?? 0}{' '}
+                tamamlanan görev
+              </Text>
+            </View>
+          ) : null}
+
+          {portfolio.length > 0 ? (
+            <UserPortfolioGallery
+              items={portfolio}
+              title="Onaylı portföyün"
+              subtitle="İşletme başvurunu incelerken bu görselleri de görür."
+              compact
+            />
+          ) : null}
+
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -127,6 +154,14 @@ const styles = StyleSheet.create({
   },
   taskTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   taskReward: { ...Typography.bodySmall, color: Colors.textSecondary },
+  statsRow: {
+    backgroundColor: Colors.surface,
+    padding: Spacing[3],
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  statText: { ...Typography.bodySmall, color: Colors.textSecondary },
   errorBox: {
     backgroundColor: Colors.errorLight,
     padding: Spacing[3],

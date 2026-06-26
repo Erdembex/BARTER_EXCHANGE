@@ -1,6 +1,7 @@
 import { GeoPoint, Timestamp } from 'firebase/firestore';
 import {
   Application,
+  ApplicationMessage,
   Business,
   BexNotification,
   Coupon,
@@ -9,6 +10,12 @@ import {
   Task,
 } from '../types';
 import { DEMO_APPLICATIONS, DEMO_BUSINESSES, DEMO_TASKS } from './demoData';
+import type {
+  TradeListingPrivateCoupon,
+  TradeListingRecord,
+  TradeOfferPrivateCoupon,
+  TradeOfferRecord,
+} from '../features/trade/types';
 
 const loc = new GeoPoint(41.0082, 28.9784);
 
@@ -17,6 +24,12 @@ let businesses: Business[] = [...DEMO_BUSINESSES];
 let applications: Application[] = [...DEMO_APPLICATIONS];
 let coupons: Coupon[] = [];
 let notifications: BexNotification[] = [];
+let messages: ApplicationMessage[] = [];
+let tradeListings: TradeListingRecord[] = [];
+let tradeListingSecrets: Record<string, TradeListingPrivateCoupon> = {};
+let tradeOffers: TradeOfferRecord[] = [];
+let tradeOfferSecrets: Record<string, TradeOfferPrivateCoupon> = {};
+let tradeIdCounter = 100;
 
 let idCounter = 100;
 
@@ -141,6 +154,34 @@ export const demoStore = {
     return task;
   },
 
+  updateTask(id: string, patch: Partial<Task>): Task | null {
+    let updated: Task | null = null;
+    tasks = tasks.map((t) => {
+      if (t.id !== id) return t;
+      updated = { ...t, ...patch };
+      return updated;
+    });
+    return updated;
+  },
+
+  getMessagesByApplication(applicationId: string): ApplicationMessage[] {
+    return messages
+      .filter((m) => m.applicationId === applicationId)
+      .sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
+  },
+
+  addMessage(
+    data: Omit<ApplicationMessage, 'id' | 'createdAt'>
+  ): ApplicationMessage {
+    const item: ApplicationMessage = {
+      id: nextId('m'),
+      createdAt: Timestamp.now(),
+      ...data,
+    };
+    messages = [...messages, item];
+    return item;
+  },
+
   getTasksByBusiness(businessId: string): Task[] {
     return tasks.filter((t) => t.businessId === businessId);
   },
@@ -171,6 +212,20 @@ export const demoStore = {
 
   addCoupon(coupon: Coupon) {
     coupons = [coupon, ...coupons];
+  },
+
+  getCouponById(id: string): Coupon | null {
+    return coupons.find((c) => c.id === id) ?? null;
+  },
+
+  updateCoupon(id: string, patch: Partial<Coupon>): Coupon | null {
+    let updated: Coupon | null = null;
+    coupons = coupons.map((c) => {
+      if (c.id !== id) return c;
+      updated = { ...c, ...patch };
+      return updated;
+    });
+    return updated;
   },
 
   getCouponByCode(code: string): Coupon | null {
@@ -256,24 +311,51 @@ export const demoStore = {
   },
 
   ensureSampleCouponForUser(userId: string) {
-    if (coupons.some((c) => c.userId === userId && c.status === 'active')) return;
-    const sample: Coupon = {
-      id: `demo-c-sample-${userId.slice(-6)}`,
-      userId,
-      businessId: 'demo-b1',
-      taskId: 'demo-t1',
-      applicationId: 'demo-a1',
-      rewardDescription: '3 ücretsiz saç tıraşı',
-      totalUses: 3,
-      usedCount: 0,
-      qrCode: `qr-${userId}-${Date.now()}`,
-      couponCode: 'BEX-DEMO-0001',
-      expiresAt: Timestamp.fromDate(new Date(Date.now() + 90 * 86400000)),
-      usageHistory: [],
-      status: 'active',
-      createdAt: Timestamp.now(),
-    };
-    coupons = [sample, ...coupons];
+    const activeForUser = coupons.filter((c) => c.userId === userId && c.status === 'active');
+
+    if (activeForUser.length === 0) {
+      coupons = [
+        {
+          id: `demo-c-barber-${userId.slice(-6)}`,
+          userId,
+          businessId: 'demo-b1',
+          taskId: 'demo-t1',
+          applicationId: 'demo-a1',
+          rewardDescription: '3 ücretsiz saç tıraşı (kuaför)',
+          totalUses: 3,
+          usedCount: 0,
+          qrCode: `qr-${userId}-barber`,
+          couponCode: `BEX-BRB-${userId.slice(-4)}`,
+          expiresAt: Timestamp.fromDate(new Date(Date.now() + 90 * 86400000)),
+          usageHistory: [],
+          status: 'active',
+          createdAt: Timestamp.now(),
+        },
+        ...coupons,
+      ];
+    }
+
+    if (coupons.filter((c) => c.userId === userId && c.status === 'active').length < 2) {
+      coupons = [
+        {
+          id: `demo-c-market-${userId.slice(-6)}`,
+          userId,
+          businessId: 'demo-b1',
+          taskId: 'demo-t4',
+          applicationId: 'demo-a2',
+          rewardDescription: '2x market alışveriş kuponu',
+          totalUses: 2,
+          usedCount: 0,
+          qrCode: `qr-${userId}-market`,
+          couponCode: `BEX-MKT-${userId.slice(-4)}`,
+          expiresAt: Timestamp.fromDate(new Date(Date.now() + 90 * 86400000)),
+          usageHistory: [],
+          status: 'active',
+          createdAt: Timestamp.now(),
+        },
+        ...coupons,
+      ];
+    }
   },
 
   getPendingAdminTasks(): Task[] {
@@ -348,4 +430,41 @@ export const demoStore = {
   },
 
   defaultLocation: loc,
+
+  nextTradeId(prefix: string) {
+    tradeIdCounter += 1;
+    return `demo-${prefix}${tradeIdCounter}`;
+  },
+
+  getTradeListings(): TradeListingRecord[] {
+    return tradeListings;
+  },
+
+  setTradeListings(list: TradeListingRecord[]) {
+    tradeListings = list;
+  },
+
+  getTradeListingSecret(listingId: string): TradeListingPrivateCoupon | undefined {
+    return tradeListingSecrets[listingId];
+  },
+
+  setTradeListingSecret(listingId: string, secret: TradeListingPrivateCoupon) {
+    tradeListingSecrets[listingId] = secret;
+  },
+
+  getTradeOffers(): TradeOfferRecord[] {
+    return tradeOffers;
+  },
+
+  setTradeOffers(list: TradeOfferRecord[]) {
+    tradeOffers = list;
+  },
+
+  getTradeOfferSecret(offerId: string): TradeOfferPrivateCoupon | undefined {
+    return tradeOfferSecrets[offerId];
+  },
+
+  setTradeOfferSecret(offerId: string, secret: TradeOfferPrivateCoupon) {
+    tradeOfferSecrets[offerId] = secret;
+  },
 };

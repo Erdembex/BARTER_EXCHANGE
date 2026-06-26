@@ -124,6 +124,11 @@ export default function AdminPanelScreen() {
             onPress={() => router.push('/(admin)/verifications' as Href)}
           />
           <Button
+            title="Kullanıcı Yönetimi"
+            variant="outline"
+            onPress={() => router.push('/(admin)/users' as Href)}
+          />
+          <Button
             title="Bildirimler"
             variant="outline"
             onPress={() => router.push('/notifications/index' as Href)}

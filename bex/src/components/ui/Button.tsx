@@ -46,11 +46,11 @@ const TEXT_VARIANT: Record<Variant, TextVariant> = {
 };
 
 const LOADER_COLOR: Record<Variant, string> = {
-  primary: Colors.white,
+  primary: Colors.textOnPrimary,
   secondary: Colors.white,
   outline: Colors.primary,
   ghost: Colors.primary,
-  danger: Colors.white,
+  danger: Colors.textOnPrimary,
 };
 
 function getBoxProps(variant: Variant) {

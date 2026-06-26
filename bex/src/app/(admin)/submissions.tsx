@@ -16,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { adminRepository, EnrichedSubmission } from '@/features/admin/adminRepository';
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
+import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function AdminSubmissionsScreen() {
@@ -112,7 +113,12 @@ export default function AdminSubmissionsScreen() {
           <View style={styles.card}>
             <Text style={styles.taskTitle}>{item.taskTitle}</Text>
             <Text style={styles.business}>{item.businessName}</Text>
-            <Text style={styles.meta}>Kullanıcı: {item.userId.slice(0, 8)}…</Text>
+            <Text style={styles.meta}>
+              Başvuran: {item.applicantName}
+              {item.submittedAt
+                ? ` · ${formatRelativeTime(item.submittedAt)}`
+                : ''}
+            </Text>
 
             {item.submissionText ? (
               <Text style={styles.desc}>{item.submissionText}</Text>
