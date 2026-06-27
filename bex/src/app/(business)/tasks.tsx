@@ -119,7 +119,7 @@ export default function BusinessTasksScreen() {
             style={styles.card}
             activeOpacity={0.85}
             onPress={() =>
-              router.push(`/(business)/applications/index?taskId=${item.id}` as Href)
+              router.navigate(`/(business)/applications/index?taskId=${item.id}` as Href)
             }
           >
             <View style={styles.cardTop}>

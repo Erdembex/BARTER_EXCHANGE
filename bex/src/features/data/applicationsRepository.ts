@@ -394,17 +394,21 @@ export async function approveApplication(
   const application = await applicationsRepository.getById(applicationId);
   if (!application || application.status !== 'pending') return false;
 
-  await applicationsRepository.updateStatus(applicationId, 'approved', reviewNote);
+  if (shouldUseDemoData()) {
+    await applicationsRepository.updateStatus(applicationId, 'approved', reviewNote);
+    await notifyUser({
+      userId: application.userId,
+      title: 'Başvurun onaylandı',
+      body: 'Görevi tamamlayıp teslim edebilirsin. Başvurularım sekmesinden devam et.',
+      type: 'application_approved',
+      data: { applicationId },
+      showLocalForUserId: application.userId,
+    });
+    return true;
+  }
 
-  await notifyUser({
-    userId: application.userId,
-    title: 'Başvurun onaylandı',
-    body: 'Görevi tamamlayıp teslim edebilirsin. Başvurularım sekmesinden devam et.',
-    type: 'application_approved',
-    data: { applicationId },
-    showLocalForUserId: application.userId,
-  });
-
+  const { cloudFunctions } = await import('../functions/cloudFunctions');
+  await cloudFunctions.approveApplication(applicationId, reviewNote);
   return true;
 }
 

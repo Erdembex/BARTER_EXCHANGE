@@ -12,6 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { createBox, ThemeProvider } from '@shopify/restyle';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/common/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { tradeRepository } from './tradeRepository';
 import { tradeTheme, TradeTheme } from './tradeTheme';
@@ -190,12 +191,14 @@ function TradeTabSwitch({
 
 export function TradeMarketScreen() {
   const { firebaseUser } = useAuthStore();
+  const { showToast } = useToast();
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<TradeTab>('market');
   const [listings, setListings] = useState<TradeListing[]>([]);
   const [myListings, setMyListings] = useState<TradeListing[]>([]);
   const [myOffers, setMyOffers] = useState<TradeOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedListing, setSelectedListing] = useState<TradeListing | null>(null);
 
@@ -204,21 +207,30 @@ export function TradeMarketScreen() {
       setListings([]);
       setMyListings([]);
       setMyOffers([]);
+      setLoadError(null);
       setLoading(false);
       return;
     }
 
-    const [market, mine, sent] = await Promise.all([
-      tradeRepository.getActiveListings(),
-      tradeRepository.getMyListings(firebaseUser.uid),
-      tradeRepository.getMyOffers(firebaseUser.uid),
-    ]);
+    try {
+      setLoadError(null);
+      const [market, mine, sent] = await Promise.all([
+        tradeRepository.getActiveListings(),
+        tradeRepository.getMyListings(firebaseUser.uid),
+        tradeRepository.getMyOffers(firebaseUser.uid),
+      ]);
 
-    setListings(market);
-    setMyListings(mine);
-    setMyOffers(sent);
-    setLoading(false);
-  }, [firebaseUser]);
+      setListings(market);
+      setMyListings(mine);
+      setMyOffers(sent);
+    } catch (err) {
+      const message = (err as Error).message || 'Takas verisi yüklenemedi.';
+      setLoadError(message);
+      showToast(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [firebaseUser, showToast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -281,6 +293,23 @@ export function TradeMarketScreen() {
           {loading ? (
             <Box flex={1} alignItems="center" justifyContent="center">
               <ActivityIndicator color={tradeTheme.colors.tradePrimary} size="large" />
+              <Text variant="bodyMuted" marginTop="md">
+                İlanlar yükleniyor...
+              </Text>
+            </Box>
+          ) : loadError ? (
+            <Box flex={1} paddingHorizontal="lg" alignItems="center" justifyContent="center">
+              <Text variant="bodyMuted" style={{ textAlign: 'center', marginBottom: 16 }}>
+                {loadError}
+              </Text>
+              <Button
+                title="Tekrar dene"
+                variant="outline"
+                onPress={() => {
+                  setLoading(true);
+                  load();
+                }}
+              />
             </Box>
           ) : tab === 'mine' ? (
             firebaseUser ? (

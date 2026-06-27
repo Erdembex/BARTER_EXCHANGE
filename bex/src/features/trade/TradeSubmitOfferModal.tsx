@@ -10,6 +10,7 @@ import {
   View,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBox } from '@shopify/restyle';
@@ -47,20 +48,26 @@ export function TradeSubmitOfferModal({
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
   useEffect(() => {
     if (!visible || !userId) return;
 
     (async () => {
-      if (shouldUseDemoData()) {
-        demoStore.ensureSampleCouponForUser(userId);
+      setLoadingCoupons(true);
+      try {
+        if (shouldUseDemoData()) {
+          demoStore.ensureSampleCouponForUser(userId);
+        }
+        const list = await tradeRepository.getAvailableTradeCoupons(userId);
+        const filtered = listing
+          ? list.filter((coupon) => coupon.id !== listing.couponId)
+          : list;
+        setCoupons(filtered);
+        setSelectedCouponId(filtered[0]?.id ?? null);
+      } finally {
+        setLoadingCoupons(false);
       }
-      const list = await tradeRepository.getAvailableTradeCoupons(userId);
-      const filtered = listing
-        ? list.filter((coupon) => coupon.id !== listing.couponId)
-        : list;
-      setCoupons(filtered);
-      setSelectedCouponId(filtered[0]?.id ?? null);
     })();
   }, [visible, userId, listing?.couponId]);
 
@@ -127,7 +134,11 @@ export function TradeSubmitOfferModal({
             <Text variant="label" marginBottom="xs">
               Kuponlarım
             </Text>
-            {coupons.length === 0 ? (
+            {loadingCoupons ? (
+              <Box alignItems="center" paddingVertical="lg">
+                <ActivityIndicator color={tradeTheme.colors.tradePrimary} />
+              </Box>
+            ) : coupons.length === 0 ? (
               <Text variant="bodyMuted" marginBottom="md">
                 Takasa uygun aktif kuponun yok. Kuponlarım sekmesinden kupon kazan veya başka bir
                 kuponu takasta kullanma.
@@ -176,7 +187,7 @@ export function TradeSubmitOfferModal({
             title={submitting ? 'Gönderiliyor...' : 'Takas Teklifini Gönder'}
             onPress={handleSubmit}
             loading={submitting}
-            disabled={submitting || coupons.length === 0}
+            disabled={submitting || loadingCoupons || coupons.length === 0}
             style={{ marginTop: 8, marginBottom: 8 }}
           />
           <Button title="Vazgeç" variant="ghost" onPress={handleClose} />

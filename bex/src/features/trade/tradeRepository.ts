@@ -24,6 +24,7 @@ import {
   notifyTradeOfferRejected,
 } from './tradeNotifications';
 import { executeTradeSwap } from './tradeCouponSwap';
+import { cloudFunctions } from '@/features/functions/cloudFunctions';
 import {
   CreateTradeListingInput,
   CreateTradeOfferInput,
@@ -73,6 +74,47 @@ function getLockedCouponIds(userId: string): Set<string> {
     if (offer.fromUserId === userId && offer.status === 'pending' && offer.counterCouponId) {
       locked.add(offer.counterCouponId);
     }
+  }
+
+  return locked;
+}
+
+async function getLockedCouponIdsForUser(userId: string): Promise<Set<string>> {
+  if (shouldUseDemoData()) {
+    return getLockedCouponIds(userId);
+  }
+
+  const locked = new Set<string>();
+
+  try {
+    const [listingsSnap, offersSnap] = await Promise.all([
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.TRADE_LISTINGS),
+          where('ownerId', '==', userId),
+          where('status', '==', 'active')
+        )
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.TRADE_OFFERS),
+          where('fromUserId', '==', userId),
+          where('status', '==', 'pending')
+        )
+      ),
+    ]);
+
+    listingsSnap.docs.forEach((d) => {
+      const couponId = d.data().couponId as string | undefined;
+      if (couponId) locked.add(couponId);
+    });
+
+    offersSnap.docs.forEach((d) => {
+      const counterCouponId = d.data().counterCouponId as string | undefined;
+      if (counterCouponId) locked.add(counterCouponId);
+    });
+  } catch {
+    // İndeks/izin hatasında boş set — validateTradeCoupon yine de kontrol eder
   }
 
   return locked;
@@ -161,7 +203,7 @@ export const tradeRepository = {
       demoStore.ensureSampleCouponForUser(userId);
     }
 
-    const locked = shouldUseDemoData() ? getLockedCouponIds(userId) : new Set<string>();
+    const locked = await getLockedCouponIdsForUser(userId);
     const active = await couponsRepository.getActiveByUser(userId);
     return active.filter((coupon) => !locked.has(coupon.id));
   },
@@ -243,7 +285,7 @@ export const tradeRepository = {
    * Ana ilan belgesinde couponCode tutulmaz.
    */
   async createListing(ownerId: string, input: CreateTradeListingInput): Promise<string> {
-    const locked = shouldUseDemoData() ? getLockedCouponIds(ownerId) : new Set<string>();
+    const locked = await getLockedCouponIdsForUser(ownerId);
     const coupon = await validateTradeCoupon(ownerId, input.couponId, locked);
 
     const ownerName = await usersRepository.getDisplayName(ownerId);
@@ -320,7 +362,7 @@ export const tradeRepository = {
       });
     }
 
-    const locked = shouldUseDemoData() ? getLockedCouponIds(fromUserId) : new Set<string>();
+    const locked = await getLockedCouponIdsForUser(fromUserId);
     const counterCoupon = await validateTradeCoupon(
       fromUserId,
       input.counterCouponId,
@@ -374,14 +416,6 @@ export const tradeRepository = {
     });
 
     await batch.commit();
-
-    await notifyTradeOfferReceived({
-      ownerId: listing.ownerId,
-      fromUserName,
-      listingTitle: listing.title,
-      listingId,
-      offerId: offerRef.id,
-    });
 
     return offerRef.id;
   },
@@ -585,14 +619,6 @@ export const tradeRepository = {
     const batch = writeBatch(db);
     batch.update(doc(db, COLLECTIONS.TRADE_OFFERS, offerId), { status: 'rejected' });
     await batch.commit();
-
-    await notifyTradeOfferRejected({
-      fromUserId: offer.fromUserId,
-      listingTitle: offer.listingTitle,
-      listingId: offer.listingId,
-      offerId: offer.id,
-      reason: 'declined',
-    });
   },
 
   async acceptOffer(ownerId: string, offerId: string): Promise<TradeSwapResult> {
@@ -690,11 +716,8 @@ export const tradeRepository = {
       throw Object.assign(new Error('Teklif artık beklemede değil.'), { code: 'offer-closed' });
     }
 
-    throw Object.assign(
-      new Error(
-        'Kupon takası şu an demo modda çalışır. Canlı ortam için Cloud Function yakında eklenecek.'
-      ),
-      { code: 'swap-needs-function' }
-    );
+    const swapResult = await cloudFunctions.executeTradeSwap(offerId);
+
+    return swapResult;
   },
 };

@@ -38,7 +38,10 @@ export default function BusinessApplicationsScreen() {
   const [filter, setFilter] = useState<FilterKey>('all');
 
   const load = useCallback(async () => {
-    if (!business) return;
+    if (!business) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const apps = await applicationsRepository.getByBusiness(business.id);
     setApplications(apps);
@@ -98,6 +101,17 @@ export default function BusinessApplicationsScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
+    );
+  }
+
+  if (!business) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>İşletme profili bulunamadı</Text>
+          <Text style={styles.emptyText}>Panel sekmesinden yenilemeyi dene.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 

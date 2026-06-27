@@ -8,6 +8,20 @@ export interface LocalUploadFile {
   mimeType: string;
 }
 
+const UPLOAD_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`${label} zaman aşımına uğradı. Emülatör veya internet bağlantını kontrol et.`)),
+        UPLOAD_TIMEOUT_MS
+      );
+    }),
+  ]);
+}
+
 export async function uploadFileToStorage(
   storagePath: string,
   localUri: string,
@@ -20,7 +34,10 @@ export async function uploadFileToStorage(
   return getDownloadURL(storageRef);
 }
 
-/** Demo modda Storage emülatörüne yükler; hata olursa yerel URI döner. Canlıda gerçek Storage. */
+/**
+ * Demo modda Storage emülatörü (9199) genelde kapalı — yerel URI kullan.
+ * Canlıda Firebase Storage'a yükler; hata olursa fırlatır.
+ */
 export async function uploadLocalFiles(
   basePath: string,
   files: LocalUploadFile[]
@@ -28,22 +45,18 @@ export async function uploadLocalFiles(
   if (files.length === 0) return [];
 
   if (shouldUseDemoData()) {
-    try {
-      const urls: string[] = [];
-      for (const file of files) {
-        const path = `${basePath}/${Date.now()}-${file.name}`;
-        urls.push(await uploadFileToStorage(path, file.uri, file.mimeType));
-      }
-      return urls;
-    } catch {
-      return files.map((f) => f.uri);
-    }
+    return files.map((f) => f.uri);
   }
 
   const urls: string[] = [];
   for (const file of files) {
     const path = `${basePath}/${Date.now()}-${file.name}`;
-    urls.push(await uploadFileToStorage(path, file.uri, file.mimeType));
+    urls.push(
+      await withTimeout(
+        uploadFileToStorage(path, file.uri, file.mimeType),
+        'Fotoğraf yüklemesi'
+      )
+    );
   }
   return urls;
 }

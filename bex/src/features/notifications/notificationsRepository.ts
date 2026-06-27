@@ -1,6 +1,5 @@
 import {
   collection,
-  addDoc,
   getDocs,
   query,
   where,
@@ -8,7 +7,6 @@ import {
   doc,
   updateDoc,
   writeBatch,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
@@ -83,21 +81,8 @@ export async function notifyUser(params: NotifyParams): Promise<void> {
       type: params.type,
       data: params.data,
     });
-  } else {
-    try {
-      await addDoc(collection(db, COLLECTIONS.NOTIFICATIONS), {
-        userId: params.userId,
-        title: params.title,
-        body: params.body,
-        type: params.type,
-        data: params.data ?? {},
-        read: false,
-        createdAt: serverTimestamp(),
-      });
-    } catch {
-      // Production'da Cloud Functions yazar; client fallback sessiz
-    }
   }
+  // Canlıda Firestore bildirimleri Cloud Functions yazar (kurallar client create: false)
 
   if (params.showLocalForUserId === params.userId) {
     await notificationService.presentLocal(params.title, params.body, params.data);

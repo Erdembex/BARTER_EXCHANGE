@@ -122,7 +122,7 @@ export default function BusinessDashboardScreen() {
           <Button
             title="Başvuruları İncele"
             variant="secondary"
-            onPress={() => router.push('/(business)/applications/index')}
+            onPress={() => router.navigate('/(business)/applications/index')}
           />
           <Button
             title="Kupon Doğrula"

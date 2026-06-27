@@ -36,9 +36,27 @@ if (__DEV__) {
   }
 }
 
+import { TradeSwapResult } from '@/features/trade/types';
+
 type CouponResult = { coupon: Coupon };
+type TradeSwapFnResult = TradeSwapResult;
 
 export const cloudFunctions = {
+  async approveApplication(
+    applicationId: string,
+    reviewNote?: string
+  ): Promise<{ ok: boolean }> {
+    if (shouldUseDemoData()) {
+      throw new Error('Demo modda cloud function çağrılmamalı.');
+    }
+    const fn = httpsCallable<
+      { applicationId: string; reviewNote?: string },
+      { ok: boolean }
+    >(functions, 'approveApplication');
+    const { data } = await fn({ applicationId, reviewNote });
+    return data;
+  },
+
   async issueCouponForSubmission(
     applicationId: string,
     reviewNote?: string
@@ -64,5 +82,17 @@ export const cloudFunctions = {
     );
     const { data } = await fn({ couponId });
     return data.coupon;
+  },
+
+  async executeTradeSwap(offerId: string): Promise<TradeSwapResult> {
+    if (shouldUseDemoData()) {
+      throw new Error('Demo modda cloud function çağrılmamalı.');
+    }
+    const fn = httpsCallable<{ offerId: string }, TradeSwapFnResult>(
+      functions,
+      'executeTradeSwap'
+    );
+    const { data } = await fn({ offerId });
+    return data;
   },
 };
