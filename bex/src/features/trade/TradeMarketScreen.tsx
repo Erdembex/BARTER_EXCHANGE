@@ -214,15 +214,29 @@ export function TradeMarketScreen() {
 
     try {
       setLoadError(null);
-      const [market, mine, sent] = await Promise.all([
-        tradeRepository.getActiveListings(),
-        tradeRepository.getMyListings(firebaseUser.uid),
-        tradeRepository.getMyOffers(firebaseUser.uid),
-      ]);
 
-      setListings(market);
-      setMyListings(mine);
-      setMyOffers(sent);
+      try {
+        const market = await tradeRepository.getMarketListings();
+        setListings(market);
+        setLoadError(null);
+      } catch (err) {
+        const message = (err as Error).message || 'Takas ilanları yüklenemedi.';
+        setListings([]);
+        setLoadError(message);
+        showToast(message);
+      }
+
+      try {
+        const [mine, sent] = await Promise.all([
+          tradeRepository.getMyListings(firebaseUser.uid),
+          tradeRepository.getMyOffers(firebaseUser.uid),
+        ]);
+        setMyListings(mine);
+        setMyOffers(sent);
+      } catch {
+        setMyListings([]);
+        setMyOffers([]);
+      }
     } catch (err) {
       const message = (err as Error).message || 'Takas verisi yüklenemedi.';
       setLoadError(message);

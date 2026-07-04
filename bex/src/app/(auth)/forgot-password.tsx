@@ -10,7 +10,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { authService } from '@/features/auth/authService';
+import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input } from '@/components/ui';
 
@@ -36,7 +36,10 @@ export default function ForgotPasswordScreen() {
       setStep('success');
     } catch (err: any) {
       const code = err?.code ?? '';
-      if (code === 'auth/user-not-found') {
+      const message = err?.message || getAuthErrorMessage(code);
+      if (code === 'auth/not-supported-yet') {
+        setError(message);
+      } else if (code === 'auth/user-not-found') {
         setError('Bu e-posta adresiyle kayıtlı hesap bulunamadı.');
       } else {
         setError('Bir hata oluştu. Lütfen tekrar deneyin.');

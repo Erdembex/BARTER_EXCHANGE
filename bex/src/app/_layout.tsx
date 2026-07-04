@@ -4,12 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { ThemeProvider } from '@shopify/restyle';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
 import { Colors, theme } from '@/theme';
-import { loadDevProfiles } from '@/lib/devProfileStore';
 import { initAppCheck } from '@/lib/appCheck';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
@@ -23,33 +20,23 @@ export default function RootLayout() {
   useNotifications();
 
   useEffect(() => {
-    loadDevProfiles();
     initAppCheck();
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setFirebaseUser(firebaseUser);
+    let cancelled = false;
 
-      if (firebaseUser) {
-        try {
-          const bexUser = await authService.getUserDocument(firebaseUser.uid, {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-          });
-          setBexUser(bexUser);
-        } catch {
-          setBexUser(null);
-        }
-      } else {
-        setBexUser(null);
-      }
-
+    authService.restoreSession().then(({ session, bexUser }) => {
+      if (cancelled) return;
+      setFirebaseUser(session);
+      setBexUser(bexUser);
       setInitialized(true);
     });
 
-    return unsubscribe;
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [setFirebaseUser, setBexUser, setInitialized]);
 
   if (!isInitialized) {
     return (

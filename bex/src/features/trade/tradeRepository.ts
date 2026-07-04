@@ -26,6 +26,14 @@ import {
 import { executeTradeSwap } from './tradeCouponSwap';
 import { cloudFunctions } from '@/features/functions/cloudFunctions';
 import {
+  createSwapListing,
+  fetchMySwapListings,
+  fetchSwapEligibleCoupons,
+  fetchSwapListings,
+  isBackendCouponId,
+  useSwapRestBackend,
+} from './swapListingsApi';
+import {
   CreateTradeListingInput,
   CreateTradeOfferInput,
   TRADE_COUPON_PRIVATE_DOC,
@@ -196,9 +204,62 @@ function toPublicListing(record: TradeListingRecord): TradeListing {
   };
 }
 
+function mergeTradeListings(primary: TradeListing[], secondary: TradeListing[]): TradeListing[] {
+  const seen = new Set(primary.map((listing) => listing.id));
+  return [...primary, ...secondary.filter((listing) => !seen.has(listing.id))];
+}
+
+async function getLegacyMyListings(ownerId: string): Promise<TradeListing[]> {
+  if (shouldUseDemoData()) {
+    return demoStore
+      .getTradeListings()
+      .filter((listing) => listing.ownerId === ownerId)
+      .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+      .map(toPublicListing);
+  }
+
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.TRADE_LISTINGS),
+      where('ownerId', '==', ownerId),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) =>
+      toPublicListing({ id: d.id, ...d.data() } as TradeListingRecord)
+    );
+  } catch {
+    try {
+      const fallback = query(
+        collection(db, COLLECTIONS.TRADE_LISTINGS),
+        where('ownerId', '==', ownerId)
+      );
+      const snap = await getDocs(fallback);
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as TradeListingRecord)
+        .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+        .map(toPublicListing);
+    } catch {
+      return [];
+    }
+  }
+}
+
 export const tradeRepository = {
   /** Takasa uygun aktif kuponlar (kilitli olanlar hariç) */
   async getAvailableTradeCoupons(userId: string): Promise<Coupon[]> {
+    if (await useSwapRestBackend()) {
+      try {
+        const restCoupons = await fetchSwapEligibleCoupons();
+        if (restCoupons.length > 0) {
+          const locked = await getLockedCouponIdsForUser(userId);
+          return restCoupons.filter((coupon) => !locked.has(coupon.id));
+        }
+      } catch {
+        // Backend kupon yoksa veya hata varsa yerel/demo yedeğine düş
+      }
+    }
+
     if (shouldUseDemoData()) {
       demoStore.ensureSampleCouponForUser(userId);
     }
@@ -233,38 +294,33 @@ export const tradeRepository = {
     }
   },
 
-  async getMyListings(ownerId: string): Promise<TradeListing[]> {
-    if (shouldUseDemoData()) {
-      return demoStore.getTradeListings()
-        .filter((listing) => listing.ownerId === ownerId)
-        .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
-        .map(toPublicListing);
+  async getMarketListings(): Promise<TradeListing[]> {
+    const legacy = await this.getActiveListings();
+
+    if (!(await useSwapRestBackend())) {
+      return legacy;
     }
 
     try {
-      const q = query(
-        collection(db, COLLECTIONS.TRADE_LISTINGS),
-        where('ownerId', '==', ownerId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) =>
-        toPublicListing({ id: d.id, ...d.data() } as TradeListingRecord)
-      );
+      const rest = await fetchSwapListings();
+      return mergeTradeListings(rest, legacy);
     } catch {
-      try {
-        const fallback = query(
-          collection(db, COLLECTIONS.TRADE_LISTINGS),
-          where('ownerId', '==', ownerId)
-        );
-        const snap = await getDocs(fallback);
-        return snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }) as TradeListingRecord)
-          .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
-          .map(toPublicListing);
-      } catch {
-        return [];
-      }
+      return legacy;
+    }
+  },
+
+  async getMyListings(ownerId: string): Promise<TradeListing[]> {
+    const legacy = await getLegacyMyListings(ownerId);
+
+    if (!(await useSwapRestBackend())) {
+      return legacy;
+    }
+
+    try {
+      const rest = await fetchMySwapListings();
+      return mergeTradeListings(rest, legacy);
+    } catch {
+      return legacy;
     }
   },
 
@@ -285,6 +341,10 @@ export const tradeRepository = {
    * Ana ilan belgesinde couponCode tutulmaz.
    */
   async createListing(ownerId: string, input: CreateTradeListingInput): Promise<string> {
+    if ((await useSwapRestBackend()) && isBackendCouponId(input.couponId)) {
+      return createSwapListing(input);
+    }
+
     const locked = await getLockedCouponIdsForUser(ownerId);
     const coupon = await validateTradeCoupon(ownerId, input.couponId, locked);
 

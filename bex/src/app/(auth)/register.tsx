@@ -12,7 +12,7 @@ import {
 import { router } from 'expo-router';
 import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
-import { auth } from '@/lib/firebase';
+import { AUTH_HOME_ROUTE } from '@/lib/authRouting';
 import { UserRole } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input, BexLogo } from '@/components/ui';
@@ -33,7 +33,7 @@ const ROLES: { id: UserRole; label: string; desc: string; emoji: string }[] = [
 ];
 
 export default function RegisterScreen() {
-  const { setBexUser } = useAuthStore();
+  const { setBexUser, setFirebaseUser } = useAuthStore();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,26 +69,24 @@ export default function RegisterScreen() {
     setErrors({});
 
     try {
-      await authService.register({
+      const { user } = await authService.register({
         email: email.trim(),
         password,
         displayName: displayName.trim(),
         role,
       });
 
-      const uid = auth.currentUser?.uid;
-      if (uid) {
-        const profile = await authService.getUserDocument(uid, {
-          email: email.trim(),
-          displayName: displayName.trim(),
-        });
-        setBexUser(profile);
-      }
+      const profile = await authService.getUserDocument(user.uid, {
+        email: user.email ?? email.trim(),
+        displayName: user.displayName ?? displayName.trim(),
+      });
+      setFirebaseUser(user);
+      setBexUser(profile);
 
-      router.replace('/(auth)/phone-verification');
+      router.replace(AUTH_HOME_ROUTE);
     } catch (err: any) {
       const code: string = err?.code ?? '';
-      const message = getAuthErrorMessage(code);
+      const message = err?.message || getAuthErrorMessage(code);
       console.error('[RegisterScreen] Kayıt hatası:', code, message);
 
       if (code === 'auth/email-already-in-use') {

@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { couponsRepository, businessesRepository } from '@/features/data';
+import { fetchRestCoupons, hasRestAuthSession } from '@/features/coupon/couponsApi';
 import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { getCouponDisplayStatus } from '@/lib/couponUtils';
@@ -31,12 +32,24 @@ export default function WalletScreen() {
   const load = useCallback(async () => {
     if (!firebaseUser) return;
 
-    if (shouldUseDemoData()) {
-      demoStore.ensureSampleCouponForUser(firebaseUser.uid);
+    setLoading(true);
+
+    let list: Coupon[] = [];
+    if (await hasRestAuthSession()) {
+      try {
+        list = await fetchRestCoupons();
+      } catch {
+        list = [];
+      }
     }
 
-    setLoading(true);
-    const list = await couponsRepository.getByUser(firebaseUser.uid);
+    if (list.length === 0) {
+      if (shouldUseDemoData()) {
+        demoStore.ensureSampleCouponForUser(firebaseUser.uid);
+      }
+      list = await couponsRepository.getByUser(firebaseUser.uid);
+    }
+
     setCoupons(list);
 
     const names: Record<string, string> = {};

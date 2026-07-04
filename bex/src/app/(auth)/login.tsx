@@ -22,7 +22,7 @@ import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input, BexLogo } from '@/components/ui';
 
 export default function LoginScreen() {
-  const { setBexUser } = useAuthStore();
+  const { setBexUser, setFirebaseUser } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -55,6 +55,7 @@ export default function LoginScreen() {
         email: user.email,
         displayName: user.displayName,
       });
+      setFirebaseUser(user);
       setBexUser(profile);
 
       if (rememberMe) {
@@ -66,7 +67,7 @@ export default function LoginScreen() {
       router.replace(AUTH_HOME_ROUTE);
     } catch (err: any) {
       const code: string = err?.code ?? '';
-      const message = getAuthErrorMessage(code);
+      const message = err?.message || getAuthErrorMessage(code);
       console.error('[LoginScreen] Giriş hatası:', code, message);
       setError(message);
     } finally {

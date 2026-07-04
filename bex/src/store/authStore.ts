@@ -1,14 +1,15 @@
 import { create } from 'zustand';
-import { User } from 'firebase/auth';
 import { BexUser } from '../types';
+import type { AuthSession } from '../features/auth/authTypes';
 
 interface AuthState {
-  firebaseUser: User | null;
+  /** REST oturumu — alan adı geriye dönük uyumluluk için korunuyor */
+  firebaseUser: AuthSession | null;
   bexUser: BexUser | null;
   isLoading: boolean;
   isInitialized: boolean;
 
-  setFirebaseUser: (user: User | null) => void;
+  setFirebaseUser: (user: AuthSession | null) => void;
   setBexUser: (user: BexUser | null) => void;
   setLoading: (loading: boolean) => void;
   setInitialized: (initialized: boolean) => void;
@@ -29,3 +30,5 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: () =>
     set({ firebaseUser: null, bexUser: null, isLoading: false }),
 }));
+
+export type { AuthSession };
