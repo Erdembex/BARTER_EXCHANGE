@@ -1,138 +1,256 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { Coupon } from '@/types';
 import {
   getCouponRemainingUses,
   getCouponDisplayStatus,
   COUPON_STATUS_LABELS,
 } from '@/lib/couponUtils';
+import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
 interface CouponCardProps {
   coupon: Coupon;
   businessName?: string;
   onPress: () => void;
+  variant?: 'default' | 'hero';
+  layout?: 'stack' | 'carousel';
+  style?: ViewStyle;
 }
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<
+  ReturnType<typeof getCouponDisplayStatus>,
+  string
+> = {
   active: Colors.primary,
-  exhausted: Colors.textTertiary,
+  exhausted: Colors.textMuted,
   expired: Colors.warning,
+  traded: Colors.accent,
 };
 
-export function CouponCard({ coupon, businessName, onPress }: CouponCardProps) {
+export function CouponCard({
+  coupon,
+  businessName,
+  onPress,
+  variant = 'default',
+  layout = 'stack',
+  style,
+}: CouponCardProps) {
   const displayStatus = getCouponDisplayStatus(coupon);
   const remaining = getCouponRemainingUses(coupon);
   const statusColor = STATUS_COLORS[displayStatus];
+  const visual = getCouponVisual(coupon.rewardDescription);
+  const isHero = variant === 'hero';
+  const isCarousel = layout === 'carousel';
+  const isActive = displayStatus === 'active';
 
   return (
     <TouchableOpacity
-      style={[styles.card, displayStatus !== 'active' && styles.cardMuted]}
+      style={[
+        styles.wrapper,
+        isHero && isCarousel && styles.wrapperCarousel,
+        isHero && !isCarousel && styles.wrapperStackHero,
+        !isActive && styles.wrapperMuted,
+        Shadow.card,
+        style,
+      ]}
       onPress={onPress}
-      activeOpacity={0.85}
-      disabled={!onPress}
+      activeOpacity={0.92}
     >
-      <View style={styles.header}>
-        <Text style={styles.reward} numberOfLines={2}>
-          {coupon.rewardDescription}
-        </Text>
-        <View style={[styles.badge, { backgroundColor: statusColor + '22' }]}>
-          <Text style={[styles.badgeText, { color: statusColor }]}>
-            {COUPON_STATUS_LABELS[displayStatus]}
+      <View style={[styles.card, isHero && styles.cardHero]}>
+        <View style={[styles.stripe, { backgroundColor: visual.stripe }]} />
+
+        <View style={styles.content}>
+          <View style={styles.topRow}>
+            <View style={[styles.iconBox, isHero && styles.iconBoxHero]}>
+              <Text style={[styles.iconText, isHero && styles.iconTextHero]}>
+                {visual.emoji}
+              </Text>
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.category}>{visual.label.toUpperCase()}</Text>
+              {businessName ? (
+                <Text style={styles.business} numberOfLines={1}>
+                  {businessName}
+                </Text>
+              ) : null}
+            </View>
+            <View style={[styles.badge, { borderColor: statusColor + '55' }]}>
+              <Text style={[styles.badgeText, { color: statusColor }]}>
+                {COUPON_STATUS_LABELS[displayStatus]}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[styles.reward, isHero && styles.rewardHero]} numberOfLines={2}>
+            {coupon.rewardDescription}
           </Text>
+
+          <View style={styles.footer}>
+            {coupon.couponCode ? (
+              <Text style={styles.code}>{coupon.couponCode}</Text>
+            ) : (
+              <Text style={styles.codeMuted}>Dijital Kupon</Text>
+            )}
+            {isActive && (
+              <Text style={styles.uses}>
+                {remaining}/{coupon.totalUses} hak
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.bottomRow}>
+            <Text style={styles.expiry}>
+              {displayStatus === 'expired'
+                ? `Süresi doldu · ${formatShortDate(coupon.expiresAt)}`
+                : formatDaysUntil(coupon.expiresAt)}
+            </Text>
+            {isActive && <Text style={styles.tapHint}>Detay →</Text>}
+          </View>
         </View>
       </View>
-
-      {businessName ? (
-        <Text style={styles.business}>{businessName}</Text>
-      ) : null}
-
-      <View style={styles.footer}>
-        <Text style={styles.code}>{coupon.couponCode}</Text>
-        {displayStatus === 'active' && (
-          <Text style={styles.uses}>
-            {remaining}/{coupon.totalUses} hak
-          </Text>
-        )}
-      </View>
-
-      <Text style={styles.expiry}>
-        {displayStatus === 'expired'
-          ? `Süresi doldu · ${formatShortDate(coupon.expiresAt)}`
-          : formatDaysUntil(coupon.expiresAt)}
-      </Text>
-
-      {displayStatus === 'active' && (
-        <Text style={styles.tapHint}>QR görmek için dokun →</Text>
-      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    marginBottom: Spacing[3],
+  },
+  wrapperCarousel: {
+    width: 280,
+    marginBottom: 0,
+    marginRight: Spacing[4],
+  },
+  wrapperStackHero: {
+    marginBottom: Spacing[4],
+  },
+  wrapperMuted: {
+    opacity: 0.78,
+  },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: Radius.lg,
-    padding: Spacing[4],
-    marginBottom: Spacing[3],
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  cardMuted: {
-    opacity: 0.75,
-    borderLeftColor: Colors.border,
-  },
-  header: {
+    borderColor: Colors.border,
+    overflow: 'hidden',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing[2],
-    marginBottom: Spacing[1],
   },
-  reward: {
-    ...Typography.labelLarge,
-    color: Colors.textPrimary,
+  cardHero: {
+    minHeight: 168,
+  },
+  stripe: {
+    width: 4,
+  },
+  content: {
     flex: 1,
+    padding: Spacing[4],
+    gap: Spacing[2],
   },
-  badge: {
-    paddingHorizontal: Spacing[2],
-    paddingVertical: 4,
-    borderRadius: Radius.full,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
   },
-  badgeText: {
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBoxHero: {
+    width: 52,
+    height: 52,
+  },
+  iconText: {
+    fontSize: 20,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  iconTextHero: {
+    fontSize: 24,
+  },
+  meta: {
+    flex: 1,
+    gap: 2,
+  },
+  category: {
     ...Typography.caption,
-    fontWeight: '600',
+    color: Colors.accent,
+    fontWeight: '800',
+    letterSpacing: 1,
+    fontSize: 10,
   },
   business: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
-    marginBottom: Spacing[2],
+  },
+  badge: {
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    backgroundColor: Colors.surface,
+  },
+  badgeText: {
+    ...Typography.caption,
+    fontWeight: '700',
+    fontSize: 10,
+  },
+  reward: {
+    ...Typography.labelLarge,
+    color: Colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 22,
+    marginTop: Spacing[1],
+  },
+  rewardHero: {
+    fontSize: 19,
+    lineHeight: 26,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing[1],
   },
   code: {
     ...Typography.labelMedium,
     color: Colors.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    fontWeight: '700',
   },
-  uses: {
+  codeMuted: {
     ...Typography.caption,
     color: Colors.textSecondary,
     fontWeight: '600',
   },
+  uses: {
+    ...Typography.caption,
+    color: Colors.accent,
+    fontWeight: '700',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing[1],
+    paddingTop: Spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
   expiry: {
     ...Typography.caption,
     color: Colors.textMuted,
-    marginTop: Spacing[2],
   },
   tapHint: {
     ...Typography.caption,
-    color: Colors.textTertiary,
-    marginTop: Spacing[1],
+    color: Colors.primary,
+    fontWeight: '700',
   },
 });

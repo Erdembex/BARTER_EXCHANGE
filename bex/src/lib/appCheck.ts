@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { CustomProvider, ReCaptchaV3Provider, initializeAppCheck } from 'firebase/app-check';
-import app from '@/lib/firebase';
+import app, { isFirebaseEnabled } from '@/lib/firebase';
 import { isAuthEmulatorActive } from '@/lib/devMode';
 
 let initialized = false;
@@ -25,7 +25,7 @@ function getRecaptchaSiteKey(): string | undefined {
  * Emulator / günlük geliştirmede hiçbir şey yapmaz.
  */
 export function initAppCheck(): void {
-  if (initialized || isAuthEmulatorActive() || __DEV__) {
+  if (initialized || isAuthEmulatorActive() || __DEV__ || !isFirebaseEnabled() || !app) {
     return;
   }
 

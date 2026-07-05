@@ -28,6 +28,7 @@ import { Button, Input } from '@/components/ui';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
 import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
 import { canUseApplicationMessages } from '@/features/messages';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplicationDetailScreen() {
@@ -44,15 +45,24 @@ export default function ApplicationDetailScreen() {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const app = await applicationsRepository.getById(id);
-    setApplication(app);
-    if (app) {
-      const t = await tasksRepository.getById(app.taskId);
-      setTask(t);
-      setApplicantName(await usersRepository.getDisplayName(app.userId));
-      setApplicantPortfolio(await usersRepository.getPortfolio(app.userId));
+    try {
+      const app = await applicationsRepository.getById(id);
+      setApplication(app);
+      if (app) {
+        const t = await tasksRepository.getById(app.taskId);
+        setTask(t);
+        setApplicantName(await usersRepository.getDisplayName(app.userId));
+        setApplicantPortfolio(await usersRepository.getPortfolio(app.userId));
+      }
+    } catch (err: unknown) {
+      setApplication(null);
+      Alert.alert(
+        'Yüklenemedi',
+        err instanceof Error ? err.message : 'Başvuru detayı açılamadı.'
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [id]);
 
   useFocusEffect(
@@ -69,12 +79,15 @@ export default function ApplicationDetailScreen() {
       Alert.alert(
         ok ? 'Başvuru onaylandı' : 'Onaylanamadı',
         ok
-          ? 'Kullanıcı görevi teslim edebilir. Kupon, teslim onaylandıktan sonra oluşturulur.'
+          ? 'Kullanıcı görevi teslim edebilir. Mesajlaşma da açıldı.'
           : 'Bu başvuru onaylanamaz.',
         [{ text: 'Tamam', onPress: () => (ok ? router.back() : undefined) }]
       );
-    } catch {
-      Alert.alert('Hata', 'İşlem tamamlanamadı.');
+    } catch (err: unknown) {
+      Alert.alert(
+        'Hata',
+        err instanceof Error ? err.message : 'İşlem tamamlanamadı.'
+      );
     } finally {
       setActionLoading(false);
     }
@@ -96,8 +109,11 @@ export default function ApplicationDetailScreen() {
           : 'Teslim onaylanamadı.',
         [{ text: 'Tamam', onPress: () => router.back() }]
       );
-    } catch {
-      Alert.alert('Hata', 'İşlem tamamlanamadı.');
+    } catch (err: unknown) {
+      Alert.alert(
+        'Hata',
+        err instanceof Error ? err.message : 'İşlem tamamlanamadı.'
+      );
     } finally {
       setActionLoading(false);
     }
@@ -223,22 +239,25 @@ export default function ApplicationDetailScreen() {
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Teslim dosyaları</Text>
             <View style={styles.fileGrid}>
-              {application.submissionFiles.map((url, i) => {
+              {application.submissionFiles
+                .filter((url) => url?.trim())
+                .map((url, i) => {
+                const resolvedUrl = resolveMediaUrl(url);
                 const isImage =
-                  url.startsWith('file:') ||
-                  url.startsWith('content:') ||
-                  /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
+                  resolvedUrl.startsWith('file:') ||
+                  resolvedUrl.startsWith('content:') ||
+                  /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(resolvedUrl);
 
                 if (isImage) {
                   return (
-                    <Image key={i} source={{ uri: url }} style={styles.fileImage} />
+                    <Image key={i} source={{ uri: resolvedUrl }} style={styles.fileImage} />
                   );
                 }
 
                 return (
                   <TouchableOpacity
                     key={i}
-                    onPress={() => Linking.openURL(url)}
+                    onPress={() => Linking.openURL(resolvedUrl)}
                     style={styles.fileLink}
                   >
                     <Text style={styles.file}>📎 Dosyayı aç</Text>
@@ -329,7 +348,12 @@ export default function ApplicationDetailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

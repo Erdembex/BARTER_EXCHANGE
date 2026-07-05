@@ -1,16 +1,12 @@
-import { Tabs, Redirect } from 'expo-router';
-import { Text } from 'react-native';
+import { Redirect } from 'expo-router';
+import { Drawer } from 'expo-router/drawer';
+import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifications } from '@/hooks/useNotifications';
+import { AppDrawerContent } from '@/components/navigation/AppDrawerContent';
 import { Colors } from '@/theme';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.45 }}>{emoji}</Text>
-  );
-}
-
-export default function TabsLayout() {
+export default function DrawerLayout() {
   const { bexUser } = useAuthStore();
   const { unreadCount } = useNotifications();
 
@@ -19,77 +15,38 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
+    <Drawer
+      drawerContent={(props: DrawerContentComponentProps) => (
+        <AppDrawerContent {...props} unreadCount={unreadCount} />
+      )}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: Colors.background,
-          borderTopColor: Colors.border,
-          borderTopWidth: 1,
-          paddingBottom: 8,
-          height: 64,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-        },
-        tabBarItemStyle: {
-          paddingHorizontal: 0,
+        drawerType: 'front',
+        drawerPosition: 'left',
+        swipeEnabled: true,
+        overlayColor: 'rgba(0,0,0,0.35)',
+        drawerStyle: {
+          width: 280,
+          backgroundColor: Colors.white,
         },
       }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Ana Sayfa',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
+      <Drawer.Screen name="home" options={{ drawerLabel: 'Ana Sayfa', title: 'Ana Sayfa' }} />
+      <Drawer.Screen
         name="tasks/index"
-        options={{
-          title: 'Görevler',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🎯" focused={focused} />,
-        }}
+        options={{ drawerLabel: 'Görevler', title: 'Görevler' }}
       />
-      <Tabs.Screen
+      <Drawer.Screen
         name="applications/index"
-        options={{
-          title: 'Başvurularım',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
-        }}
+        options={{ drawerLabel: 'Başvurular', title: 'Başvurular' }}
       />
-      <Tabs.Screen
-        name="trade"
-        options={{
-          title: 'Takas',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🔄" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="wallet"
-        options={{
-          title: 'Kuponlarım',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🎟️" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
+      <Drawer.Screen name="trade" options={{ drawerLabel: 'Takas', title: 'Takas' }} />
+      <Drawer.Screen name="wallet" options={{ drawerLabel: 'Cüzdan', title: 'Cüzdan' }} />
+      <Drawer.Screen
         name="notifications/index"
-        options={{
-          title: 'Bildirimler',
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🔔" focused={focused} />,
-        }}
+        options={{ drawerLabel: 'Bildirimler', title: 'Bildirimler' }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
-        }}
-      />
-    </Tabs>
+      <Drawer.Screen name="profile" options={{ drawerLabel: 'Profil', title: 'Profil' }} />
+    </Drawer>
   );
 }

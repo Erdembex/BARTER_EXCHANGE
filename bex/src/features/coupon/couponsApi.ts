@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Timestamp } from 'firebase/firestore';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth/tokenStorage';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { Coupon } from '@/types';
 
 type CouponDto = {
@@ -47,6 +47,7 @@ function mapCouponDto(dto: CouponDto): Coupon {
     usageHistory: [],
     status,
     createdAt: Timestamp.now(),
+    businessName: dto.businessName?.trim() || undefined,
   };
 }
 
@@ -75,9 +76,7 @@ export async function fetchRestCoupons(status?: 'ACTIVE'): Promise<Coupon[]> {
   }
 }
 
-export async function hasRestAuthSession(): Promise<boolean> {
-  return !!(await getAccessToken());
-}
+export { hasRestAuthSession };
 
 /** Takas için uygun backend kuponları */
 export async function fetchSwapEligibleCoupons(): Promise<Coupon[]> {

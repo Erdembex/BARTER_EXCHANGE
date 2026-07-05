@@ -6,6 +6,7 @@ import {
   ListRenderItem,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
@@ -19,17 +20,22 @@ import { tradeTheme, TradeTheme } from './tradeTheme';
 import { TradeListing, TradeOffer } from './types';
 import { TradeMyListingsPanel } from './TradeMyListingsPanel';
 import { TradeMyOffersPanel } from './TradeMyOffersPanel';
+import { TradeNewSwapPanel } from './TradeNewSwapPanel';
+import { TradeHistoryPanel } from './TradeHistoryPanel';
 import { TradeSubmitOfferModal } from './TradeSubmitOfferModal';
+import { AppHeader } from '@/components/navigation/AppHeader';
 
 const Box = createBox<TradeTheme>();
 
-type TradeTab = 'market' | 'mine' | 'offers';
+type TradeTab = 'market' | 'new' | 'history' | 'mine' | 'offers';
 
-const TAB_LABELS: Record<TradeTab, string> = {
-  market: 'Pazar',
-  mine: 'İlanlarım',
-  offers: 'Tekliflerim',
-};
+const TAB_ITEMS: { id: TradeTab; label: string; short: string }[] = [
+  { id: 'market', label: 'Pazar', short: 'Pazar' },
+  { id: 'new', label: 'Yeni Takas', short: 'Yeni' },
+  { id: 'history', label: 'Geçmiş', short: 'Geçmiş' },
+  { id: 'mine', label: 'İlanlarım', short: 'İlan' },
+  { id: 'offers', label: 'Teklifler', short: 'Teklif' },
+];
 
 interface TradeListingCardProps {
   item: TradeListing;
@@ -154,38 +160,45 @@ function TradeTabSwitch({
   onChange: (tab: TradeTab) => void;
 }) {
   return (
-    <Box flexDirection="row" marginTop="md">
-      {(['market', 'mine', 'offers'] as TradeTab[]).map((tab, index, arr) => {
-        const selected = active === tab;
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ marginTop: tradeTheme.spacing.md }}
+      contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+    >
+      {TAB_ITEMS.map((tab) => {
+        const selected = active === tab.id;
         return (
           <TouchableOpacity
-            key={tab}
+            key={tab.id}
             activeOpacity={0.85}
-            onPress={() => onChange(tab)}
-            style={{ flex: 1, marginRight: index < arr.length - 1 ? 6 : 0 }}
+            onPress={() => onChange(tab.id)}
           >
             <Box
               paddingVertical="sm"
-              borderRadius="md"
+              paddingHorizontal="md"
+              borderRadius="sm"
               alignItems="center"
               backgroundColor={selected ? 'tradePrimary' : 'surface'}
               borderWidth={1}
               borderColor={selected ? 'tradePrimary' : 'border'}
+              minWidth={72}
             >
               <Text
                 variant="caption"
                 style={{
                   color: selected ? '#FFFFFF' : tradeTheme.colors.text,
                   fontWeight: '700',
+                  fontSize: 11,
                 }}
               >
-                {TAB_LABELS[tab]}
+                {tab.short}
               </Text>
             </Box>
           </TouchableOpacity>
         );
       })}
-    </Box>
+    </ScrollView>
   );
 }
 
@@ -254,13 +267,19 @@ export function TradeMarketScreen() {
   );
 
   React.useEffect(() => {
-    if (tabParam === 'mine' || tabParam === 'offers' || tabParam === 'market') {
+    if (
+      tabParam === 'mine' ||
+      tabParam === 'offers' ||
+      tabParam === 'market' ||
+      tabParam === 'new' ||
+      tabParam === 'history'
+    ) {
       setTab(tabParam);
     }
   }, [tabParam]);
 
   React.useEffect(() => {
-    if (firebaseUser && (tab === 'mine' || tab === 'offers')) {
+    if (firebaseUser && (tab === 'mine' || tab === 'offers' || tab === 'history')) {
       load();
     }
   }, [tab, firebaseUser, load]);
@@ -282,24 +301,24 @@ export function TradeMarketScreen() {
   return (
     <ThemeProvider theme={tradeTheme}>
       <SafeAreaView style={{ flex: 1, backgroundColor: tradeTheme.colors.background }}>
+        <AppHeader title="Takas" />
         <Box flex={1} backgroundColor="background">
-          <Box paddingHorizontal="lg" paddingTop="lg" paddingBottom="md">
-            <Text variant="headingLarge">Takas Pazarı</Text>
+          <Box paddingHorizontal="lg" paddingTop="sm" paddingBottom="md">
             <Text variant="bodyMuted" marginTop="xs">
-              Kuponlarını takas et, yeni fırsatlar keşfet.
+              Güvenli takas, şeffaf işlem geçmişi.
             </Text>
             <TradeTabSwitch active={tab} onChange={setTab} />
             <Box
               flexDirection="row"
               marginTop="md"
               padding="sm"
-              borderRadius="md"
+              borderRadius="sm"
               backgroundColor="tradePrimaryLight"
               borderWidth={1}
               borderColor="tradePrimaryBorder"
             >
-              <Text variant="caption" style={{ color: tradeTheme.colors.tradePrimary }}>
-                🔒 Kupon kodları ilanlarda gösterilmez — güvenli takas sonrası paylaşılır.
+              <Text variant="caption" style={{ color: tradeTheme.colors.tradePrimary, lineHeight: 18 }}>
+                Kupon kodları ilanlarda gösterilmez. Takas tamamlanınca cüzdana yansır.
               </Text>
             </Box>
           </Box>
@@ -325,6 +344,22 @@ export function TradeMarketScreen() {
                 }}
               />
             </Box>
+          ) : tab === 'new' ? (
+            firebaseUser ? (
+              <TradeNewSwapPanel ownerId={firebaseUser.uid} onCreated={load} />
+            ) : (
+              <Box paddingHorizontal="lg">
+                <Text variant="bodyMuted">Yeni takas için giriş yap.</Text>
+              </Box>
+            )
+          ) : tab === 'history' ? (
+            firebaseUser ? (
+              <TradeHistoryPanel userId={firebaseUser.uid} />
+            ) : (
+              <Box paddingHorizontal="lg">
+                <Text variant="bodyMuted">İşlem geçmişi için giriş yap.</Text>
+              </Box>
+            )
           ) : tab === 'mine' ? (
             firebaseUser ? (
               <Box flex={1}>

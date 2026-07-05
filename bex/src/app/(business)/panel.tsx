@@ -42,7 +42,7 @@ export default function BusinessDashboardScreen() {
     ]);
     setStats({
       pendingApps: apps.filter((a) =>
-        ['pending', 'submitted', 'submission_approved'].includes(a.status)
+        ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
       ).length,
       activeTasks: tasks.filter((t) => t.status === 'active').length,
       pendingApproval: tasks.filter((t) => !t.approvedByAdmin).length,
@@ -122,7 +122,7 @@ export default function BusinessDashboardScreen() {
           <Button
             title="Başvuruları İncele"
             variant="secondary"
-            onPress={() => router.navigate('/(business)/applications/index')}
+            onPress={() => router.push('/(business)/applications')}
           />
           <Button
             title="Kupon Doğrula"

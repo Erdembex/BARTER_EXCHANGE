@@ -1,0 +1,8 @@
+target/
+uploads/
+.tools/
+*.log
+upload-test.jpg
+upload-result.json
+.env
+.env.*

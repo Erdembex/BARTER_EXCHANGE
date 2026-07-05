@@ -1,0 +1,1 @@
+-- Managed by db/migration/V10__create_conversations.sql

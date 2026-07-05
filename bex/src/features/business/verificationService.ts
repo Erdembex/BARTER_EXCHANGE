@@ -1,16 +1,8 @@
-import {
-  doc,
-  updateDoc,
-  addDoc,
-  collection,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { businessesRepository } from '@/features/data/businessesRepository';
 import { uploadLocalFiles } from '@/lib/storageUpload';
-import { COLLECTIONS, Business } from '@/types';
+import { Business } from '@/types';
 import { notifyAdmins } from '@/features/notifications/notificationsRepository';
 
 export interface VerificationUpload {
@@ -39,22 +31,5 @@ export async function submitBusinessVerification(
     return updated;
   }
 
-  await addDoc(collection(db, COLLECTIONS.BUSINESS_DOCUMENTS), {
-    businessId: business.id,
-    ownerUid: business.ownerUid,
-    fileUrl,
-    fileName: file.name,
-    mimeType: file.mimeType,
-    status: 'pending',
-    uploadedAt: serverTimestamp(),
-  });
-
-  await updateDoc(doc(db, COLLECTIONS.BUSINESSES, business.id), {
-    verificationStatus: 'pending',
-    verificationDocumentUrl: fileUrl,
-  });
-
-  const updated = await businessesRepository.getById(business.id);
-  if (!updated) throw new Error('İşletme güncellenemedi');
-  return updated;
+  throw new Error('KYC evrak yükleme REST backend\'de henüz desteklenmiyor.');
 }

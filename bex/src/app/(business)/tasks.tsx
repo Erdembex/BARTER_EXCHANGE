@@ -17,6 +17,7 @@ import { Task } from '@/types';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
+import { shouldUseDemoData } from '@/lib/devMode';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessTasksScreen() {
@@ -39,6 +40,28 @@ export default function BusinessTasksScreen() {
       load();
     }, [load])
   );
+
+  const handlePublish = (task: Task) => {
+    if (!business) return;
+    Alert.alert('Görevi Yayınla', `"${task.title}" kullanıcılara görünür olacak.`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Yayınla',
+        onPress: async () => {
+          setActionId(task.id);
+          try {
+            await tasksRepository.publish(task.id);
+            showToast('Görev yayınlandı.');
+            await load();
+          } catch (err: unknown) {
+            showToast(err instanceof Error ? err.message : 'Yayınlama başarısız.');
+          } finally {
+            setActionId(null);
+          }
+        },
+      },
+    ]);
+  };
 
   const handlePauseToggle = (task: Task) => {
     if (!business) return;
@@ -142,7 +165,11 @@ export default function BusinessTasksScreen() {
                     { color: item.approvedByAdmin ? Colors.success : Colors.warning },
                   ]}
                 >
-                  {item.approvedByAdmin ? 'Yayında' : 'Onay bekliyor'}
+                  {item.approvedByAdmin
+                    ? 'Yayında'
+                    : item.status === 'draft'
+                      ? 'Taslak'
+                      : 'Onay bekliyor'}
                 </Text>
               </View>
             </View>
@@ -158,12 +185,25 @@ export default function BusinessTasksScreen() {
             ) : null}
             <View style={styles.actions}>
               {!item.approvedByAdmin ? (
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => router.push(`/(business)/edit-task/${item.id}` as Href)}
-                >
-                  <Text style={styles.actionText}>Düzenle</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => router.push(`/(business)/edit-task/${item.id}` as Href)}
+                  >
+                    <Text style={styles.actionText}>Düzenle</Text>
+                  </TouchableOpacity>
+                  {item.status === 'draft' && shouldUseDemoData() ? (
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => handlePublish(item)}
+                      disabled={actionId === item.id}
+                    >
+                      <Text style={styles.actionText}>Yayınla</Text>
+                    </TouchableOpacity>
+                  ) : item.status === 'draft' ? (
+                    <Text style={styles.adminWait}>Admin onayı bekleniyor</Text>
+                  ) : null}
+                </>
               ) : null}
               {item.approvedByAdmin ? (
                 <TouchableOpacity
@@ -242,6 +282,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   actionText: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
+  adminWait: {
+    ...Typography.caption,
+    color: Colors.warning,
+    fontWeight: '600',
+    paddingVertical: Spacing[1],
+  },
   tapHint: {
     ...Typography.caption,
     color: Colors.primary,

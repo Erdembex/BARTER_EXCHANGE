@@ -1,18 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  addDoc,
-  updateDoc,
-  serverTimestamp,
-  limit,
-} from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { shouldUseDemoData } from '../../lib/devMode';
 import { demoStore } from '../../lib/demoStore';
 import {
@@ -26,40 +12,69 @@ import {
 import { tasksRepository } from './businessesRepository';
 import { usersRepository } from './usersRepository';
 import { notifyUser, notifyAdmins } from '../notifications/notificationsRepository';
+import {
+  acceptApplication,
+  applyToListing,
+  fetchApplicationById,
+  fetchBusinessApplications,
+  fetchMyApplications,
+  findMyApplicationForListing,
+  rejectApplication,
+  reviewApplication,
+  submitApplicationSubmission,
+  useApplicationsRestBackend,
+  withdrawApplication,
+} from '../application/applicationsApi';
+import { isBackendId } from '@/lib/api/backendId';
 
 export const applicationsRepository = {
   async getById(id: string): Promise<Application | null> {
+    if (isBackendId(id) && (await useApplicationsRestBackend())) {
+      try {
+        const app = await fetchApplicationById(id);
+        if (app) return app;
+      } catch {
+        return null;
+      }
+    }
+
     if (shouldUseDemoData()) {
       return demoStore.getApplications().find((a) => a.id === id) ?? null;
     }
-    const snap = await getDoc(doc(db, COLLECTIONS.APPLICATIONS, id));
-    return snap.exists() ? ({ id: snap.id, ...snap.data() } as Application) : null;
+    return null;
   },
 
   async getByUser(userId: string, status?: ApplicationStatus): Promise<Application[]> {
+    if (await useApplicationsRestBackend()) {
+      try {
+        let apps = await fetchMyApplications(userId);
+        if (status) apps = apps.filter((app) => app.status === status);
+        return apps;
+      } catch {
+        return [];
+      }
+    }
+
     if (shouldUseDemoData()) {
       let apps = demoStore.getApplications().filter((a) => a.userId === userId);
       if (status) apps = apps.filter((a) => a.status === status);
       return apps.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
     }
-    let q = query(
-      collection(db, COLLECTIONS.APPLICATIONS),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    if (status) {
-      q = query(
-        collection(db, COLLECTIONS.APPLICATIONS),
-        where('userId', '==', userId),
-        where('status', '==', status),
-        orderBy('createdAt', 'desc')
-      );
-    }
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Application);
+    return [];
   },
 
   async getActiveByUser(userId: string): Promise<Application[]> {
+    if (await useApplicationsRestBackend()) {
+      try {
+        const apps = await fetchMyApplications(userId);
+        return apps.filter((app) =>
+          ['pending', 'approved', 'submitted', 'submission_approved'].includes(app.status)
+        );
+      } catch {
+        // yerel yedeğe düş
+      }
+    }
+
     if (shouldUseDemoData()) {
       return demoStore
         .getApplications()
@@ -69,21 +84,18 @@ export const applicationsRepository = {
             ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
         );
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.APPLICATIONS),
-        where('userId', '==', userId),
-        where('status', 'in', ['pending', 'approved', 'submitted', 'submission_approved']),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Application);
-    } catch {
-      return [];
-    }
+    return [];
   },
 
   async getByUserAndTask(userId: string, taskId: string): Promise<Application | null> {
+    if (await useApplicationsRestBackend() && isBackendId(taskId)) {
+      try {
+        return await findMyApplicationForListing(userId, taskId);
+      } catch {
+        return null;
+      }
+    }
+
     const inactive: ApplicationStatus[] = ['rejected', 'cancelled'];
     if (shouldUseDemoData()) {
       return (
@@ -97,45 +109,32 @@ export const applicationsRepository = {
           ) ?? null
       );
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.APPLICATIONS),
-        where('userId', '==', userId),
-        where('taskId', '==', taskId),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const snap = await getDocs(q);
-      const app = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }) as Application)
-        .find((a) => !inactive.includes(a.status));
-      return app ?? null;
-    } catch {
-      return null;
-    }
+    return null;
   },
 
   async getByBusiness(businessId: string): Promise<Application[]> {
+    if (await useApplicationsRestBackend()) {
+      try {
+        return await fetchBusinessApplications();
+      } catch {
+        return [];
+      }
+    }
+
     if (shouldUseDemoData()) {
       return demoStore.getApplicationsByBusiness(businessId);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.APPLICATIONS),
-        where('businessId', '==', businessId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Application);
-    } catch {
-      return demoStore.getApplicationsByBusiness(businessId);
-    }
+    return [];
   },
 
   async create(userId: string, data: CreateApplication): Promise<string> {
     const existing = await this.getByUserAndTask(userId, data.taskId);
     if (existing) {
       throw Object.assign(new Error('Bu göreve zaten başvurdun.'), { code: 'already-applied' });
+    }
+
+    if (await useApplicationsRestBackend() && isBackendId(data.taskId)) {
+      return applyToListing(data);
     }
 
     if (shouldUseDemoData()) {
@@ -166,15 +165,7 @@ export const applicationsRepository = {
 
       return id;
     }
-    const ref = await addDoc(collection(db, COLLECTIONS.APPLICATIONS), {
-      ...data,
-      userId,
-      status: 'pending' as ApplicationStatus,
-      submissionText: '',
-      submissionFiles: [],
-      createdAt: serverTimestamp(),
-    });
-    return ref.id;
+    throw new Error('Başvuru için REST oturumu gerekli.');
   },
 
   async submit(id: string, submissionText: string, submissionFiles: string[]) {
@@ -204,12 +195,13 @@ export const applicationsRepository = {
       }
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.APPLICATIONS, id), {
-      status: 'submitted',
-      submissionText,
-      submissionFiles,
-      submittedAt: serverTimestamp(),
-    });
+
+    if (isBackendId(id) && (await useApplicationsRestBackend())) {
+      await submitApplicationSubmission(id, submissionText, submissionFiles);
+      return;
+    }
+
+    throw new Error('Teslim REST backend\'de henüz desteklenmiyor.');
   },
 
   async updateStatus(
@@ -217,6 +209,13 @@ export const applicationsRepository = {
     status: ApplicationStatus,
     reviewNote?: string
   ) {
+    if (isBackendId(id) && (await useApplicationsRestBackend())) {
+      if (status === 'rejected') {
+        await rejectApplication(id);
+        return;
+      }
+    }
+
     if (shouldUseDemoData()) {
       demoStore.updateApplication(id, {
         status,
@@ -225,11 +224,7 @@ export const applicationsRepository = {
       });
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.APPLICATIONS, id), {
-      status,
-      reviewNote: reviewNote ?? '',
-      reviewedAt: serverTimestamp(),
-    });
+    throw new Error('Başvuru durumu REST üzerinden güncellenmeli.');
   },
 
   async cancel(id: string, userId: string): Promise<boolean> {
@@ -237,6 +232,11 @@ export const applicationsRepository = {
     if (!application) return false;
     if (application.userId !== userId) return false;
     if (!['pending', 'approved'].includes(application.status)) return false;
+
+    if (isBackendId(id) && (await useApplicationsRestBackend())) {
+      await withdrawApplication(id);
+      return true;
+    }
 
     await this.updateStatus(id, 'cancelled');
     return true;
@@ -253,27 +253,14 @@ export const couponsRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getCoupons().find((c) => c.id === id) ?? null;
     }
-    const snap = await getDoc(doc(db, COLLECTIONS.COUPONS, id));
-    return snap.exists() ? ({ id: snap.id, ...snap.data() } as Coupon) : null;
+    return null;
   },
 
   async getByApplicationId(applicationId: string): Promise<Coupon | null> {
     if (shouldUseDemoData()) {
       return demoStore.getCoupons().find((c) => c.applicationId === applicationId) ?? null;
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.COUPONS),
-        where('applicationId', '==', applicationId),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      if (snap.empty) return null;
-      const d = snap.docs[0];
-      return { id: d.id, ...d.data() } as Coupon;
-    } catch {
-      return demoStore.getCoupons().find((c) => c.applicationId === applicationId) ?? null;
-    }
+    return null;
   },
 
   async getByCode(code: string): Promise<Coupon | null> {
@@ -281,19 +268,7 @@ export const couponsRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getCouponByCode(normalized);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.COUPONS),
-        where('couponCode', '==', normalized),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      if (snap.empty) return null;
-      const d = snap.docs[0];
-      return { id: d.id, ...d.data() } as Coupon;
-    } catch {
-      return demoStore.getCouponByCode(normalized);
-    }
+    return null;
   },
 
   async getByUser(userId: string, status?: Coupon['status']): Promise<Coupon[]> {
@@ -302,21 +277,7 @@ export const couponsRepository = {
       if (status) list = list.filter((c) => c.status === status);
       return list;
     }
-    let q = query(
-      collection(db, COLLECTIONS.COUPONS),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    if (status) {
-      q = query(
-        collection(db, COLLECTIONS.COUPONS),
-        where('userId', '==', userId),
-        where('status', '==', status),
-        orderBy('createdAt', 'desc')
-      );
-    }
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Coupon);
+    return [];
   },
 
   async getActiveByUser(userId: string): Promise<Coupon[]> {
@@ -327,17 +288,7 @@ export const couponsRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getCouponsByBusiness(businessId);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.COUPONS),
-        where('businessId', '==', businessId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Coupon);
-    } catch {
-      return demoStore.getCouponsByBusiness(businessId);
-    }
+    return [];
   },
 
   async createFromApplication(
@@ -377,12 +328,11 @@ export const couponsRepository = {
       return demoStore.redeemCoupon(couponId, scannedBy);
     }
 
-    const { cloudFunctions } = await import('../functions/cloudFunctions');
-    try {
-      return await cloudFunctions.redeemCoupon(couponId);
-    } catch {
-      return null;
+    if (await useApplicationsRestBackend()) {
+      throw new Error('Kupon kullanımı REST backend\'de henüz desteklenmiyor.');
     }
+
+    return null;
   },
 };
 
@@ -393,6 +343,20 @@ export async function approveApplication(
 ): Promise<boolean> {
   const application = await applicationsRepository.getById(applicationId);
   if (!application || application.status !== 'pending') return false;
+
+  if (isBackendId(applicationId) && (await useApplicationsRestBackend())) {
+    await reviewApplication(applicationId);
+    await acceptApplication(applicationId);
+    await notifyUser({
+      userId: application.userId,
+      title: 'Başvurun onaylandı',
+      body: 'Görevi tamamlayıp teslim edebilirsin. Başvurularım sekmesinden devam et.',
+      type: 'application_approved',
+      data: { applicationId },
+      showLocalForUserId: application.userId,
+    });
+    return true;
+  }
 
   if (shouldUseDemoData()) {
     await applicationsRepository.updateStatus(applicationId, 'approved', reviewNote);
@@ -407,9 +371,7 @@ export async function approveApplication(
     return true;
   }
 
-  const { cloudFunctions } = await import('../functions/cloudFunctions');
-  await cloudFunctions.approveApplication(applicationId, reviewNote);
-  return true;
+  throw new Error('Başvuru onayı REST backend\'de işletme panelinden yapılır.');
 }
 
 /** submission_approved → rewarded + kupon (admin + işletme onayı sonrası) */
@@ -443,6 +405,21 @@ export async function issueCouponForSubmission(
     return coupon;
   }
 
-  const { cloudFunctions } = await import('../functions/cloudFunctions');
-  return cloudFunctions.issueCouponForSubmission(applicationId, reviewNote);
+  if (await useApplicationsRestBackend()) {
+    const { issueBusinessCoupon, mapCouponDto } = await import('../coupon/businessCouponsApi');
+    const task = await tasksRepository.getById(application.taskId);
+    const dto = await issueBusinessCoupon(applicationId, reviewNote);
+    const coupon = mapCouponDto(
+      dto,
+      applicationId,
+      application.taskId,
+      application.userId
+    );
+    if (task && !coupon.rewardDescription) {
+      coupon.rewardDescription = task.rewardDescription;
+    }
+    return coupon;
+  }
+
+  throw new Error('Kupon oluşturma REST backend\'de henüz desteklenmiyor.');
 }

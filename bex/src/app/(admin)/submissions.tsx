@@ -17,6 +17,7 @@ import { adminRepository, EnrichedSubmission } from '@/features/admin/adminRepos
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function AdminSubmissionsScreen() {
@@ -129,21 +130,22 @@ export default function AdminSubmissionsScreen() {
             {item.submissionFiles.length > 0 ? (
               <View style={styles.fileGrid}>
                 {item.submissionFiles.map((url, i) => {
+                  const resolvedUrl = resolveMediaUrl(url);
                   const isImage =
-                    url.startsWith('file:') ||
-                    url.startsWith('content:') ||
-                    /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
+                    resolvedUrl.startsWith('file:') ||
+                    resolvedUrl.startsWith('content:') ||
+                    /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(resolvedUrl);
 
                   if (isImage) {
                     return (
-                      <Image key={i} source={{ uri: url }} style={styles.fileImage} />
+                      <Image key={i} source={{ uri: resolvedUrl }} style={styles.fileImage} />
                     );
                   }
 
                   return (
                     <TouchableOpacity
                       key={i}
-                      onPress={() => Linking.openURL(url)}
+                      onPress={() => Linking.openURL(resolvedUrl)}
                       style={styles.fileLink}
                     >
                       <Text style={styles.fileLinkText}>📎 Dosya {i + 1}</Text>

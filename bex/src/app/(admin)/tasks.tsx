@@ -89,12 +89,16 @@ export default function AdminTasksScreen() {
               <Text style={styles.back}>← Geri</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Görev Moderasyonu</Text>
-            <Text style={styles.subtitle}>{tasks.length} onay bekliyor</Text>
+            <Text style={styles.subtitle}>
+              Admin onayı bekleyen taslak görevler
+            </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Onay bekleyen görev yok.</Text>
+            <Text style={styles.emptyText}>
+              Onay bekleyen görev yok.
+            </Text>
           </View>
         }
         renderItem={({ item }) => (

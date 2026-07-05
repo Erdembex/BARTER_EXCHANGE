@@ -1,21 +1,7 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  orderBy,
-  query,
-  serverTimestamp,
-  Timestamp,
-  where,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { COLLECTIONS } from '@/types';
 import { couponsRepository } from '@/features/data/applicationsRepository';
 import { usersRepository } from '@/features/data/usersRepository';
 import {
@@ -24,7 +10,6 @@ import {
   notifyTradeOfferRejected,
 } from './tradeNotifications';
 import { executeTradeSwap } from './tradeCouponSwap';
-import { cloudFunctions } from '@/features/functions/cloudFunctions';
 import {
   createSwapListing,
   fetchMySwapListings,
@@ -36,15 +21,13 @@ import {
 import {
   CreateTradeListingInput,
   CreateTradeOfferInput,
-  TRADE_COUPON_PRIVATE_DOC,
-  TRADE_PRIVATE_COLLECTION,
   TradeListing,
   TradeListingPrivateCoupon,
   TradeListingRecord,
   TradeOffer,
-  TradeOfferPrivateCoupon,
   TradeOfferRecord,
   TradeSwapResult,
+  TradeHistoryEntry,
 } from './types';
 import { Coupon } from '@/types';
 
@@ -91,41 +74,7 @@ async function getLockedCouponIdsForUser(userId: string): Promise<Set<string>> {
   if (shouldUseDemoData()) {
     return getLockedCouponIds(userId);
   }
-
-  const locked = new Set<string>();
-
-  try {
-    const [listingsSnap, offersSnap] = await Promise.all([
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.TRADE_LISTINGS),
-          where('ownerId', '==', userId),
-          where('status', '==', 'active')
-        )
-      ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.TRADE_OFFERS),
-          where('fromUserId', '==', userId),
-          where('status', '==', 'pending')
-        )
-      ),
-    ]);
-
-    listingsSnap.docs.forEach((d) => {
-      const couponId = d.data().couponId as string | undefined;
-      if (couponId) locked.add(couponId);
-    });
-
-    offersSnap.docs.forEach((d) => {
-      const counterCouponId = d.data().counterCouponId as string | undefined;
-      if (counterCouponId) locked.add(counterCouponId);
-    });
-  } catch {
-    // İndeks/izin hatasında boş set — validateTradeCoupon yine de kontrol eder
-  }
-
-  return locked;
+  return new Set<string>();
 }
 
 async function validateTradeCoupon(
@@ -217,32 +166,7 @@ async function getLegacyMyListings(ownerId: string): Promise<TradeListing[]> {
       .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
       .map(toPublicListing);
   }
-
-  try {
-    const q = query(
-      collection(db, COLLECTIONS.TRADE_LISTINGS),
-      where('ownerId', '==', ownerId),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map((d) =>
-      toPublicListing({ id: d.id, ...d.data() } as TradeListingRecord)
-    );
-  } catch {
-    try {
-      const fallback = query(
-        collection(db, COLLECTIONS.TRADE_LISTINGS),
-        where('ownerId', '==', ownerId)
-      );
-      const snap = await getDocs(fallback);
-      return snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }) as TradeListingRecord)
-        .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
-        .map(toPublicListing);
-    } catch {
-      return [];
-    }
-  }
+  return [];
 }
 
 export const tradeRepository = {
@@ -278,20 +202,7 @@ export const tradeRepository = {
         .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
         .map(toPublicListing);
     }
-
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TRADE_LISTINGS),
-        where('status', '==', 'active'),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) =>
-        toPublicListing({ id: d.id, ...d.data() } as TradeListingRecord)
-      );
-    } catch {
-      return [];
-    }
+    return [];
   },
 
   async getMarketListings(): Promise<TradeListing[]> {
@@ -331,9 +242,19 @@ export const tradeRepository = {
       return record ? toPublicListing(record) : null;
     }
 
-    const snap = await getDoc(doc(db, COLLECTIONS.TRADE_LISTINGS, listingId));
-    if (!snap.exists()) return null;
-    return toPublicListing({ id: snap.id, ...snap.data() } as TradeListingRecord);
+    if (await useSwapRestBackend()) {
+      try {
+        const mine = await fetchMySwapListings();
+        const own = mine.find((listing) => listing.id === listingId);
+        if (own) return own;
+        const market = await fetchSwapListings();
+        return market.find((listing) => listing.id === listingId) ?? null;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
   },
 
   /**
@@ -375,20 +296,11 @@ export const tradeRepository = {
       return id;
     }
 
-    const listingRef = doc(collection(db, COLLECTIONS.TRADE_LISTINGS));
-    const batch = writeBatch(db);
+    if (await useSwapRestBackend()) {
+      throw new Error('Takas ilanı yalnızca backend kuponları ile oluşturulabilir.');
+    }
 
-    batch.set(listingRef, {
-      ...record,
-      createdAt: serverTimestamp(),
-    });
-    batch.set(
-      doc(listingRef, TRADE_PRIVATE_COLLECTION, TRADE_COUPON_PRIVATE_DOC),
-      privateCoupon
-    );
-
-    await batch.commit();
-    return listingRef.id;
+    throw new Error('Takas ilanı REST modunda desteklenmiyor.');
   },
 
   /**
@@ -464,20 +376,7 @@ export const tradeRepository = {
       return id;
     }
 
-    const offerRef = doc(collection(db, COLLECTIONS.TRADE_OFFERS));
-    const batch = writeBatch(db);
-
-    batch.set(offerRef, {
-      ...offerBase,
-      createdAt: serverTimestamp(),
-    });
-    batch.update(doc(db, COLLECTIONS.TRADE_LISTINGS, listingId), {
-      offerCount: increment(1),
-    });
-
-    await batch.commit();
-
-    return offerRef.id;
+    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
   },
 
   /**
@@ -502,28 +401,7 @@ export const tradeRepository = {
       return revealed ? secret.couponCode : null;
     }
 
-    const listingSnap = await getDoc(doc(db, COLLECTIONS.TRADE_LISTINGS, listingId));
-    if (!listingSnap.exists()) return null;
-
-    const listing = listingSnap.data() as TradeListingRecord;
-    const canRead =
-      listing.ownerId === requesterId ||
-      (listing.status === 'completed' && listing.acceptedFromUserId === requesterId);
-
-    if (!canRead) return null;
-
-    const secretSnap = await getDoc(
-      doc(
-        db,
-        COLLECTIONS.TRADE_LISTINGS,
-        listingId,
-        TRADE_PRIVATE_COLLECTION,
-        TRADE_COUPON_PRIVATE_DOC
-      )
-    );
-
-    if (!secretSnap.exists()) return null;
-    return (secretSnap.data() as TradeListingPrivateCoupon).couponCode;
+    return null;
   },
 
   /** İlan sahibinin gelen teklifleri — couponCode dönmez */
@@ -538,23 +416,7 @@ export const tradeRepository = {
         .map(toPublicOffer);
     }
 
-    const listingSnap = await getDoc(doc(db, COLLECTIONS.TRADE_LISTINGS, listingId));
-    if (!listingSnap.exists()) return [];
-    if ((listingSnap.data() as TradeListingRecord).ownerId !== ownerId) return [];
-
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TRADE_OFFERS),
-        where('listingId', '==', listingId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) =>
-        toPublicOffer({ id: d.id, ...d.data() } as TradeOfferRecord)
-      );
-    } catch {
-      return [];
-    }
+    return [];
   },
 
   /** Kullanıcının gönderdiği teklifler — couponCode dönmez */
@@ -566,19 +428,7 @@ export const tradeRepository = {
         .map(toPublicOffer);
     }
 
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TRADE_OFFERS),
-        where('fromUserId', '==', fromUserId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) =>
-        toPublicOffer({ id: d.id, ...d.data() } as TradeOfferRecord)
-      );
-    } catch {
-      return [];
-    }
+    return [];
   },
 
   async getOfferCouponCode(offerId: string, requesterId: string): Promise<string | null> {
@@ -597,33 +447,7 @@ export const tradeRepository = {
       return revealed ? secret.couponCode : null;
     }
 
-    const offerSnap = await getDoc(doc(db, COLLECTIONS.TRADE_OFFERS, offerId));
-    if (!offerSnap.exists()) return null;
-
-    const offer = offerSnap.data() as TradeOfferRecord;
-    const listingSnap = await getDoc(doc(db, COLLECTIONS.TRADE_LISTINGS, offer.listingId));
-    const listing = listingSnap.exists()
-      ? (listingSnap.data() as TradeListingRecord)
-      : null;
-
-    const canRead =
-      offer.fromUserId === requesterId ||
-      (offer.status === 'accepted' && listing?.ownerId === requesterId);
-
-    if (!canRead) return null;
-
-    const secretSnap = await getDoc(
-      doc(
-        db,
-        COLLECTIONS.TRADE_OFFERS,
-        offerId,
-        TRADE_PRIVATE_COLLECTION,
-        TRADE_COUPON_PRIVATE_DOC
-      )
-    );
-
-    if (!secretSnap.exists()) return null;
-    return (secretSnap.data() as TradeOfferPrivateCoupon).couponCode;
+    return null;
   },
 
   async rejectOffer(ownerId: string, offerId: string): Promise<void> {
@@ -657,28 +481,7 @@ export const tradeRepository = {
       return;
     }
 
-    const offerSnap = await getDoc(doc(db, COLLECTIONS.TRADE_OFFERS, offerId));
-    if (!offerSnap.exists()) {
-      throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
-    }
-
-    const offer = { id: offerSnap.id, ...offerSnap.data() } as TradeOfferRecord;
-    const listingSnap = await getDoc(doc(db, COLLECTIONS.TRADE_LISTINGS, offer.listingId));
-    if (!listingSnap.exists()) {
-      throw Object.assign(new Error('İlan bulunamadı.'), { code: 'listing-not-found' });
-    }
-
-    const listing = listingSnap.data() as TradeListingRecord;
-    if (listing.ownerId !== ownerId) {
-      throw Object.assign(new Error('Bu teklifi yönetemezsin.'), { code: 'forbidden' });
-    }
-    if (offer.status !== 'pending' || listing.status !== 'active') {
-      throw Object.assign(new Error('Teklif artık beklemede değil.'), { code: 'offer-closed' });
-    }
-
-    const batch = writeBatch(db);
-    batch.update(doc(db, COLLECTIONS.TRADE_OFFERS, offerId), { status: 'rejected' });
-    await batch.commit();
+    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
   },
 
   async acceptOffer(ownerId: string, offerId: string): Promise<TradeSwapResult> {
@@ -755,29 +558,52 @@ export const tradeRepository = {
       return swapResult;
     }
 
-    const offerRef = doc(db, COLLECTIONS.TRADE_OFFERS, offerId);
-    const offerSnap = await getDoc(offerRef);
-    if (!offerSnap.exists()) {
-      throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
-    }
+    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
+  },
 
-    const offer = { id: offerSnap.id, ...offerSnap.data() } as TradeOfferRecord;
-    const listingRef = doc(db, COLLECTIONS.TRADE_LISTINGS, offer.listingId);
-    const listingSnap = await getDoc(listingRef);
-    if (!listingSnap.exists()) {
-      throw Object.assign(new Error('İlan bulunamadı.'), { code: 'listing-not-found' });
-    }
+  /** Tamamlanan / sonuçlanmış takas işlemleri */
+  async getTradeHistory(userId: string): Promise<TradeHistoryEntry[]> {
+    const [offers, listings] = await Promise.all([
+      this.getMyOffers(userId),
+      this.getMyListings(userId),
+    ]);
 
-    const listing = { id: listingSnap.id, ...listingSnap.data() } as TradeListingRecord;
-    if (listing.ownerId !== ownerId) {
-      throw Object.assign(new Error('Bu teklifi yönetemezsin.'), { code: 'forbidden' });
-    }
-    if (offer.status !== 'pending' || listing.status !== 'active') {
-      throw Object.assign(new Error('Teklif artık beklemede değil.'), { code: 'offer-closed' });
-    }
+    const offerHistory: TradeHistoryEntry[] = offers
+      .filter((offer) => offer.status !== 'pending')
+      .map((offer) => ({
+        id: `offer-${offer.id}`,
+        kind: 'offer' as const,
+        title: offer.listingTitle,
+        subtitle: `Teklif · ${offer.counterRewardLabel}`,
+        detail:
+          offer.status === 'accepted'
+            ? 'Takas tamamlandı — yeni kupon cüzdanında.'
+            : offer.status === 'rejected'
+              ? 'İlan sahibi teklifi reddetti.'
+              : 'Teklif iptal edildi.',
+        status:
+          offer.status === 'accepted'
+            ? 'accepted'
+            : offer.status === 'rejected'
+              ? 'rejected'
+              : 'cancelled',
+        createdAtLabel: offer.createdAtLabel,
+        referenceId: offer.id,
+      }));
 
-    const swapResult = await cloudFunctions.executeTradeSwap(offerId);
+    const listingHistory: TradeHistoryEntry[] = listings
+      .filter((listing) => listing.status === 'completed')
+      .map((listing) => ({
+        id: `listing-${listing.id}`,
+        kind: 'listing' as const,
+        title: listing.title,
+        subtitle: `İlan · ${listing.rewardLabel}`,
+        detail: 'İlan üzerinden takas tamamlandı.',
+        status: 'completed' as const,
+        createdAtLabel: listing.createdAtLabel,
+        referenceId: listing.id,
+      }));
 
-    return swapResult;
+    return [...offerHistory, ...listingHistory];
   },
 };

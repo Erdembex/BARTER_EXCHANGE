@@ -1,8 +1,5 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { getDevProfile, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
-import { COLLECTIONS } from '@/types';
 import { getUserPortfolio } from '@/features/portfolio';
 
 export const usersRepository = {
@@ -12,24 +9,14 @@ export const usersRepository = {
     if (profile?.displayName?.trim()) {
       return profile.displayName.trim();
     }
-
-    if (!shouldUseDemoData()) {
-      try {
-        const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-        if (snap.exists()) {
-          const name = snap.data().displayName as string | undefined;
-          if (name?.trim()) return name.trim();
-        }
-      } catch {
-        // Yerel profile yeterli
-      }
-    }
-
     return `Kullanıcı ${uid.slice(-4)}`;
   },
 
   async getPortfolio(userId: string) {
-    return getUserPortfolio(userId);
+    if (shouldUseDemoData()) {
+      return getUserPortfolio(userId);
+    }
+    return [];
   },
 
   async getDisplayNames(uids: string[]): Promise<Record<string, string>> {
@@ -49,16 +36,5 @@ export const usersRepository = {
     const count = (profile?.completedTaskCount ?? 0) + 1;
     const reputationScore = (profile?.reputationScore ?? 0) + reputationGain;
     await setDevProfile(uid, { completedTaskCount: count, reputationScore });
-
-    if (!shouldUseDemoData()) {
-      try {
-        await updateDoc(doc(db, COLLECTIONS.USERS, uid), {
-          completedTaskCount: count,
-          reputationScore,
-        });
-      } catch {
-        // Dev / izin hatası
-      }
-    }
   },
 };

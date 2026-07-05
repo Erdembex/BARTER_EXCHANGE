@@ -19,6 +19,7 @@ import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { getApplicationQuickAction, getApplicationTarget } from '@/lib/applicationNavigation';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -83,9 +84,7 @@ export default function MyApplicationsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Başvurularım</Text>
-        </View>
+        <AppHeader title="Başvurular" />
         <TaskListSkeleton count={3} />
       </SafeAreaView>
     );
@@ -93,6 +92,7 @@ export default function MyApplicationsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppHeader title="Başvurular" />
       <FlatList
         data={applications}
         keyExtractor={(item) => item.id}
@@ -106,7 +106,6 @@ export default function MyApplicationsScreen() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>Başvurularım</Text>
             <Text style={styles.subtitle}>
               {activeCount} aktif · {applications.length} toplam
             </Text>
@@ -171,8 +170,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
-  header: { marginBottom: Spacing[4] },
-  title: { ...Typography.headingLarge, color: Colors.textPrimary },
+  header: { marginBottom: Spacing[3], paddingHorizontal: Spacing[5], paddingTop: Spacing[1] },
   subtitle: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,

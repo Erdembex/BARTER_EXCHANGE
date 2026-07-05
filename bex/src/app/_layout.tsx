@@ -1,7 +1,9 @@
+import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '@shopify/restyle';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { authService } from '@/features/auth/authService';
@@ -47,34 +49,37 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <SafeAreaProvider>
-        <ErrorBoundary>
-          <ToastProvider>
-            <StatusBar style="light" backgroundColor={Colors.background} />
-            <OfflineBanner />
-            <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(business)" />
-          <Stack.Screen name="(admin)" />
-          <Stack.Screen name="task" />
-            <Stack.Screen name="business" />
-            <Stack.Screen name="application" />
-            <Stack.Screen name="notifications/index" />
-            <Stack.Screen name="setup-guide" />
-            <Stack.Screen name="settings" />
-            <Stack.Screen name="user/[id]" />
-          </Stack>
-          </ToastProvider>
-        </ErrorBoundary>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <ToastProvider>
+              <StatusBar style="dark" backgroundColor={Colors.background} />
+              <OfflineBanner />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(business)" />
+                <Stack.Screen name="(admin)" />
+                <Stack.Screen name="task" />
+                <Stack.Screen name="business" />
+                <Stack.Screen name="application" />
+                <Stack.Screen name="notifications/index" />
+                <Stack.Screen name="setup-guide" />
+                <Stack.Screen name="settings" />
+                <Stack.Screen name="user/[id]" />
+              </Stack>
+            </ToastProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   splash: {
     flex: 1,
     backgroundColor: Colors.background,

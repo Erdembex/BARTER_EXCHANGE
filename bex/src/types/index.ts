@@ -171,6 +171,7 @@ export interface Coupon {
   usageHistory: CouponUsage[];
   status: CouponStatus;
   createdAt: Timestamp;
+  businessName?: string;
 }
 
 // ─── Bildirim ────────────────────────────────────────────────

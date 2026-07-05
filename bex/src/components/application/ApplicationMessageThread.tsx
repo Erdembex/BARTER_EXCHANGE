@@ -30,6 +30,7 @@ export function ApplicationMessageThread({
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ApplicationMessage>>(null);
   const prevCount = useRef(0);
 
@@ -57,14 +58,18 @@ export function ApplicationMessageThread({
   const handleSend = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
+    setSendError(null);
     try {
-      await messagesRepository.send(
+      const message = await messagesRepository.send(
         applicationId,
         currentUserId,
         currentUserRole,
         text
       );
+      setMessages((prev) => [...prev, message]);
       setText('');
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : 'Mesaj gönderilemedi.');
     } finally {
       setSending(false);
     }
@@ -111,6 +116,7 @@ export function ApplicationMessageThread({
       )}
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
@@ -151,6 +157,7 @@ const styles = StyleSheet.create({
   title: { ...Typography.labelLarge, color: Colors.textPrimary },
   subtitle: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
   empty: { ...Typography.bodySmall, color: Colors.textTertiary, textAlign: 'center' },
+  error: { ...Typography.caption, color: Colors.error, marginBottom: Spacing[1] },
   list: { gap: Spacing[2], maxHeight: 280 },
   bubble: {
     maxWidth: '85%',

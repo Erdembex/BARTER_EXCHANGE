@@ -4,6 +4,19 @@ export type TradeListingStatus = 'active' | 'paused' | 'completed';
 
 export type TradeOfferStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
 
+export type TradeHistoryStatus = 'completed' | 'accepted' | 'rejected' | 'cancelled' | 'pending';
+
+export interface TradeHistoryEntry {
+  id: string;
+  kind: 'offer' | 'listing';
+  title: string;
+  subtitle: string;
+  detail: string;
+  status: TradeHistoryStatus;
+  createdAtLabel: string;
+  referenceId: string;
+}
+
 /** Kullanıcının pazara koyduğu kupon / ödül ilanı */
 export interface TradeListing {
   id: string;

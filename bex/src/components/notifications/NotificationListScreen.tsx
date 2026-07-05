@@ -15,6 +15,7 @@ import { notificationsRepository, getNotificationTarget } from '@/features/notif
 import { useNotifications } from '@/hooks/useNotifications';
 import { BexNotification } from '@/types';
 import { Button } from '@/components/ui';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
@@ -71,6 +72,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
 
   return (
     <SafeAreaView style={styles.safe}>
+      {!showBack ? <AppHeader title="Bildirimler" /> : null}
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
@@ -85,7 +87,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
                 <Text style={styles.back}>← Geri</Text>
               </TouchableOpacity>
             ) : null}
-            <Text style={styles.title}>Bildirimler</Text>
+            {showBack ? <Text style={styles.title}>Bildirimler</Text> : null}
             {items.some((n) => !n.read) ? (
               <Button
                 title="Tümünü okundu işaretle"

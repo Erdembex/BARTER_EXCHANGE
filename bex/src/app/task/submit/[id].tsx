@@ -14,6 +14,7 @@ import {
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { isCurrentApplicationOwner } from '@/features/application/applicationsApi';
 import { applicationsRepository, tasksRepository } from '@/features/data';
 import { uploadSubmissionFiles } from '@/features/applications/submissionService';
 import { useAuthStore } from '@/store/authStore';
@@ -47,7 +48,7 @@ export default function SubmitTaskScreen() {
       return;
     }
 
-    if (app.userId !== firebaseUser.uid) {
+    if (!(await isCurrentApplicationOwner(app.userId, firebaseUser.uid))) {
       setError('Bu başvuruyu teslim etme yetkin yok.');
       setCanSubmit(false);
       setChecking(false);
@@ -105,6 +106,10 @@ export default function SubmitTaskScreen() {
 
     if (!submissionText.trim() || submissionText.trim().length < 10) {
       setError('Lütfen çalışmanı en az 10 karakterle açıkla.');
+      return;
+    }
+    if (files.length === 0) {
+      setError('En az bir kanıt fotoğrafı eklemelisin.');
       return;
     }
     if (!id || !firebaseUser) return;

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { router, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
 import { BexUser } from '@/types';
 import { Button, Input } from '@/components/ui';
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
@@ -30,6 +32,43 @@ export function AccountSettings({
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(bexUser?.displayName ?? '');
   const [savingName, setSavingName] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handlePickAvatar = async () => {
+    if (!firebaseUser) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('İzin gerekli', 'Profil fotoğrafı için galeri erişimine izin ver.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingAvatar(true);
+    try {
+      const updated = await authService.updateAvatar(
+        firebaseUser.uid,
+        asset.uri,
+        asset.mimeType ?? 'image/jpeg',
+        asset.fileName ?? 'avatar.jpg'
+      );
+      onUserUpdated(updated);
+      showToast('Profil fotoğrafın güncellendi.');
+    } catch {
+      showToast('Profil fotoğrafı yüklenemedi.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSaveName = async () => {
     if (!firebaseUser) return;
@@ -48,11 +87,15 @@ export function AccountSettings({
 
   return (
     <>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {(bexUser?.displayName ?? '?').charAt(0).toUpperCase()}
-        </Text>
-      </View>
+      <ProfileAvatar
+        name={bexUser?.displayName}
+        avatarUrl={bexUser?.avatarUrl}
+        size={88}
+        editable
+        loading={uploadingAvatar}
+        onPress={handlePickAvatar}
+      />
+      <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokun</Text>
 
       <Text style={styles.name}>{bexUser?.displayName ?? 'Kullanıcı'}</Text>
       <Text style={styles.email}>{bexUser?.email ?? firebaseUser?.email ?? '—'}</Text>
@@ -169,16 +212,11 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing[2],
+  avatarHint: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    marginTop: -Spacing[2],
   },
-  avatarText: { fontSize: 36, fontWeight: '700', color: Colors.primaryDark },
   name: { ...Typography.headingMedium, color: Colors.textPrimary },
   email: { ...Typography.bodyMedium, color: Colors.textSecondary },
   badgeRow: {

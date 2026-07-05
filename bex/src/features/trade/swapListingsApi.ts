@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
-import { fetchSwapEligibleCoupons, hasRestAuthSession, isBackendCouponId } from '@/features/coupon/couponsApi';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
+import { fetchSwapEligibleCoupons, isBackendCouponId } from '@/features/coupon/couponsApi';
 import { CreateTradeListingInput, TradeListing, TradeListingStatus } from './types';
 
 /** Takkas JWT oturumu varsa takas işlemleri REST üzerinden yapılır */

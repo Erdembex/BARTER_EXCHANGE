@@ -1,0 +1,1 @@
+-- Managed by db/migration/V11__create_messages.sql

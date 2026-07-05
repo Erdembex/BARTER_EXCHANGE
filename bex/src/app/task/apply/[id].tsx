@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { tasksRepository, applicationsRepository, EnrichedTask } from '@/features/data';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
+import { isBackendId } from '@/lib/api/backendId';
 import { usersRepository } from '@/features/data/usersRepository';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/common/Toast';
@@ -40,8 +42,16 @@ export default function ApplyScreen() {
   }, [firebaseUser]);
 
   const handleSubmit = async () => {
-    if (!coverLetter.trim() || coverLetter.trim().length < 20) {
-      setError('Lütfen en az 20 karakterlik bir açıklama yaz.');
+    const trimmed = coverLetter.trim();
+    const minLength =
+      (await hasRestAuthSession()) && task && isBackendId(task.id) ? 50 : 20;
+
+    if (!trimmed || trimmed.length < minLength) {
+      setError(
+        minLength >= 50
+          ? 'Lütfen en az 50 karakterlik bir açıklama yaz.'
+          : 'Lütfen en az 20 karakterlik bir açıklama yaz.'
+      );
       return;
     }
     if (!firebaseUser || !task) return;
@@ -53,7 +63,7 @@ export default function ApplyScreen() {
       await applicationsRepository.create(firebaseUser.uid, {
         taskId: task.id,
         businessId: task.businessId,
-        coverLetter: coverLetter.trim(),
+        coverLetter: trimmed,
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
       showToast('Başvurun gönderildi!');

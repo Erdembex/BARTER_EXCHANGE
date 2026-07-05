@@ -1,0 +1,372 @@
+import axios from 'axios';
+import { Timestamp, GeoPoint } from 'firebase/firestore';
+import { apiClient, getApiErrorMessage } from '@/lib/api';
+import { isBackendId } from '@/lib/api/backendId';
+import { usesDemoStore } from '@/lib/restBackend';
+import { EnrichedTask } from '@/features/data/businessesRepository';
+import { CreateTask, Task, TaskCategory, TaskDifficulty } from '@/types';
+
+type ListingCardDto = {
+  id: string;
+  businessName?: string;
+  businessLogoUrl?: string | null;
+  businessCategory?: string;
+  title?: string;
+  skills?: string[];
+  rewardType?: string;
+  rewardQuantity?: number;
+  rewardUnit?: string | null;
+  rewardDescription?: string | null;
+  status?: string;
+  applicantCount?: number;
+  createdAt?: string;
+};
+
+type ListingDetailDto = {
+  id: string;
+  businessId?: string;
+  businessName?: string;
+  businessLogoUrl?: string | null;
+  title?: string;
+  description?: string;
+  weeklyHours?: { min?: number; max?: number } | null;
+  status?: string;
+  skills?: string[];
+  rewardType?: string;
+  rewardQuantity?: number;
+  rewardUnit?: string | null;
+  validityDays?: number | null;
+  rewardDescription?: string | null;
+  viewCount?: number;
+  createdAt?: string;
+  expiresAt?: string | null;
+};
+
+type ListingsPageDto = {
+  content?: ListingCardDto[];
+  nextCursor?: string | null;
+  hasMore?: boolean;
+};
+
+type ListingResponseDto = ListingDetailDto & {
+  businessId?: string;
+  weeklyHours?: string;
+  rewardType?: string;
+  rewardQuantity?: number;
+  rewardUnit?: string | null;
+  validityDays?: number | null;
+  viewCount?: number;
+};
+
+const CATEGORY_TO_SKILL: Record<TaskCategory, string> = {
+  design: 'GRAPHIC_DESIGN',
+  development: 'WEB_DESIGN',
+  marketing: 'SOCIAL_MEDIA',
+  content: 'WRITING',
+  photography: 'PHOTOGRAPHY',
+  video: 'VIDEO',
+  translation: 'WRITING',
+  consulting: 'OTHER',
+  other: 'OTHER',
+};
+
+const SKILL_TO_CATEGORY: Record<string, TaskCategory> = {
+  GRAPHIC_DESIGN: 'design',
+  WEB_DESIGN: 'development',
+  SOCIAL_MEDIA: 'marketing',
+  SEO: 'marketing',
+  VIDEO: 'video',
+  PHOTOGRAPHY: 'photography',
+  WRITING: 'content',
+  MUSIC: 'other',
+  OTHER: 'other',
+};
+
+function mapSkillToCategory(skills?: string[]): TaskCategory {
+  const first = skills?.[0]?.toUpperCase();
+  if (first && SKILL_TO_CATEGORY[first]) return SKILL_TO_CATEGORY[first];
+  return 'other';
+}
+
+function mapListingStatus(status?: string): Task['status'] {
+  switch (status?.toUpperCase()) {
+    case 'ACTIVE':
+      return 'active';
+    case 'DRAFT':
+      return 'draft';
+    case 'CLOSED':
+      return 'paused';
+    case 'EXPIRED':
+      return 'completed';
+    default:
+      return 'draft';
+  }
+}
+
+function isListingPublished(status?: string): boolean {
+  return status?.toUpperCase() === 'ACTIVE';
+}
+
+function formatRewardLabel(dto: {
+  rewardDescription?: string | null;
+  rewardQuantity?: number;
+  rewardUnit?: string | null;
+  rewardType?: string;
+}): string {
+  if (dto.rewardDescription?.trim()) return dto.rewardDescription.trim();
+  const parts = [dto.rewardQuantity, dto.rewardUnit, dto.rewardType]
+    .filter((part) => part !== null && part !== undefined && `${part}`.trim())
+    .map(String);
+  return parts.join(' ') || 'Ödül';
+}
+
+function estimateHours(weeklyHours?: { min?: number; max?: number } | null): number {
+  const max = weeklyHours?.max ?? weeklyHours?.min;
+  if (typeof max === 'number' && max > 0) return max;
+  return 8;
+}
+
+function toTimestamp(value?: string | null): Timestamp {
+  if (!value) return Timestamp.now();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? Timestamp.now() : Timestamp.fromDate(date);
+}
+
+function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
+  const status = mapListingStatus(dto.status);
+  return {
+    id: String(dto.id),
+    businessId,
+    title: dto.title?.trim() || 'Görev',
+    description: '',
+    category: mapSkillToCategory(dto.skills),
+    difficulty: 'medium' as TaskDifficulty,
+    estimatedHours: 8,
+    rewardDescription: formatRewardLabel(dto),
+    rewardQuantity: dto.rewardQuantity ?? 1,
+    maxApplicants: 50,
+    currentApplicantCount: dto.applicantCount ?? 0,
+    status,
+    location: new GeoPoint(41.0082, 28.9784),
+    deadline: toTimestamp(dto.createdAt),
+    createdAt: toTimestamp(dto.createdAt),
+    approvedByAdmin: isListingPublished(dto.status),
+    featured: false,
+    businessName: dto.businessName?.trim() || 'İşletme',
+    businessVerified: false,
+  };
+}
+
+function mapResponseToTask(dto: ListingResponseDto): EnrichedTask {
+  const status = mapListingStatus(dto.status);
+  return {
+    id: String(dto.id),
+    businessId: dto.businessId ? String(dto.businessId) : '',
+    title: dto.title?.trim() || 'Görev',
+    description: dto.description?.trim() || '',
+    category: mapSkillToCategory(dto.skills),
+    difficulty: 'medium',
+    estimatedHours: estimateHours(dto.weeklyHours as { min?: number; max?: number } | null),
+    rewardDescription: formatRewardLabel(dto),
+    rewardQuantity: dto.rewardQuantity ?? 1,
+    maxApplicants: 50,
+    currentApplicantCount: 0,
+    status,
+    location: new GeoPoint(41.0082, 28.9784),
+    deadline: toTimestamp(dto.expiresAt ?? dto.createdAt),
+    createdAt: toTimestamp(dto.createdAt),
+    approvedByAdmin: isListingPublished(dto.status),
+    featured: false,
+    businessName: dto.businessName?.trim() || 'İşletme',
+    businessVerified: false,
+  };
+}
+
+function mapDetailToTask(dto: ListingDetailDto): EnrichedTask {
+  return mapResponseToTask(dto as ListingResponseDto);
+}
+
+function mapHoursToWeekly(hours: number): string {
+  if (hours <= 3) return 'H1_3';
+  if (hours <= 5) return 'H3_5';
+  if (hours <= 10) return 'H5_10';
+  return 'H10_PLUS';
+}
+
+function mapCreateTaskToRequest(data: CreateTask) {
+  const deadlineMs = data.deadline?.toMillis?.() ?? Date.now() + 14 * 86400000;
+  return {
+    title: data.title.trim(),
+    description: data.description.trim(),
+    weeklyHours: mapHoursToWeekly(data.estimatedHours || 4),
+    skills: [CATEGORY_TO_SKILL[data.category] ?? 'OTHER'],
+    reward: {
+      rewardType: 'CUSTOM',
+      quantity: data.rewardQuantity || 1,
+      unit: 'adet',
+      validityDays: Math.max(
+        1,
+        Math.ceil((deadlineMs - Date.now()) / 86400000)
+      ),
+      description: data.rewardDescription.trim(),
+    },
+    expiresAt: new Date(deadlineMs).toISOString(),
+  };
+}
+
+function mapPartialTaskToUpdate(data: CreateTask) {
+  const base = mapCreateTaskToRequest(data);
+  return {
+    title: base.title,
+    description: base.description,
+    weeklyHours: base.weeklyHours,
+    skills: base.skills,
+    rewardType: base.reward.rewardType,
+    quantity: base.reward.quantity,
+    unit: base.reward.unit,
+    validityDays: base.reward.validityDays,
+    rewardDescription: base.reward.description,
+    expiresAt: base.expiresAt,
+  };
+}
+
+function mapListingsError(error: unknown, fallback: string): Error {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+    const detail = getApiErrorMessage(error, fallback);
+    return new Error(status ? `[${status}] ${detail}` : detail);
+  }
+  if (error instanceof Error && error.message) return error;
+  return new Error(fallback);
+}
+
+export { isBackendId };
+
+export type DiscoverListingsResult = {
+  tasks: EnrichedTask[];
+  nextCursor: string | null;
+};
+
+/** Keşfet — GET /api/listings */
+export async function discoverListings(options?: {
+  pageSize?: number;
+  cursor?: string;
+  city?: string;
+  district?: string;
+}): Promise<DiscoverListingsResult> {
+  try {
+    const { data } = await apiClient.get<ListingsPageDto>('/api/listings', {
+      params: {
+        pageSize: options?.pageSize ?? 20,
+        cursor: options?.cursor,
+        city: options?.city,
+        district: options?.district,
+      },
+    });
+    const content = Array.isArray(data?.content) ? data.content : [];
+    return {
+      tasks: content.map((item) => mapCardToTask(item)),
+      nextCursor: data?.nextCursor ?? null,
+    };
+  } catch (error) {
+    throw mapListingsError(error, 'Görevler yüklenemedi.');
+  }
+}
+
+/** İlan detayı — GET /api/listings/{id} */
+export async function fetchListingDetail(listingId: string): Promise<EnrichedTask | null> {
+  if (!isBackendId(listingId)) return null;
+  try {
+    const { data } = await apiClient.get<ListingDetailDto>(`/api/listings/${listingId}`);
+    return mapDetailToTask(data);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+    throw mapListingsError(error, 'Görev detayı yüklenemedi.');
+  }
+}
+
+/** İşletme ilanları — GET /api/business/listings */
+export async function fetchBusinessListings(): Promise<EnrichedTask[]> {
+  try {
+    const { data } = await apiClient.get<ListingCardDto[]>('/api/business/listings');
+    const cards = Array.isArray(data) ? data : [];
+    return cards.map((item) => mapCardToTask(item, item.id ? '' : ''));
+  } catch (error) {
+    throw mapListingsError(error, 'İşletme görevleri yüklenemedi.');
+  }
+}
+
+/** POST /api/business/listings */
+export async function createListing(data: CreateTask): Promise<EnrichedTask> {
+  try {
+    const { data: response } = await apiClient.post<ListingResponseDto>(
+      '/api/business/listings',
+      mapCreateTaskToRequest(data)
+    );
+    return mapResponseToTask(response);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev oluşturulamadı.');
+  }
+}
+
+/** PATCH /api/admin/listings/{id}/approve */
+export async function approveListingAsAdmin(listingId: string): Promise<EnrichedTask> {
+  try {
+    const { data } = await apiClient.patch<ListingResponseDto>(
+      `/api/admin/listings/${listingId}/approve`
+    );
+    return mapResponseToTask(data);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev onaylanamadı.');
+  }
+}
+
+/** PATCH /api/admin/listings/{id}/reject */
+export async function rejectListingAsAdmin(listingId: string): Promise<void> {
+  try {
+    await apiClient.patch(`/api/admin/listings/${listingId}/reject`);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev reddedilemedi.');
+  }
+}
+
+/** GET /api/admin/listings/pending */
+export async function fetchPendingAdminListings(): Promise<EnrichedTask[]> {
+  try {
+    const { data } = await apiClient.get<ListingCardDto[]>('/api/admin/listings/pending');
+    return (Array.isArray(data) ? data : []).map((item) => mapCardToTask(item));
+  } catch (error) {
+    throw mapListingsError(error, 'Onay bekleyen görevler yüklenemedi.');
+  }
+}
+
+/** @deprecated İşletme yayınlayamaz — admin onayı gerekir */
+export async function publishListing(listingId: string): Promise<EnrichedTask> {
+  return approveListingAsAdmin(listingId);
+}
+
+/** PUT /api/business/listings/{id} */
+export async function updateListing(listingId: string, data: CreateTask): Promise<EnrichedTask> {
+  try {
+    const { data: response } = await apiClient.put<ListingResponseDto>(
+      `/api/business/listings/${listingId}`,
+      mapPartialTaskToUpdate(data)
+    );
+    return mapResponseToTask(response);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev güncellenemedi.');
+  }
+}
+
+/** PATCH /api/business/listings/{id}/close */
+export async function closeListing(listingId: string): Promise<void> {
+  try {
+    await apiClient.patch(`/api/business/listings/${listingId}/close`);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev kapatılamadı.');
+  }
+}
+
+export async function shouldUseListingsRest(): Promise<boolean> {
+  return !usesDemoStore();
+}

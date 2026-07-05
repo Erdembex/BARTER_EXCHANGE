@@ -15,6 +15,7 @@ import {
   updateBusinessProfile,
 } from './authApi';
 import { refreshAccessToken } from '../../lib/auth/authTokenRefresh';
+import { uploadLocalFiles } from '../../lib/storageUpload';
 
 export type { AuthSession } from './authTypes';
 
@@ -38,6 +39,7 @@ export function getAuthErrorMessage(code: string): string {
 }
 
 function mapUserTypeToRole(userType: string | undefined, email?: string | null): UserRole {
+  if (userType === 'ADMIN') return 'admin';
   const base: UserRole =
     userType === 'BUSINESS' ? 'business' : userType === 'INDIVIDUAL' ? 'user' : 'user';
   return resolveEffectiveRole(email, base);
@@ -95,6 +97,12 @@ async function fetchProfileForSession(
   if (!token) return null;
 
   try {
+    if (userType === 'ADMIN') {
+      return mapProfileToBexUser(session, userType, {
+        displayName: session.displayName ?? session.email?.split('@')[0] ?? 'Admin',
+      });
+    }
+
     if (userType === 'BUSINESS') {
       const profile = await fetchBusinessProfile();
       return mapProfileToBexUser(session, userType, {
@@ -213,6 +221,38 @@ export const authService = {
     }
 
     const session = sessionFromAccessToken(token, trimmed);
+    return fetchProfileForSession(session, claims.userType);
+  },
+
+  async updateAvatar(
+    uid: string,
+    localUri: string,
+    mimeType: string,
+    fileName: string
+  ): Promise<BexUser | null> {
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+
+    const claims = decodeJwtPayload(token);
+    if (claims?.sub !== uid) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+
+    const [avatarUrl] = await uploadLocalFiles(`avatars/${uid}`, [
+      { uri: localUri, name: fileName, mimeType },
+    ]);
+
+    if (claims.userType === 'BUSINESS') {
+      const current = await fetchBusinessProfile();
+      await updateBusinessProfile({ ...current, logoUrl: avatarUrl });
+    } else {
+      const current = await fetchIndividualProfile();
+      await updateIndividualProfile({ ...current, avatarUrl });
+    }
+
+    const session = sessionFromAccessToken(token);
     return fetchProfileForSession(session, claims.userType);
   },
 

@@ -1,11 +1,10 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { apiClient } from '@/lib/api';
 import { shouldUseDemoData } from '@/lib/devMode';
+import { usesRestBackend } from '@/lib/restBackend';
 import { setDevProfile } from '@/lib/devProfileStore';
-import { COLLECTIONS } from '@/types';
 
 let initialized = false;
 
@@ -57,9 +56,16 @@ export const notificationService = {
         return;
       }
 
-      await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
-        expoPushToken: token,
-      });
+      if (await usesRestBackend()) {
+        try {
+          await apiClient.post('/api/device/fcm-token', {
+            token,
+            platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
+          });
+        } catch {
+          // Push kaydı isteğe bağlı
+        }
+      }
     } catch {
       // Expo Go / emülatörde push token alınamayabilir — yerel bildirimler yeterli
     }

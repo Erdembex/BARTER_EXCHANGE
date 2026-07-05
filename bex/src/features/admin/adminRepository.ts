@@ -1,30 +1,17 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  updateDoc,
-  serverTimestamp,
-  Timestamp,
-  writeBatch,
-  limit,
-} from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { DEMO_BUSINESSES, DEMO_TASKS } from '@/lib/demoData';
-import { db } from '@/lib/firebase';
-import { shouldUseDemoData } from '@/lib/devMode';
+import { resolveEffectiveRole, shouldUseDemoData, buildDevUser } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { COLLECTIONS, Business, Task, Application, BexUser } from '@/types';
 import { enrichTasksWithBusiness, getDemoBusinessName } from '@/lib/demoData';
 import type { EnrichedTask } from '@/features/data/businessesRepository';
 import { tasksRepository, businessesRepository } from '@/features/data/businessesRepository';
+import { applicationsRepository } from '@/features/data/applicationsRepository';
 import { usersRepository } from '@/features/data/usersRepository';
 import { appendApprovedWorkToPortfolio } from '@/features/portfolio';
 import { notifyUser, notifyAdmins } from '@/features/notifications/notificationsRepository';
 import { getAllDevProfiles, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
-import { buildDevUser } from '@/lib/devMode';
+import { usesRestBackend } from '@/lib/restBackend';
 
 async function notifyBusinessOwner(
   businessId: string,
@@ -33,22 +20,20 @@ async function notifyBusinessOwner(
   type: 'task_approved' | 'kyc_result' | 'general',
   data?: Record<string, string>
 ) {
-  const business = shouldUseDemoData()
-    ? demoStore.getBusinesses().find((b) => b.id === businessId)
-    : (await getDoc(doc(db, COLLECTIONS.BUSINESSES, businessId))).data() as
-        | Business
-        | undefined;
-
-  if (!business?.ownerUid) return;
-
-  await notifyUser({
-    userId: business.ownerUid,
-    title,
-    body,
-    type,
-    data,
-    showLocalForUserId: business.ownerUid,
-  });
+  if (shouldUseDemoData()) {
+    const business = demoStore.getBusinesses().find((b) => b.id === businessId);
+    if (!business?.ownerUid) return;
+    await notifyUser({
+      userId: business.ownerUid,
+      title,
+      body,
+      type,
+      data,
+      showLocalForUserId: business.ownerUid,
+    });
+    return;
+  }
+  // REST modunda bildirimler backend tarafından oluşturulur
 }
 
 export type EnrichedSubmission = Application & {
@@ -122,25 +107,15 @@ export const adminRepository = {
         demoStore.getBusinesses()
       );
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TASKS),
-        where('status', '==', 'active'),
-        where('approvedByAdmin', '==', false),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Task);
-      return list.map((t) => ({
-        ...t,
-        businessName: getDemoBusinessName(t.businessId),
-      }));
-    } catch {
-      return enrichTasksWithBusiness(
-        demoStore.getPendingAdminTasks(),
-        demoStore.getBusinesses()
-      );
+    if (await usesRestBackend()) {
+      try {
+        const { fetchPendingAdminListings } = await import('../listing/listingsApi');
+        return fetchPendingAdminListings();
+      } catch {
+        return [];
+      }
     }
+    return [];
   },
 
   async approveTask(taskId: string): Promise<void> {
@@ -158,9 +133,21 @@ export const adminRepository = {
       }
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), {
-      approvedByAdmin: true,
-    });
+    if (await usesRestBackend()) {
+      const { approveListingAsAdmin } = await import('../listing/listingsApi');
+      const task = await tasksRepository.getById(taskId);
+      await approveListingAsAdmin(taskId);
+      if (task) {
+        await notifyBusinessOwner(
+          task.businessId,
+          'Görevin onaylandı',
+          `"${task.title}" artık kullanıcılara görünür.`,
+          'task_approved',
+          { taskId }
+        );
+      }
+      return;
+    }
   },
 
   async rejectTask(taskId: string): Promise<void> {
@@ -168,31 +155,18 @@ export const adminRepository = {
       demoStore.setTaskAdminApproval(taskId, false);
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), {
-      status: 'paused',
-      approvedByAdmin: false,
-    });
+    if (await usesRestBackend()) {
+      const { rejectListingAsAdmin } = await import('../listing/listingsApi');
+      await rejectListingAsAdmin(taskId);
+      return;
+    }
   },
 
   async getPendingVerifications(): Promise<Business[]> {
     if (shouldUseDemoData()) {
       return demoStore.getPendingVerifications();
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.BUSINESSES),
-        where('verificationStatus', '==', 'pending'),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        verificationStatus: (d.data() as Business).verificationStatus ?? 'none',
-      })) as Business[];
-    } catch {
-      return demoStore.getPendingVerifications();
-    }
+    return [];
   },
 
   async approveBusinessVerification(businessId: string): Promise<void> {
@@ -210,10 +184,7 @@ export const adminRepository = {
       }
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.BUSINESSES, businessId), {
-      verificationStatus: 'verified',
-      isVerified: true,
-    });
+    throw new Error('KYC moderasyonu REST backend\'de henüz desteklenmiyor.');
   },
 
   async rejectBusinessVerification(businessId: string): Promise<void> {
@@ -231,55 +202,69 @@ export const adminRepository = {
       }
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.BUSINESSES, businessId), {
-      verificationStatus: 'rejected',
-      isVerified: false,
-    });
+    throw new Error('KYC moderasyonu REST backend\'de henüz desteklenmiyor.');
   },
 
   async getPendingSubmissions(): Promise<EnrichedSubmission[]> {
     if (shouldUseDemoData()) {
       return enrichSubmissionsSync(demoStore.getPendingSubmissions());
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.APPLICATIONS),
-        where('status', '==', 'submitted'),
-        orderBy('submittedAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Application);
-      return enrichSubmissions(list);
-    } catch {
-      return enrichSubmissionsSync(demoStore.getPendingSubmissions());
+    if (await usesRestBackend()) {
+      try {
+        const { fetchPendingAdminSubmissions } = await import('../application/applicationsApi');
+        const apps = await fetchPendingAdminSubmissions();
+        return await enrichSubmissions(apps);
+      } catch {
+        return [];
+      }
     }
+    return [];
   },
 
   async approveSubmission(applicationId: string, reviewNote?: string): Promise<void> {
-    let app: Application | null = null;
-
-    if (shouldUseDemoData()) {
-      app = demoStore.getApplications().find((a) => a.id === applicationId) ?? null;
-    } else {
-      const snap = await getDoc(doc(db, COLLECTIONS.APPLICATIONS, applicationId));
-      app = snap.exists() ? ({ id: snap.id, ...snap.data() } as Application) : null;
+    if (await usesRestBackend()) {
+      const { approveAdminSubmission } = await import('../application/applicationsApi');
+      await approveAdminSubmission(applicationId, reviewNote);
+      const app = await applicationsRepository.getById(applicationId);
+      if (app) {
+        await notifyBusinessOwner(
+          app.businessId,
+          'Teslim admin onayladı',
+          'Kullanıcı teslimi uygun bulundu. Başvurularından kupon verebilirsin.',
+          'general',
+          { applicationId }
+        );
+        await notifyUser({
+          userId: app.userId,
+          title: 'Teslimin onaylandı',
+          body: 'Admin içeriği onayladı. Görsellerin portföyünde görünür.',
+          type: 'general',
+          data: { applicationId },
+          showLocalForUserId: app.userId,
+        });
+        const task = await tasksRepository.getById(app.taskId);
+        await appendApprovedWorkToPortfolio(
+          app.userId,
+          { ...app, status: 'submission_approved', reviewNote: reviewNote ?? '' },
+          task?.title ?? 'Görev'
+        );
+      }
+      return;
     }
+
+    if (!shouldUseDemoData()) {
+      throw new Error('Teslim moderasyonu REST backend\'de henüz desteklenmiyor.');
+    }
+
+    let app: Application | null = demoStore.getApplications().find((a) => a.id === applicationId) ?? null;
 
     if (!app || app.status !== 'submitted') return;
 
-    if (shouldUseDemoData()) {
-      demoStore.updateApplication(applicationId, {
-        status: 'submission_approved',
-        reviewNote: reviewNote ?? '',
-        reviewedAt: Timestamp.now(),
-      });
-    } else {
-      await updateDoc(doc(db, COLLECTIONS.APPLICATIONS, applicationId), {
-        status: 'submission_approved',
-        reviewNote: reviewNote ?? '',
-        reviewedAt: serverTimestamp(),
-      });
-    }
+    demoStore.updateApplication(applicationId, {
+      status: 'submission_approved',
+      reviewNote: reviewNote ?? '',
+      reviewedAt: Timestamp.now(),
+    });
 
     await notifyBusinessOwner(
       app.businessId,
@@ -311,32 +296,38 @@ export const adminRepository = {
   },
 
   async rejectSubmission(applicationId: string, reviewNote: string): Promise<void> {
-    const note = reviewNote.trim() || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.';
-
-    let app: Application | null = null;
-
-    if (shouldUseDemoData()) {
-      app = demoStore.getApplications().find((a) => a.id === applicationId) ?? null;
-    } else {
-      const snap = await getDoc(doc(db, COLLECTIONS.APPLICATIONS, applicationId));
-      app = snap.exists() ? ({ id: snap.id, ...snap.data() } as Application) : null;
+    if (await usesRestBackend()) {
+      const { rejectAdminSubmission } = await import('../application/applicationsApi');
+      const note = reviewNote.trim() || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.';
+      await rejectAdminSubmission(applicationId, note);
+      const app = await applicationsRepository.getById(applicationId);
+      if (app) {
+        await notifyUser({
+          userId: app.userId,
+          title: 'Teslimin reddedildi',
+          body: note,
+          type: 'general',
+          data: { applicationId },
+          showLocalForUserId: app.userId,
+        });
+      }
+      return;
     }
+
+    if (!shouldUseDemoData()) {
+      throw new Error('Teslim moderasyonu REST backend\'de henüz desteklenmiyor.');
+    }
+
+    const note = reviewNote.trim() || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.';
+    const app = demoStore.getApplications().find((a) => a.id === applicationId) ?? null;
 
     if (!app || app.status !== 'submitted') return;
 
-    if (shouldUseDemoData()) {
-      demoStore.updateApplication(applicationId, {
-        status: 'approved',
-        reviewNote: note,
-        reviewedAt: Timestamp.now(),
-      });
-    } else {
-      await updateDoc(doc(db, COLLECTIONS.APPLICATIONS, applicationId), {
-        status: 'approved',
-        reviewNote: note,
-        reviewedAt: serverTimestamp(),
-      });
-    }
+    demoStore.updateApplication(applicationId, {
+      status: 'approved',
+      reviewNote: note,
+      reviewedAt: Timestamp.now(),
+    });
 
     await notifyUser({
       userId: app.userId,
@@ -348,33 +339,8 @@ export const adminRepository = {
     });
   },
 
-  /** Canlı Firestore boşsa demo işletme + görev yükler (admin). */
   async seedLiveCatalog(): Promise<{ businesses: number; tasks: number }> {
-    if (shouldUseDemoData()) {
-      throw new Error('demo-mode');
-    }
-
-    const existing = await getDocs(
-      query(collection(db, COLLECTIONS.TASKS), limit(1))
-    );
-    if (!existing.empty) {
-      throw new Error('already-seeded');
-    }
-
-    const batch = writeBatch(db);
-
-    for (const business of DEMO_BUSINESSES) {
-      const { id, ...data } = business;
-      batch.set(doc(db, COLLECTIONS.BUSINESSES, id), data);
-    }
-
-    for (const task of DEMO_TASKS) {
-      const { id, ...data } = task;
-      batch.set(doc(db, COLLECTIONS.TASKS, id), data);
-    }
-
-    await batch.commit();
-    return { businesses: DEMO_BUSINESSES.length, tasks: DEMO_TASKS.length };
+    throw new Error('REST modunda tohum veri desteklenmiyor.');
   },
 
   async searchUsers(search: string, max = 40): Promise<BexUser[]> {
@@ -396,26 +362,11 @@ export const adminRepository = {
       return list;
     }
 
-    const snap = await getDocs(query(collection(db, COLLECTIONS.USERS), limit(100)));
-    return snap.docs
-      .map((d) => ({ uid: d.id, ...d.data() }) as BexUser)
-      .filter((u) => {
-        if (!q) return true;
-        return (
-          u.displayName?.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.uid.toLowerCase().includes(q)
-        );
-      })
-      .slice(0, max);
+    return [];
   },
 
   async setUserBanned(uid: string, banned: boolean): Promise<void> {
     await loadDevProfiles();
     await setDevProfile(uid, { isBanned: banned });
-
-    if (!shouldUseDemoData()) {
-      await updateDoc(doc(db, COLLECTIONS.USERS, uid), { isBanned: banned });
-    }
   },
 };

@@ -1,9 +1,10 @@
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
+import { getFunctions, httpsCallable, connectFunctionsEmulator, Functions } from 'firebase/functions';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import app from '@/lib/firebase';
+import app, { isFirebaseEnabled } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Coupon } from '@/types';
+import { TradeSwapResult } from '@/features/trade/types';
 
 function getDevHost(): string {
   if (Platform.OS === 'web') return '127.0.0.1';
@@ -22,21 +23,28 @@ function getDevHost(): string {
   return '127.0.0.1';
 }
 
-const functions = getFunctions(app);
+let functions: Functions | null = null;
 
-if (__DEV__) {
-  const g = globalThis as typeof globalThis & { __bexFunctionsEmulator?: boolean };
-  if (!g.__bexFunctionsEmulator) {
-    try {
-      connectFunctionsEmulator(functions, getDevHost(), 5001);
-      g.__bexFunctionsEmulator = true;
-    } catch {
-      // Emulator kapalıysa prod functions kullanılır
+function getFunctionsClient(): Functions {
+  if (!isFirebaseEnabled() || !app) {
+    throw new Error('Firebase Functions REST modunda devre dışı.');
+  }
+  if (!functions) {
+    functions = getFunctions(app);
+    if (__DEV__) {
+      const g = globalThis as typeof globalThis & { __bexFunctionsEmulator?: boolean };
+      if (!g.__bexFunctionsEmulator) {
+        try {
+          connectFunctionsEmulator(functions, getDevHost(), 5001);
+          g.__bexFunctionsEmulator = true;
+        } catch {
+          // Emulator kapalı
+        }
+      }
     }
   }
+  return functions;
 }
-
-import { TradeSwapResult } from '@/features/trade/types';
 
 type CouponResult = { coupon: Coupon };
 type TradeSwapFnResult = TradeSwapResult;
@@ -52,7 +60,7 @@ export const cloudFunctions = {
     const fn = httpsCallable<
       { applicationId: string; reviewNote?: string },
       { ok: boolean }
-    >(functions, 'approveApplication');
+    >(getFunctionsClient(), 'approveApplication');
     const { data } = await fn({ applicationId, reviewNote });
     return data;
   },
@@ -67,7 +75,7 @@ export const cloudFunctions = {
     const fn = httpsCallable<
       { applicationId: string; reviewNote?: string },
       CouponResult
-    >(functions, 'issueCouponForSubmission');
+    >(getFunctionsClient(), 'issueCouponForSubmission');
     const { data } = await fn({ applicationId, reviewNote });
     return data.coupon;
   },
@@ -77,7 +85,7 @@ export const cloudFunctions = {
       throw new Error('Demo modda cloud function çağrılmamalı.');
     }
     const fn = httpsCallable<{ couponId: string }, CouponResult>(
-      functions,
+      getFunctionsClient(),
       'redeemCoupon'
     );
     const { data } = await fn({ couponId });
@@ -89,7 +97,7 @@ export const cloudFunctions = {
       throw new Error('Demo modda cloud function çağrılmamalı.');
     }
     const fn = httpsCallable<{ offerId: string }, TradeSwapFnResult>(
-      functions,
+      getFunctionsClient(),
       'executeTradeSwap'
     );
     const { data } = await fn({ offerId });

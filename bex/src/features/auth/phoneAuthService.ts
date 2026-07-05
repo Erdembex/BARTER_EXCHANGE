@@ -6,11 +6,9 @@ import {
   linkWithCredential,
   signInWithPhoneNumber,
 } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
-import { auth, db, getAuthEmulatorHost } from '@/lib/firebase';
+import { auth, getAuthEmulatorHost } from '@/lib/firebase';
 import { isAuthEmulatorActive, shouldUseDemoData } from '@/lib/devMode';
 import { setDevProfile } from '@/lib/devProfileStore';
-import { COLLECTIONS } from '@/types';
 
 const PROJECT_ID = 'bexcursor';
 
@@ -33,7 +31,7 @@ function createDevAppVerifier(): ApplicationVerifier {
 }
 
 function getAppVerifier(): ApplicationVerifier {
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && auth) {
     if (!webRecaptchaVerifier) {
       webRecaptchaVerifier = new RecaptchaVerifier(auth, 'bex-recaptcha', {
         size: 'invisible',
@@ -157,6 +155,15 @@ export function getLastDevVerificationCode(): string | null {
 }
 
 export async function sendPhoneVerificationCode(phoneInput: string): Promise<string> {
+  if (!shouldUseDemoData() && !isAuthEmulatorActive()) {
+    throw Object.assign(new Error('Telefon doğrulama REST modunda henüz desteklenmiyor.'), {
+      code: 'auth/not-supported-yet',
+    });
+  }
+  if (!auth) {
+    throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
+  }
+
   if (!validateTurkishPhone(phoneInput)) {
     throw Object.assign(new Error('invalid-phone'), { code: 'invalid-phone' });
   }
@@ -183,6 +190,15 @@ export async function sendPhoneVerificationCode(phoneInput: string): Promise<str
 }
 
 export async function verifyPhoneCode(code: string, phoneInput: string): Promise<void> {
+  if (!shouldUseDemoData() && !isAuthEmulatorActive()) {
+    throw Object.assign(new Error('Telefon doğrulama REST modunda henüz desteklenmiyor.'), {
+      code: 'auth/not-supported-yet',
+    });
+  }
+  if (!auth) {
+    throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
+  }
+
   if (!pendingSessionInfo) {
     throw Object.assign(new Error('no-pending-verification'), {
       code: 'no-pending-verification',
@@ -201,17 +217,6 @@ export async function verifyPhoneCode(code: string, phoneInput: string): Promise
 
   const phone = formatTurkishPhone(phoneInput);
   await setDevProfile(user.uid, { phone, phoneVerified: true });
-
-  if (!shouldUseDemoData()) {
-    try {
-      await updateDoc(doc(db, COLLECTIONS.USERS, user.uid), {
-        phone,
-        phoneVerified: true,
-      });
-    } catch {
-      // Emulator / izin hatasında yerel profil yeterli
-    }
-  }
 }
 
 export function clearPendingPhoneVerification() {
@@ -220,7 +225,7 @@ export function clearPendingPhoneVerification() {
 }
 
 export function isPhoneAuthSupported(): boolean {
-  return isAuthEmulatorActive() || Platform.OS === 'web';
+  return shouldUseDemoData() && (isAuthEmulatorActive() || Platform.OS === 'web');
 }
 
 export { extractErrorCode as getPhoneAuthErrorCode };

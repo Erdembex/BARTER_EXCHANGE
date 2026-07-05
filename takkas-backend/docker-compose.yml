@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: takkas-redis
+    ports:
+      - "6379:6379"
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: takkas-redisinsight
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+volumes: {}

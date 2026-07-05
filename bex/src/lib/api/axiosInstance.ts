@@ -19,6 +19,10 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // FormData: boundary otomatik eklenmeli (RN/axios multipart hatası önlenir)
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 

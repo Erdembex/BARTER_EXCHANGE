@@ -14,6 +14,7 @@ import { tasksRepository, EnrichedTask } from '@/features/data';
 import { TaskCategory, TaskDifficulty } from '@/types';
 import { SearchBar, CategoryFilter, TaskCard } from '@/components/tasks';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Colors, Typography, Spacing } from '@/theme';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
@@ -32,6 +33,7 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -48,20 +50,27 @@ export default function TasksScreen() {
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
-    const { tasks: fetched, lastDoc: doc } = await tasksRepository.getActive(10);
+    const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(10);
     setTasks(fetched);
     setLastDoc(doc);
-    setHasMore(doc !== null && fetched.length >= 10);
+    setNextCursor(cursor);
+    setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
     setLoading(false);
   }, []);
 
   const loadMore = async () => {
-    if (loadingMore || !hasMore || !lastDoc) return;
+    if (loadingMore || !hasMore) return;
+    if (!nextCursor && !lastDoc) return;
     setLoadingMore(true);
-    const { tasks: fetched, lastDoc: doc } = await tasksRepository.getActive(10, lastDoc);
+    const cursorArg = nextCursor ?? lastDoc ?? undefined;
+    const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
+      10,
+      cursorArg
+    );
     setTasks((prev) => [...prev, ...fetched]);
     setLastDoc(doc);
-    setHasMore(doc !== null && fetched.length >= 10);
+    setNextCursor(cursor);
+    setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
     setLoadingMore(false);
   };
 
@@ -79,8 +88,8 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppHeader title="Görevler" />
       <View style={styles.header}>
-        <Text style={styles.title}>Görevler</Text>
         <Text style={styles.subtitle}>Becerinle ödül kazan</Text>
       </View>
 
@@ -140,8 +149,7 @@ export default function TasksScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[4], gap: 4 },
-  title: { ...Typography.headingLarge, color: Colors.textPrimary },
+  header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[1], paddingBottom: Spacing[2] },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary },
   filters: { paddingHorizontal: Spacing[5], gap: Spacing[3], paddingBottom: Spacing[3] },
   diffRow: { flexDirection: 'row', gap: Spacing[2] },

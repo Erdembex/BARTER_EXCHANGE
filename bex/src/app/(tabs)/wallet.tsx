@@ -18,6 +18,7 @@ import { Coupon } from '@/types';
 import { router, Href } from 'expo-router';
 import { CouponCard, CouponQrModal } from '@/components/wallet';
 import { WalletSkeleton } from '@/components/tasks/TaskCardSkeleton';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
 
@@ -35,15 +36,18 @@ export default function WalletScreen() {
     setLoading(true);
 
     let list: Coupon[] = [];
+    let usedRest = false;
+
     if (await hasRestAuthSession()) {
       try {
         list = await fetchRestCoupons();
+        usedRest = true;
       } catch {
         list = [];
       }
     }
 
-    if (list.length === 0) {
+    if (!usedRest) {
       if (shouldUseDemoData()) {
         demoStore.ensureSampleCouponForUser(firebaseUser.uid);
       }
@@ -54,9 +58,10 @@ export default function WalletScreen() {
 
     const names: Record<string, string> = {};
     for (const c of list) {
+      if (c.businessName) names[c.businessId] = c.businessName;
       if (!names[c.businessId]) {
         const biz = await businessesRepository.getById(c.businessId);
-        names[c.businessId] = biz?.name ?? 'İşletme';
+        names[c.businessId] = biz?.name ?? c.businessName ?? 'İşletme';
       }
     }
     setBusinessNames(names);
@@ -81,6 +86,7 @@ export default function WalletScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
+        <AppHeader title="Cüzdan" />
         <WalletSkeleton />
       </SafeAreaView>
     );
@@ -88,14 +94,15 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppHeader title="Cüzdan" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Kuponlarım</Text>
           <Text style={styles.subtitle}>
             {active.length} aktif · {archive.length} arşiv
           </Text>
@@ -103,14 +110,14 @@ export default function WalletScreen() {
 
         {coupons.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🎟️</Text>
+            <Text style={styles.emptyIcon}>▣</Text>
             <Text style={styles.emptyTitle}>Henüz kupon yok</Text>
             <Text style={styles.emptyText}>
               Görev tamamlayıp işletme onayı aldığında kuponlar burada görünür.
             </Text>
             <Button
               title="Görevlere Göz At"
-              onPress={() => router.push('/(tabs)/home' as Href)}
+              onPress={() => router.push('/(tabs)/tasks' as Href)}
               style={{ marginTop: Spacing[5], alignSelf: 'stretch' }}
             />
           </View>
@@ -119,12 +126,14 @@ export default function WalletScreen() {
             {active.length > 0 && (
               <>
                 <Text style={styles.section}>Aktif Kuponlar</Text>
-                {active.map((coupon) => (
+                {active.map((coupon, index) => (
                   <CouponCard
                     key={coupon.id}
                     coupon={coupon}
                     businessName={businessNames[coupon.businessId]}
                     onPress={() => setSelectedCoupon(coupon)}
+                    variant={index === 0 ? 'hero' : 'default'}
+                    layout="stack"
                   />
                 ))}
               </>
@@ -161,27 +170,37 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
-  header: { marginBottom: Spacing[4] },
-  title: { ...Typography.headingLarge, color: Colors.textPrimary },
+  scroll: { padding: Spacing[5], paddingTop: Spacing[2], paddingBottom: Spacing[10], flexGrow: 1 },
+  header: {
+    marginBottom: Spacing[4],
+    paddingBottom: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary, marginTop: 2 },
   section: {
     ...Typography.labelLarge,
     color: Colors.textPrimary,
     marginBottom: Spacing[3],
+    fontWeight: '700',
   },
   sectionArchive: {
-    marginTop: Spacing[4],
+    marginTop: Spacing[5],
     color: Colors.textSecondary,
   },
   empty: { alignItems: 'center', paddingTop: Spacing[16] },
-  emptyEmoji: { fontSize: 48, marginBottom: Spacing[3] },
+  emptyIcon: {
+    fontSize: 40,
+    color: Colors.primary,
+    marginBottom: Spacing[3],
+    fontWeight: '300',
+  },
   emptyTitle: { ...Typography.headingMedium, color: Colors.textPrimary },
   emptyText: {
     ...Typography.bodyMedium,
     color: Colors.textSecondary,
     marginTop: Spacing[1],
     textAlign: 'center',
+    lineHeight: 22,
   },
 });

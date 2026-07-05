@@ -1,18 +1,13 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { Auth, getAuth, connectAuthEmulator } from 'firebase/auth';
+import { Firestore, getFirestore } from 'firebase/firestore';
+import { FirebaseStorage, getStorage, connectStorageEmulator } from 'firebase/storage';
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyDinx7Ufj8QSFlztCI410kzWb-bfSNf8JU',
-  authDomain: 'bexcursor.firebaseapp.com',
-  projectId: 'bexcursor',
-  storageBucket: 'bexcursor.firebasestorage.app',
-  messagingSenderId: '671290008734',
-  appId: '1:671290008734:web:f7ead50594a01d28dfc78f',
-};
+/** Yalnızca EXPO_PUBLIC_USE_FIREBASE_EMULATOR=true iken Firebase etkin. */
+const useFirebaseEmulator =
+  __DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
 
 export function getAuthEmulatorHost(): string {
   if (Platform.OS === 'web') {
@@ -38,29 +33,48 @@ export function getAuthEmulatorHost(): string {
   return '127.0.0.1';
 }
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? 'demo',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'demo.firebaseapp.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? 'demo',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? 'demo.appspot.com',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '0',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? 'demo',
+};
 
-if (__DEV__) {
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
+
+if (useFirebaseEmulator) {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+
   const g = globalThis as typeof globalThis & {
     __bexAuthEmulator?: boolean;
     __bexStorageEmulator?: boolean;
   };
-  if (!g.__bexAuthEmulator) {
+
+  if (!g.__bexAuthEmulator && auth) {
     const host = getAuthEmulatorHost();
     connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
     auth.settings.appVerificationDisabledForTesting = true;
     g.__bexAuthEmulator = true;
 
-    if (!g.__bexStorageEmulator) {
+    if (!g.__bexStorageEmulator && storage) {
       connectStorageEmulator(storage, host, 9199);
       g.__bexStorageEmulator = true;
     }
   }
 }
 
+export { auth, db, storage, app };
+export default app;
 export { isAuthEmulatorActive } from './devMode';
 
-export default app;
+export function isFirebaseEnabled(): boolean {
+  return useFirebaseEmulator;
+}

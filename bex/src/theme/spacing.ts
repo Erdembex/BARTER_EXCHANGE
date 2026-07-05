@@ -15,42 +15,56 @@ export const Spacing = {
 } as const;
 
 export const Radius = {
-  xs: 6,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 28,
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 10,
+  xl: 12,
+  '2xl': 14,
   full: 9999,
 } as const;
 
 export const Shadow = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  lg: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 4,
   },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
-    shadowRadius: 20,
-    elevation: 8,
-  },
   primary: {
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#1A4D8C',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  accent: {
+    shadowColor: '#C9A227',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  card: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
 } as const;

@@ -1,158 +1,116 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  addDoc,
-  updateDoc,
-  serverTimestamp,
-  QueryDocumentSnapshot,
-  DocumentData,
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { shouldUseDemoData } from '../../lib/devMode';
-import { COLLECTIONS, Task, TaskCategory, TaskDifficulty, Business, CreateBusiness, CreateTask } from '../../types';
+import { usesRestBackend } from '../../lib/restBackend';
+import { Task, TaskCategory, TaskDifficulty, Business, CreateBusiness, CreateTask } from '../../types';
 import { matchesSearch } from '../../lib/taskUtils';
 import {
-  DEMO_TASKS,
   DEMO_BUSINESSES,
   enrichTasksWithBusiness,
   getDemoBusinessName,
 } from '../../lib/demoData';
 import { demoStore } from '../../lib/demoStore';
-import { notifyAdmins } from '../notifications/notificationsRepository';
+import {
+  closeListing,
+  createListing,
+  discoverListings,
+  fetchBusinessListings,
+  fetchListingDetail,
+  publishListing,
+  shouldUseListingsRest,
+  updateListing,
+} from '../listing/listingsApi';
+import { isBackendId } from '@/lib/api/backendId';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 
 export type EnrichedTask = Task & { businessName: string; businessVerified?: boolean };
 
-async function enrichTasks(tasks: Task[]): Promise<EnrichedTask[]> {
-  if (shouldUseDemoData()) {
-    return enrichTasksWithBusiness(tasks, demoStore.getBusinesses());
-  }
-
-  const cache = new Map<string, { name: string; isVerified: boolean }>();
-  const result: EnrichedTask[] = [];
-
-  for (const task of tasks) {
-    if (!cache.has(task.businessId)) {
-      try {
-        const snap = await getDoc(doc(db, COLLECTIONS.BUSINESSES, task.businessId));
-        if (snap.exists()) {
-          const biz = snap.data() as Business;
-          cache.set(task.businessId, { name: biz.name, isVerified: biz.isVerified });
-        } else {
-          cache.set(task.businessId, {
-            name: getDemoBusinessName(task.businessId),
-            isVerified: false,
-          });
-        }
-      } catch {
-        cache.set(task.businessId, {
-          name: getDemoBusinessName(task.businessId),
-          isVerified: false,
-        });
-      }
-    }
-    const biz = cache.get(task.businessId)!;
-    result.push({
-      ...task,
-      businessName: biz.name,
-      businessVerified: biz.isVerified,
-    });
-  }
-  return result;
+function asEnriched(tasks: EnrichedTask[]): EnrichedTask[] {
+  return tasks.map((task) => ({
+    ...task,
+    businessName: task.businessName || getDemoBusinessName(task.businessId),
+    businessVerified: task.businessVerified ?? false,
+  }));
 }
 
 export const tasksRepository = {
   async getById(id: string): Promise<Task | null> {
     if (shouldUseDemoData()) {
-      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
+      return demoStore.getTaskById(id) ?? null;
     }
-    if (id.startsWith('demo-')) {
-      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
+
+    if (isBackendId(id)) {
+      try {
+        const listing = await fetchListingDetail(id);
+        if (listing) return listing;
+      } catch {
+        return null;
+      }
     }
-    try {
-      const snap = await getDoc(doc(db, COLLECTIONS.TASKS, id));
-      return snap.exists() ? ({ id: snap.id, ...snap.data() } as Task) : null;
-    } catch {
-      return demoStore.getTaskById(id) ?? DEMO_TASKS.find((t) => t.id === id) ?? null;
-    }
+
+    return null;
   },
 
   async getFeatured(limitCount = 5): Promise<EnrichedTask[]> {
+    if (await shouldUseListingsRest()) {
+      try {
+        const page = await discoverListings({ pageSize: limitCount });
+        if (page.tasks.length > 0) return asEnriched(page.tasks);
+      } catch {
+        // demo yedeğine düş
+      }
+    }
+
     if (shouldUseDemoData()) {
       return enrichTasksWithBusiness(
         demoStore.getFeaturedTasks(limitCount),
         demoStore.getBusinesses()
       );
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TASKS),
-        where('status', '==', 'active'),
-        where('approvedByAdmin', '==', true),
-        where('featured', '==', true),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
-      const snap = await getDocs(q);
-      if (snap.empty) throw new Error('empty');
-      const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Task);
-      return enrichTasks(tasks);
-    } catch {
-      return enrichTasksWithBusiness(
-        demoStore.getFeaturedTasks(limitCount),
-        demoStore.getBusinesses()
-      );
-    }
+
+    return [];
   },
 
   async getActive(
     pageSize = 10,
-    lastDoc?: QueryDocumentSnapshot<DocumentData>
-  ): Promise<{ tasks: EnrichedTask[]; lastDoc: QueryDocumentSnapshot<DocumentData> | null }> {
+    cursor?: QueryDocumentSnapshot<DocumentData> | string | null
+  ): Promise<{
+    tasks: EnrichedTask[];
+    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    nextCursor: string | null;
+  }> {
+    const restCursor = typeof cursor === 'string' ? cursor : undefined;
+
+    if (await shouldUseListingsRest()) {
+      try {
+        const page = await discoverListings({ pageSize, cursor: restCursor });
+        return {
+          tasks: asEnriched(page.tasks),
+          lastDoc: null,
+          nextCursor: page.nextCursor,
+        };
+      } catch {
+        if (shouldUseDemoData()) {
+          const visible = demoStore.getVisibleTasks();
+          return {
+            tasks: enrichTasksWithBusiness(visible, demoStore.getBusinesses()),
+            lastDoc: null,
+            nextCursor: null,
+          };
+        }
+        return { tasks: [], lastDoc: null, nextCursor: null };
+      }
+    }
+
     if (shouldUseDemoData()) {
       const visible = demoStore.getVisibleTasks();
       return {
         tasks: enrichTasksWithBusiness(visible, demoStore.getBusinesses()),
         lastDoc: null,
+        nextCursor: null,
       };
     }
-    try {
-      let q = query(
-        collection(db, COLLECTIONS.TASKS),
-        where('status', '==', 'active'),
-        where('approvedByAdmin', '==', true),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-      );
-      if (lastDoc) {
-        q = query(
-          collection(db, COLLECTIONS.TASKS),
-          where('status', '==', 'active'),
-          where('approvedByAdmin', '==', true),
-          orderBy('createdAt', 'desc'),
-          startAfter(lastDoc),
-          limit(pageSize)
-        );
-      }
-      const snap = await getDocs(q);
-      if (snap.empty && !lastDoc) throw new Error('empty');
-      const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Task);
-      const enriched = await enrichTasks(tasks);
-      const newLast = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
-      return { tasks: enriched, lastDoc: newLast };
-    } catch {
-      const visible = demoStore.getVisibleTasks();
-      return {
-        tasks: enrichTasksWithBusiness(visible, demoStore.getBusinesses()),
-        lastDoc: null,
-      };
-    }
+
+    return { tasks: [], lastDoc: null, nextCursor: null };
   },
 
   async search(
@@ -172,11 +130,10 @@ export const tasksRepository = {
   async getEnrichedById(id: string): Promise<EnrichedTask | null> {
     const task = await this.getById(id);
     if (!task) return null;
-    if (shouldUseDemoData() || id.startsWith('demo-')) {
+    if (shouldUseDemoData()) {
       return enrichTasksWithBusiness([task], demoStore.getBusinesses())[0] ?? null;
     }
-    const enriched = await enrichTasks([task]);
-    return enriched[0] ?? null;
+    return asEnriched([task as EnrichedTask])[0] ?? null;
   },
 
   async getSimilar(task: Task, limitCount = 3): Promise<EnrichedTask[]> {
@@ -187,55 +144,68 @@ export const tasksRepository = {
   },
 
   async getByBusiness(businessId: string): Promise<Task[]> {
+    if (await shouldUseListingsRest()) {
+      try {
+        const listings = await fetchBusinessListings();
+        return listings.filter(
+          (listing) =>
+            !businessId ||
+            !listing.businessId ||
+            listing.businessId === businessId ||
+            isBackendId(businessId)
+        );
+      } catch {
+        if (shouldUseDemoData()) {
+          return demoStore.getTasksByBusiness(businessId);
+        }
+        return [];
+      }
+    }
+
     if (shouldUseDemoData()) {
       return demoStore.getTasksByBusiness(businessId);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.TASKS),
-        where('businessId', '==', businessId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Task);
-    } catch {
-      return demoStore.getTasksByBusiness(businessId);
-    }
+
+    return [];
   },
 
   async getPublicActiveByBusiness(businessId: string): Promise<EnrichedTask[]> {
     const tasks = await this.getByBusiness(businessId);
-    const publicTasks = tasks.filter(
-      (t) => t.status === 'active' && t.approvedByAdmin
+    return asEnriched(
+      tasks.filter((t) => t.status === 'active' && t.approvedByAdmin) as EnrichedTask[]
     );
-    return enrichTasks(publicTasks);
   },
 
   async create(businessId: string, data: CreateTask): Promise<string> {
     if (shouldUseDemoData()) {
       const task = demoStore.createTask(businessId, data);
-      await notifyAdmins({
-        title: 'Yeni görev onayı bekliyor',
-        body: `"${data.title}" admin moderasyonuna düştü.`,
-        type: 'general',
-        data: { taskId: task.id },
-      });
       return task.id;
     }
-    const ref = await addDoc(collection(db, COLLECTIONS.TASKS), {
-      ...data,
-      businessId,
-      currentApplicantCount: 0,
-      approvedByAdmin: false,
-      createdAt: serverTimestamp(),
-    });
-    await notifyAdmins({
-      title: 'Yeni görev onayı bekliyor',
-      body: `"${data.title}" admin moderasyonuna düştü.`,
-      type: 'general',
-      data: { taskId: ref.id },
-    });
-    return ref.id;
+
+    if (!(await hasRestAuthSession())) {
+      throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+    }
+
+    const listing = await createListing(data);
+    return listing.id;
+  },
+
+  async publish(taskId: string): Promise<void> {
+    if (shouldUseDemoData()) {
+      demoStore.setTaskAdminApproval(taskId, true);
+      demoStore.updateTask(taskId, { status: 'active' });
+      return;
+    }
+
+    throw new Error('Görev yayınlama yalnızca admin onayı ile yapılır.');
+  },
+
+  async createAndPublish(businessId: string, data: CreateTask): Promise<string> {
+    const id = await this.create(businessId, data);
+    if (shouldUseDemoData()) {
+      demoStore.setTaskAdminApproval(id, true);
+    }
+    return id;
   },
 
   async update(
@@ -249,19 +219,36 @@ export const tasksRepository = {
         throw new Error('Görev bulunamadı');
       }
       if (task.approvedByAdmin) {
-        throw new Error('Onaylanmış görev düzenlenemez');
+        throw new Error('Yayınlanmış görev düzenlenemez');
       }
       demoStore.updateTask(taskId, data);
       return;
     }
-    const task = await this.getById(taskId);
-    if (!task || task.businessId !== businessId) {
+
+    const current = await this.getById(taskId);
+    if (!current || current.businessId !== businessId) {
       throw new Error('Görev bulunamadı');
     }
-    if (task.approvedByAdmin) {
-      throw new Error('Onaylanmış görev düzenlenemez');
+    if (current.approvedByAdmin) {
+      throw new Error('Yayınlanmış görev düzenlenemez');
     }
-    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), data);
+
+    const merged: CreateTask = {
+      businessId,
+      title: data.title ?? current.title,
+      description: data.description ?? current.description,
+      category: data.category ?? current.category,
+      difficulty: data.difficulty ?? current.difficulty,
+      estimatedHours: data.estimatedHours ?? current.estimatedHours,
+      rewardDescription: data.rewardDescription ?? current.rewardDescription,
+      rewardQuantity: data.rewardQuantity ?? current.rewardQuantity,
+      maxApplicants: data.maxApplicants ?? current.maxApplicants,
+      status: data.status ?? current.status,
+      location: data.location ?? current.location,
+      deadline: data.deadline ?? current.deadline,
+    };
+
+    await updateListing(taskId, merged);
   },
 
   async setStatus(
@@ -274,51 +261,41 @@ export const tasksRepository = {
       if (!task || task.businessId !== businessId) {
         throw new Error('Görev bulunamadı');
       }
-      if (!task.approvedByAdmin && status !== 'active') {
-        throw new Error('Onay bekleyen görev duraklatılamaz');
+      if (task.status === 'draft' && status === 'paused') {
+        throw new Error('Taslak görev duraklatılamaz.');
+      }
+      if (task.status === 'draft' && status === 'active') {
+        demoStore.setTaskAdminApproval(taskId, true);
       }
       demoStore.updateTask(taskId, { status });
       return;
     }
+
     const task = await this.getById(taskId);
     if (!task || task.businessId !== businessId) {
       throw new Error('Görev bulunamadı');
     }
-    if (!task.approvedByAdmin && status !== 'active') {
-      throw new Error('Onay bekleyen görev duraklatılamaz');
+
+    if (task.status === 'draft' && status === 'active') {
+      await publishListing(taskId);
+      return;
     }
-    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), { status });
+
+    if (status === 'paused' || status === 'completed') {
+      await closeListing(taskId);
+      return;
+    }
+
+    throw new Error('Bu durum değişikliği desteklenmiyor.');
   },
 };
 
 export const businessesRepository = {
   async getById(id: string): Promise<Business | null> {
     if (shouldUseDemoData()) {
-      return (
-        demoStore.getBusinessById(id) ??
-        DEMO_BUSINESSES.find((b) => b.id === id) ??
-        null
-      );
+      return demoStore.getBusinessById(id) ?? DEMO_BUSINESSES.find((b) => b.id === id) ?? null;
     }
-    if (id.startsWith('demo-')) {
-      return (
-        demoStore.getBusinessById(id) ??
-        DEMO_BUSINESSES.find((b) => b.id === id) ??
-        null
-      );
-    }
-    try {
-      const snap = await getDoc(doc(db, COLLECTIONS.BUSINESSES, id));
-      if (!snap.exists()) return null;
-      const data = snap.data() as Omit<Business, 'id'>;
-      return {
-        id: snap.id,
-        ...data,
-        verificationStatus: data.verificationStatus ?? 'none',
-      };
-    } catch {
-      return DEMO_BUSINESSES.find((b) => b.id === id) ?? null;
-    }
+    return null;
   },
 
   async getPopular(limitCount = 10): Promise<Business[]> {
@@ -327,38 +304,14 @@ export const businessesRepository = {
         .sort((a, b) => b.reputationScore - a.reputationScore)
         .slice(0, limitCount);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.BUSINESSES),
-        where('isVerified', '==', true),
-        orderBy('reputationScore', 'desc'),
-        limit(limitCount)
-      );
-      const snap = await getDocs(q);
-      if (snap.empty) throw new Error('empty');
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Business);
-    } catch {
-      return DEMO_BUSINESSES;
-    }
+    return [];
   },
 
-  async getByOwner(ownerUid: string): Promise<Business | null> {
+  async getByOwner(_ownerUid: string): Promise<Business | null> {
     if (shouldUseDemoData()) {
-      return demoStore.getBusinessByOwner(ownerUid);
+      return demoStore.getBusinessByOwner(_ownerUid);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.BUSINESSES),
-        where('ownerUid', '==', ownerUid),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      if (snap.empty) return null;
-      const d = snap.docs[0];
-      return { id: d.id, ...d.data() } as Business;
-    } catch {
-      return demoStore.getBusinessByOwner(ownerUid);
-    }
+    return null;
   },
 
   async create(data: CreateBusiness): Promise<string> {
@@ -366,18 +319,14 @@ export const businessesRepository = {
       const business = demoStore.createBusiness(data.ownerUid, data);
       return business.id;
     }
-    const ref = await addDoc(collection(db, COLLECTIONS.BUSINESSES), {
-      ...data,
-      isVerified: false,
-      verificationStatus: 'none',
-      reputationScore: 0,
-      totalTasksPublished: 0,
-      createdAt: serverTimestamp(),
-    });
-    return ref.id;
+    throw new Error('İşletme kaydı REST üzerinden yapılır.');
   },
 
-  async update(id: string, data: Partial<Omit<Business, 'id' | 'createdAt'>>) {
-    await updateDoc(doc(db, COLLECTIONS.BUSINESSES, id), data);
+  async update(_id: string, _data: Partial<Omit<Business, 'id' | 'createdAt'>>) {
+    if (shouldUseDemoData()) {
+      demoStore.updateBusiness(_id, _data);
+      return;
+    }
+    throw new Error('İşletme profili REST üzerinden güncellenir.');
   },
 };

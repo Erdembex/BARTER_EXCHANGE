@@ -15,6 +15,7 @@ import { usersRepository } from '@/features/data';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { AccountSettings } from '@/components/profile/AccountSettings';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import { PortfolioItem } from '@/types';
 import { Colors, Typography, Spacing } from '@/theme';
@@ -52,9 +53,8 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppHeader title="Profil" />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Profil</Text>
-
         <AccountSettings
           bexUser={bexUser}
           onUserUpdated={setBexUser}
@@ -93,14 +93,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     padding: Spacing[5],
+    paddingTop: Spacing[2],
     paddingBottom: Spacing[10],
     alignItems: 'center',
     gap: Spacing[4],
-  },
-  title: {
-    ...Typography.headingLarge,
-    color: Colors.textPrimary,
-    alignSelf: 'flex-start',
   },
   meta: { alignItems: 'center', gap: Spacing[1], marginTop: Spacing[2] },
   metaText: { ...Typography.caption, color: Colors.textTertiary },

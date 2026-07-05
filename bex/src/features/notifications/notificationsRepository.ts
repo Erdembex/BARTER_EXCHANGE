@@ -1,43 +1,44 @@
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  doc,
-  updateDoc,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
-import { BexNotification, COLLECTIONS, NotificationType } from '@/types';
-import { notificationService } from './notificationService';
+import { usesRestBackend } from '@/lib/restBackend';
+import { shouldUseDemoData } from '@/lib/devMode';
+import { BexNotification, NotificationType } from '@/types';
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markAllNotificationsRead,
+} from './notificationsApi';
 
 export const notificationsRepository = {
   async getByUser(userId: string): Promise<BexNotification[]> {
     if (shouldUseDemoData()) {
       return demoStore.getNotificationsByUser(userId);
     }
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.NOTIFICATIONS),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BexNotification);
-    } catch {
-      return demoStore.getNotificationsByUser(userId);
+
+    if (await usesRestBackend()) {
+      try {
+        return await fetchNotifications(userId);
+      } catch {
+        return [];
+      }
     }
+
+    return [];
   },
 
   async getUnreadCount(userId: string): Promise<number> {
     if (shouldUseDemoData()) {
       return demoStore.getUnreadNotificationCount(userId);
     }
-    const list = await this.getByUser(userId);
-    return list.filter((n) => !n.read).length;
+
+    if (await usesRestBackend()) {
+      try {
+        return await fetchUnreadCount();
+      } catch {
+        return 0;
+      }
+    }
+
+    return 0;
   },
 
   async markRead(id: string, userId: string): Promise<void> {
@@ -45,7 +46,8 @@ export const notificationsRepository = {
       demoStore.markNotificationRead(id, userId);
       return;
     }
-    await updateDoc(doc(db, COLLECTIONS.NOTIFICATIONS, id), { read: true });
+
+    // REST: tekil okundu uç noktası yok; yerel state yenilemesi yeterli
   },
 
   async markAllRead(userId: string): Promise<void> {
@@ -53,12 +55,14 @@ export const notificationsRepository = {
       demoStore.markAllNotificationsRead(userId);
       return;
     }
-    const list = await this.getByUser(userId);
-    const batch = writeBatch(db);
-    list.filter((n) => !n.read).forEach((n) => {
-      batch.update(doc(db, COLLECTIONS.NOTIFICATIONS, n.id), { read: true });
-    });
-    await batch.commit();
+
+    if (await usesRestBackend()) {
+      try {
+        await markAllNotificationsRead();
+      } catch {
+        // sessiz
+      }
+    }
   },
 };
 
@@ -68,10 +72,10 @@ type NotifyParams = {
   body: string;
   type: NotificationType;
   data?: Record<string, string>;
-  /** Giriş yapmış kullanıcıya anlık yerel bildirim göster */
   showLocalForUserId?: string;
 };
 
+/** Demo modda yerel bildirim; REST modunda backend olayları yazar. */
 export async function notifyUser(params: NotifyParams): Promise<void> {
   if (shouldUseDemoData()) {
     demoStore.addNotification({
@@ -82,21 +86,8 @@ export async function notifyUser(params: NotifyParams): Promise<void> {
       data: params.data,
     });
   }
-  // Canlıda Firestore bildirimleri Cloud Functions yazar (kurallar client create: false)
-
-  if (params.showLocalForUserId === params.userId) {
-    await notificationService.presentLocal(params.title, params.body, params.data);
-  }
 }
 
-export async function notifyAdmins(
-  params: Omit<NotifyParams, 'userId' | 'showLocalForUserId'>
-): Promise<void> {
-  const { loadDevProfiles, getUidsByRole } = await import('@/lib/devProfileStore');
-  await loadDevProfiles();
-  const adminUids = getUidsByRole('admin');
-
-  for (const userId of adminUids) {
-    await notifyUser({ ...params, userId });
-  }
+export async function notifyAdmins(_params: Omit<NotifyParams, 'userId'>): Promise<void> {
+  if (!shouldUseDemoData()) return;
 }

@@ -11,61 +11,47 @@ import {
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import {
-  tasksRepository,
-  businessesRepository,
-  applicationsRepository,
-} from '@/features/data';
-import type { EnrichedTask } from '@/features/data';
-import { Business, Application, TaskCategory } from '@/types';
-import { getGreeting } from '@/lib/taskUtils';
+import { applicationsRepository } from '@/features/data';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
-import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
-import { getApplicationTarget } from '@/lib/applicationNavigation';
-import { SearchBar, CategoryFilter, TaskCard, BusinessCard } from '@/components/tasks';
-import { SectionHeader } from '@/components/common/SectionHeader';
+import { getGreeting } from '@/lib/taskUtils';
+import { AppHeader } from '@/components/navigation/AppHeader';
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { HomeScreenSkeleton } from '@/components/common/HomeScreenSkeleton';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
 
-interface HomeApplication extends Application {
-  taskTitle: string;
-}
+const QUICK_LINKS: { route: Href; label: string; hint: string; icon: string }[] = [
+  { route: '/(tabs)/tasks' as Href, label: 'Görevler', hint: 'Tüm görevleri keşfet', icon: '◎' },
+  {
+    route: '/(tabs)/applications' as Href,
+    label: 'Başvurular',
+    hint: 'Aktif süreçlerin',
+    icon: '☰',
+  },
+  { route: '/(tabs)/trade' as Href, label: 'Takas', hint: 'Kupon takası yap', icon: '⇄' },
+  { route: '/(tabs)/wallet' as Href, label: 'Cüzdan', hint: 'Kuponlarını gör', icon: '▣' },
+];
 
 export default function HomeScreen() {
   const { bexUser, firebaseUser } = useAuthStore();
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<TaskCategory | null>(null);
-  const [featured, setFeatured] = useState<EnrichedTask[]>([]);
-  const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [myApplications, setMyApplications] = useState<HomeApplication[]>([]);
+  const [activeApplicationCount, setActiveApplicationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [featuredTasks, popularBusinesses] = await Promise.all([
-        tasksRepository.getFeatured(),
-        businessesRepository.getPopular(6),
-      ]);
-      setFeatured(featuredTasks);
-      setBusinesses(popularBusinesses);
-
       if (firebaseUser) {
-        try {
-          if (shouldUseDemoData()) {
-            demoStore.ensureSampleApplicationsForUser(firebaseUser.uid);
-          }
-          const apps = await applicationsRepository.getActiveByUser(firebaseUser.uid);
-          const enriched: HomeApplication[] = [];
-          for (const app of apps) {
-            const task = await tasksRepository.getById(app.taskId);
-            enriched.push({ ...app, taskTitle: task?.title ?? 'Görev' });
-          }
-          setMyApplications(enriched);
-        } catch {
-          setMyApplications([]);
+        if (shouldUseDemoData()) {
+          demoStore.ensureSampleApplicationsForUser(firebaseUser.uid);
         }
+        try {
+          const apps = await applicationsRepository.getActiveByUser(firebaseUser.uid);
+          setActiveApplicationCount(apps.length);
+        } catch {
+          setActiveApplicationCount(0);
+        }
+      } else {
+        setActiveApplicationCount(0);
       }
     } finally {
       setLoading(false);
@@ -84,34 +70,13 @@ export default function HomeScreen() {
     loadData();
   };
 
-  const filteredFeatured = featured.filter((t) => {
-    if (category && t.category !== category) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const matchesTitle = t.title.toLowerCase().includes(q);
-      const matchesBusiness = t.businessName?.toLowerCase().includes(q);
-      if (!matchesTitle && !matchesBusiness) return false;
-    }
-    return true;
-  });
-
-  const filteredBusinesses = businesses.filter((b) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      b.name.toLowerCase().includes(q) ||
-      b.address.toLowerCase().includes(q)
-    );
-  });
-
-  const goToTask = (id: string) => router.push(`/task/${id}`);
-
   if (loading) {
     return <HomeScreenSkeleton />;
   }
 
   return (
     <SafeAreaView style={styles.safe}>
+      <AppHeader title="Ana Sayfa" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -119,108 +84,47 @@ export default function HomeScreen() {
         }
         contentContainerStyle={styles.scroll}
       >
-        {/* Karşılama */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerText}>
-              <Text style={styles.greeting}>
-                {getGreeting(bexUser?.displayName)}
-              </Text>
-              <Text style={styles.subGreeting}>
-                Bugün hangi görevi tamamlayacaksın?
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(tabs)/profile' as Href)}
-              style={styles.profileBtn}
-            >
-              <Text style={styles.profileText}>👤</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Arama */}
-        <SearchBar value={search} onChangeText={setSearch} />
-
-        {/* Kategoriler */}
-        <CategoryFilter selected={category} onSelect={setCategory} />
-
-        <TouchableOpacity
-          style={styles.tradeBanner}
-          activeOpacity={0.88}
-          onPress={() => router.push('/(tabs)/trade' as Href)}
-        >
-          <Text style={styles.tradeBannerEmoji}>🔄</Text>
-          <View style={styles.tradeBannerText}>
-            <Text style={styles.tradeBannerTitle}>Takas Pazarı</Text>
-            <Text style={styles.tradeBannerSub}>
-              Kuponlarını takas et — alt sekmeden de ulaşabilirsin.
-            </Text>
-          </View>
-          <Text style={styles.tradeBannerArrow}>→</Text>
-        </TouchableOpacity>
-
-        {/* Aktif görevlerim */}
-        {myApplications.length > 0 && (
-          <View style={styles.section}>
-            <SectionHeader
-              title="Aktif Görevlerim"
-              actionLabel="Tümü →"
-              onAction={() => router.push('/(tabs)/applications' as Href)}
-            />
-            {myApplications.slice(0, 2).map((app) => (
-              <TouchableOpacity
-                key={app.id}
-                style={styles.appRow}
-                onPress={() => router.push(getApplicationTarget(app))}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.appStatus}>
-                  {APPLICATION_STATUS_LABELS[app.status]}
-                </Text>
-                <Text style={styles.appTask} numberOfLines={1}>
-                  {app.taskTitle}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Öne çıkan görevler */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Öne Çıkan Görevler"
-            actionLabel="Tümü →"
-            onAction={() => router.push('/(tabs)/tasks')}
+        <View style={styles.hero}>
+          <ProfileAvatar
+            name={bexUser?.displayName}
+            avatarUrl={bexUser?.avatarUrl}
+            size={56}
+            onPress={() => router.push('/(tabs)/profile' as Href)}
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-            {filteredFeatured.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                businessName={task.businessName}
-                businessVerified={task.businessVerified}
-                onPress={() => goToTask(task.id)}
-              />
-            ))}
-            {filteredFeatured.length === 0 && (
-              <Text style={styles.empty}>Görev bulunamadı.</Text>
-            )}
-          </ScrollView>
+          <View style={styles.heroText}>
+            <Text style={styles.greeting}>{getGreeting(bexUser?.displayName)}</Text>
+            <Text style={styles.subGreeting}>Menüden istediğin bölüme geçebilirsin.</Text>
+          </View>
         </View>
 
-        {/* Popüler işletmeler */}
-        <View style={styles.section}>
-          <SectionHeader title="Popüler İşletmeler" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-            {filteredBusinesses.map((b) => (
-              <BusinessCard
-                key={b.id}
-                business={b}
-                onPress={() => router.push(`/business/${b.id}` as Href)}
-              />
-            ))}
-          </ScrollView>
+        {activeApplicationCount > 0 ? (
+          <TouchableOpacity
+            style={styles.summaryCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(tabs)/applications' as Href)}
+          >
+            <Text style={styles.summaryLabel}>Aktif başvuru</Text>
+            <Text style={styles.summaryValue}>{activeApplicationCount}</Text>
+            <Text style={styles.summaryHint}>Detaylar için dokun →</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <View style={styles.links}>
+          {QUICK_LINKS.map((link) => (
+            <TouchableOpacity
+              key={link.label}
+              style={styles.linkCard}
+              activeOpacity={0.88}
+              onPress={() => router.push(link.route)}
+            >
+              <Text style={styles.linkIcon}>{link.icon}</Text>
+              <View style={styles.linkText}>
+                <Text style={styles.linkLabel}>{link.label}</Text>
+                <Text style={styles.linkHint}>{link.hint}</Text>
+              </View>
+              <Text style={styles.linkArrow}>→</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -229,56 +133,60 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: Spacing[5], gap: Spacing[5], paddingBottom: Spacing[10] },
-  header: { gap: Spacing[1] },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: Spacing[3],
+  scroll: {
+    padding: Spacing[5],
+    paddingTop: Spacing[2],
+    paddingBottom: Spacing[10],
+    gap: Spacing[5],
   },
-  headerText: { flex: 1, gap: Spacing[1] },
-  profileBtn: { paddingVertical: Spacing[1], paddingHorizontal: Spacing[2] },
-  profileText: { fontSize: 22 },
-  greeting: { ...Typography.headingLarge, color: Colors.textPrimary },
-  subGreeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
-  section: { gap: Spacing[2] },
-  tradeBanner: {
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[4],
+    padding: Spacing[4],
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  heroText: { flex: 1, gap: Spacing[1] },
+  greeting: { ...Typography.headingMedium, color: Colors.textPrimary },
+  subGreeting: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  summaryCard: {
+    padding: Spacing[4],
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 2,
+  },
+  summaryLabel: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '600' },
+  summaryValue: { ...Typography.headingLarge, color: Colors.primaryDark },
+  summaryHint: { ...Typography.caption, color: Colors.primary, marginTop: Spacing[1] },
+  links: { gap: Spacing[3] },
+  linkCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[3],
     padding: Spacing[4],
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#6B4C9A55',
-    borderLeftWidth: 4,
-    borderLeftColor: '#6B4C9A',
+    borderColor: Colors.border,
   },
-  tradeBannerEmoji: { fontSize: 28 },
-  tradeBannerText: { flex: 1, gap: 4 },
-  tradeBannerTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
-  tradeBannerSub: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 18 },
-  tradeBannerArrow: { ...Typography.labelLarge, color: '#6B4C9A' },
-  hScroll: { gap: Spacing[3], paddingRight: Spacing[2] },
-  empty: { ...Typography.bodySmall, color: Colors.textTertiary, paddingVertical: Spacing[4] },
-  appRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[3],
-    padding: Spacing[3],
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    marginBottom: Spacing[2],
-  },
-  appStatus: {
-    ...Typography.caption,
-    color: Colors.primaryDark,
-    fontWeight: '700',
+  linkIcon: {
+    width: 36,
+    height: 36,
+    lineHeight: 36,
+    textAlign: 'center',
+    fontSize: 18,
+    color: Colors.primary,
     backgroundColor: Colors.primaryLight,
-    paddingHorizontal: Spacing[2],
-    paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
+    overflow: 'hidden',
   },
-  appTask: { ...Typography.bodySmall, color: Colors.textSecondary, flex: 1 },
+  linkText: { flex: 1, gap: 2 },
+  linkLabel: { ...Typography.labelLarge, color: Colors.textPrimary, fontWeight: '700' },
+  linkHint: { ...Typography.caption, color: Colors.textSecondary },
+  linkArrow: { ...Typography.labelLarge, color: Colors.textMuted },
 });

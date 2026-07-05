@@ -1,11 +1,9 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
+import { Timestamp } from 'firebase/firestore';
 import { getDevProfile, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
 import { demoStore } from '@/lib/demoStore';
 import { tasksRepository } from '@/features/data/businessesRepository';
-import { Application, COLLECTIONS, PortfolioItem } from '@/types';
+import { Application, PortfolioItem } from '@/types';
 import { isPortfolioImageUrl, PORTFOLIO_APPROVED_STATUSES } from '@/lib/portfolioUtils';
 
 function mergePortfolioItems(
@@ -80,14 +78,6 @@ export async function appendApprovedWorkToPortfolio(
   const existing = getDevProfile(userId)?.portfolioItems ?? [];
   const merged = mergePortfolioItems(existing, incoming);
   await setDevProfile(userId, { portfolioItems: merged });
-
-  if (!shouldUseDemoData()) {
-    try {
-      await updateDoc(doc(db, COLLECTIONS.USERS, userId), { portfolioItems: merged });
-    } catch {
-      // Admin / izin hatası — yerel kayıt yeterli
-    }
-  }
 }
 
 export async function getUserPortfolio(userId: string): Promise<PortfolioItem[]> {
@@ -95,37 +85,19 @@ export async function getUserPortfolio(userId: string): Promise<PortfolioItem[]>
   const stored = getDevProfile(userId)?.portfolioItems;
   if (stored?.length) return stored;
 
-  if (!shouldUseDemoData()) {
-    try {
-      const snap = await getDoc(doc(db, COLLECTIONS.USERS, userId));
-      if (snap.exists()) {
-        const items = (snap.data().portfolioItems ?? []) as PortfolioItem[];
-        if (items.length > 0) {
-          await setDevProfile(userId, { portfolioItems: items });
-          return items;
-        }
-      }
-    } catch {
-      // Yerel türetmeye düş
+  if (shouldUseDemoData()) {
+    const derived = await derivePortfolioFromApplications(userId);
+    if (derived.length > 0) {
+      await setDevProfile(userId, { portfolioItems: derived });
     }
-
-    const backfilled = await backfillPortfolioFromUserApplications(userId);
-    if (backfilled.length > 0) return backfilled;
-
-    return [];
+    return derived;
   }
 
-  const derived = await derivePortfolioFromApplications(userId);
-  if (derived.length > 0) {
-    await setDevProfile(userId, { portfolioItems: derived });
-  }
-  return derived;
+  const backfilled = await backfillPortfolioFromUserApplications(userId);
+  return backfilled;
 }
 
 async function backfillPortfolioFromUserApplications(userId: string): Promise<PortfolioItem[]> {
-  const { auth } = await import('@/lib/firebase');
-  if (auth.currentUser?.uid !== userId) return [];
-
   const { applicationsRepository } = await import('@/features/data/applicationsRepository');
   const apps = await applicationsRepository.getByUser(userId);
   const approved = apps.filter((a) =>
@@ -156,10 +128,5 @@ async function backfillPortfolioFromUserApplications(userId: string): Promise<Po
   if (merged.length === 0) return [];
 
   await setDevProfile(userId, { portfolioItems: merged });
-  try {
-    await updateDoc(doc(db, COLLECTIONS.USERS, userId), { portfolioItems: merged });
-  } catch {
-    // İzin hatası — bir sonraki profil açılışında tekrar dener
-  }
   return merged;
 }
