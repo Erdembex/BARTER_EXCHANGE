@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Image,
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -18,9 +17,11 @@ import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { ApplicationProgress } from '@/components/application/ApplicationProgress';
 import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
+import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { useToast } from '@/components/common/Toast';
 import { getApplicationTimeline } from '@/lib/applicationTimeline';
 import { canUseApplicationMessages } from '@/features/messages';
+import { isCurrentApplicationOwner } from '@/features/application/applicationsApi';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
@@ -42,12 +43,18 @@ export default function ApplicationDetailScreen() {
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     const app = await applicationsRepository.getById(id);
     setApplication(app);
+    if (app && firebaseUser) {
+      setIsOwner(await isCurrentApplicationOwner(app.userId, firebaseUser.uid));
+    } else {
+      setIsOwner(false);
+    }
     if (app) {
       const task = await tasksRepository.getById(app.taskId);
       setTaskTitle(task?.title ?? 'Görev');
@@ -59,7 +66,7 @@ export default function ApplicationDetailScreen() {
       }
     }
     setLoading(false);
-  }, [id]);
+  }, [id, firebaseUser?.uid]);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,7 +77,7 @@ export default function ApplicationDetailScreen() {
   const canCancel =
     application &&
     firebaseUser &&
-    application.userId === firebaseUser.uid &&
+    isOwner &&
     ['pending', 'approved'].includes(application.status);
 
   const handleCancel = () => {
@@ -187,11 +194,7 @@ export default function ApplicationDetailScreen() {
         {application.submissionFiles.length > 0 ? (
           <>
             <Text style={styles.section}>Teslim Fotoğrafları</Text>
-            <View style={styles.fileGrid}>
-              {application.submissionFiles.map((url, i) => (
-                <Image key={i} source={{ uri: url }} style={styles.fileImage} />
-              ))}
-            </View>
+            <ImagePreviewGrid urls={application.submissionFiles} />
           </>
         ) : null}
 

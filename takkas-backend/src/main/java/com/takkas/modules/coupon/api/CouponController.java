@@ -39,7 +39,14 @@ public class CouponController {
         return couponService.getQrCode(id, p.profileId());
     }
 
-    @GetMapping("/api/business/coupons/verify/{qrToken}")
+    @GetMapping("/api/individual/applications/{applicationId}/coupon")
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public CouponResponse getByApplication(@CurrentUser UserPrincipal p,
+                                           @PathVariable UUID applicationId) {
+        return couponService.getByApplicationForOwner(p.profileId(), applicationId);
+    }
+
+    @PostMapping("/api/business/coupons/verify/{qrToken}")
     @PreAuthorize("hasRole('BUSINESS')")
     public CouponVerifyResponse verify(@CurrentUser UserPrincipal p, @PathVariable String qrToken) {
         return couponVerifyService.verify(qrToken, p.profileId());

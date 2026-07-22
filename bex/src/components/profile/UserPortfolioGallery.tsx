@@ -6,11 +6,10 @@ import {
   Image,
   TouchableOpacity,
   Modal,
-  ScrollView,
-  Pressable,
   Dimensions,
 } from 'react-native';
 import { PortfolioItem } from '@/types';
+import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -69,19 +68,20 @@ export function UserPortfolioGallery({
       </View>
 
       <Modal visible={!!preview} transparent animationType="fade" onRequestClose={() => setPreview(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setPreview(null)}>
-          <ScrollView contentContainerStyle={styles.modalScroll}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
             {preview ? (
-              <Pressable onPress={(e) => e.stopPropagation()}>
-                <Image source={{ uri: preview.imageUrl }} style={styles.previewImage} resizeMode="contain" />
+              <>
+                <ZoomableImage uri={preview.imageUrl} style={styles.previewImage} />
                 <Text style={styles.previewTitle}>{preview.taskTitle}</Text>
-              </Pressable>
+                <Text style={styles.zoomHint}>İki parmakla yakınlaştır · çift dokun</Text>
+              </>
             ) : null}
-          </ScrollView>
+          </View>
           <TouchableOpacity style={styles.closeBtn} onPress={() => setPreview(null)}>
             <Text style={styles.closeText}>Kapat</Text>
           </TouchableOpacity>
-        </Pressable>
+        </View>
       </Modal>
     </>
   );
@@ -123,7 +123,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Spacing[4],
   },
-  modalScroll: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  modalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   previewImage: {
     width: SCREEN_WIDTH - Spacing[8],
     height: SCREEN_WIDTH - Spacing[8],
@@ -134,6 +138,13 @@ const styles = StyleSheet.create({
     color: Colors.textOnPrimary,
     textAlign: 'center',
     marginTop: Spacing[3],
+  },
+  zoomHint: {
+    ...Typography.caption,
+    color: Colors.textOnPrimary,
+    textAlign: 'center',
+    marginTop: Spacing[2],
+    opacity: 0.85,
   },
   closeBtn: {
     alignSelf: 'center',

@@ -17,6 +17,7 @@ type BackendApplicationStatus =
   | 'WITHDRAWN'
   | 'SUBMITTED'
   | 'SUBMISSION_APPROVED'
+  | 'REWARDED'
   | string;
 
 type ApplicationDto = {
@@ -69,6 +70,7 @@ const STATUS_MAP: Record<string, ApplicationStatus> = {
   WITHDRAWN: 'cancelled',
   SUBMITTED: 'submitted',
   SUBMISSION_APPROVED: 'submission_approved',
+  REWARDED: 'rewarded',
 };
 
 function mapDetailFields(dto: ApplicationDetailDto): Pick<

@@ -16,7 +16,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     @Query("""
         SELECT m FROM Message m
         WHERE m.conversation.id = :cid
-          AND m.createdAt < COALESCE(:cursor, :#{T(java.time.Instant).MAX})
+          AND m.createdAt < :cursor
         ORDER BY m.createdAt DESC
         """)
     List<Message> findByConversationWithCursor(

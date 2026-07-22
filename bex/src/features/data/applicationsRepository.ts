@@ -24,8 +24,12 @@ import {
   submitApplicationSubmission,
   useApplicationsRestBackend,
   withdrawApplication,
+  isCurrentApplicationOwner,
 } from '../application/applicationsApi';
 import { isBackendId } from '@/lib/api/backendId';
+import { fetchIssuedCoupons, type BusinessIssuedCoupon } from '@/features/coupon/businessCouponsApi';
+import { fetchCouponByApplicationId } from '@/features/coupon/couponsApi';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 
 export const applicationsRepository = {
   async getById(id: string): Promise<Application | null> {
@@ -230,7 +234,7 @@ export const applicationsRepository = {
   async cancel(id: string, userId: string): Promise<boolean> {
     const application = await this.getById(id);
     if (!application) return false;
-    if (application.userId !== userId) return false;
+    if (!(await isCurrentApplicationOwner(application.userId, userId))) return false;
     if (!['pending', 'approved'].includes(application.status)) return false;
 
     if (isBackendId(id) && (await useApplicationsRestBackend())) {
@@ -248,6 +252,39 @@ function generateCouponCode(): string {
   return `BEX-${part()}-${part()}`;
 }
 
+function mapIssuedStatus(statusRaw: BusinessIssuedCoupon['statusRaw']): Coupon['status'] {
+  switch (statusRaw) {
+    case 'USED':
+      return 'exhausted';
+    case 'EXPIRED':
+      return 'expired';
+    case 'SWAPPED':
+      return 'traded';
+    default:
+      return 'active';
+  }
+}
+
+function mapIssuedToCoupon(c: BusinessIssuedCoupon, businessId: string): Coupon {
+  const status = mapIssuedStatus(c.statusRaw);
+  return {
+    id: c.id,
+    userId: '',
+    businessId,
+    taskId: '',
+    applicationId: '',
+    rewardDescription: c.rewardDescription,
+    totalUses: c.quantity,
+    usedCount: c.statusRaw === 'USED' ? c.quantity : 0,
+    qrCode: c.id,
+    couponCode: `BEX-${c.id.slice(0, 8).toUpperCase()}`,
+    expiresAt: Timestamp.now(),
+    usageHistory: [],
+    status,
+    createdAt: c.issuedAt ?? Timestamp.now(),
+  };
+}
+
 export const couponsRepository = {
   async getById(id: string): Promise<Coupon | null> {
     if (shouldUseDemoData()) {
@@ -260,6 +297,15 @@ export const couponsRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getCoupons().find((c) => c.applicationId === applicationId) ?? null;
     }
+
+    if (await hasRestAuthSession()) {
+      try {
+        return await fetchCouponByApplicationId(applicationId);
+      } catch {
+        return null;
+      }
+    }
+
     return null;
   },
 
@@ -285,6 +331,14 @@ export const couponsRepository = {
   },
 
   async getByBusiness(businessId: string): Promise<Coupon[]> {
+    if (await useApplicationsRestBackend()) {
+      try {
+        const issued = await fetchIssuedCoupons();
+        return issued.map((c) => mapIssuedToCoupon(c, businessId));
+      } catch {
+        return [];
+      }
+    }
     if (shouldUseDemoData()) {
       return demoStore.getCouponsByBusiness(businessId);
     }

@@ -8,16 +8,14 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Image,
-  Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { adminRepository, EnrichedSubmission } from '@/features/admin/adminRepository';
 import { Button, Input } from '@/components/ui';
+import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function AdminSubmissionsScreen() {
@@ -128,31 +126,7 @@ export default function AdminSubmissionsScreen() {
             )}
 
             {item.submissionFiles.length > 0 ? (
-              <View style={styles.fileGrid}>
-                {item.submissionFiles.map((url, i) => {
-                  const resolvedUrl = resolveMediaUrl(url);
-                  const isImage =
-                    resolvedUrl.startsWith('file:') ||
-                    resolvedUrl.startsWith('content:') ||
-                    /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(resolvedUrl);
-
-                  if (isImage) {
-                    return (
-                      <Image key={i} source={{ uri: resolvedUrl }} style={styles.fileImage} />
-                    );
-                  }
-
-                  return (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => Linking.openURL(resolvedUrl)}
-                      style={styles.fileLink}
-                    >
-                      <Text style={styles.fileLinkText}>📎 Dosya {i + 1}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <ImagePreviewGrid urls={item.submissionFiles} />
             ) : null}
 
             <Input

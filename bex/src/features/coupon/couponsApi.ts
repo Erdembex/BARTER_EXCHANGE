@@ -89,3 +89,84 @@ export function isBackendCouponId(couponId: string): boolean {
     couponId
   );
 }
+
+/** Başvuruya bağlı kupon — GET /api/individual/applications/{applicationId}/coupon */
+export async function fetchCouponByApplicationId(applicationId: string): Promise<Coupon | null> {
+  try {
+    const { data } = await apiClient.get<CouponDto>(
+      `/api/individual/applications/${applicationId}/coupon`
+    );
+    const coupon = mapCouponDto(data);
+    return { ...coupon, applicationId: String(applicationId) };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+    throw mapCouponsError(error, 'Kupon yüklenemedi.');
+  }
+}
+
+type CouponQrDto = {
+  couponId?: string;
+  qrToken?: string;
+  rewardType?: string;
+  quantity?: number;
+  unit?: string | null;
+  description?: string | null;
+  expiresAt?: string | null;
+};
+
+/** Kuponun doğrulama token'ı — GET /api/individual/coupons/{id}/qr */
+export async function fetchCouponQrToken(couponId: string): Promise<string | null> {
+  try {
+    const { data } = await apiClient.get<CouponQrDto>(
+      `/api/individual/coupons/${couponId}/qr`
+    );
+    return data.qrToken ? String(data.qrToken) : null;
+  } catch (error) {
+    throw mapCouponsError(error, 'Kupon QR kodu alınamadı.');
+  }
+}
+
+export type CouponVerifyResult = 'SUCCESS' | 'ALREADY_USED' | 'EXPIRED';
+
+export type CouponVerifyOutcome = {
+  result: CouponVerifyResult;
+  couponId: string;
+  rewardDescription: string;
+  quantity: number;
+  unit: string;
+};
+
+type CouponVerifyDto = {
+  result?: string;
+  couponId?: string;
+  rewardType?: string;
+  quantity?: number;
+  unit?: string | null;
+  description?: string | null;
+  usedAt?: string | null;
+};
+
+/** İşletme kupon doğrulama — POST /api/business/coupons/verify/{qrToken} */
+export async function verifyCouponByToken(qrToken: string): Promise<CouponVerifyOutcome> {
+  try {
+    const { data } = await apiClient.post<CouponVerifyDto>(
+      `/api/business/coupons/verify/${encodeURIComponent(qrToken)}`
+    );
+    const description =
+      data.description?.trim() ||
+      [data.quantity, data.unit, data.rewardType].filter(Boolean).join(' ') ||
+      'Kupon';
+    const resultRaw = data.result?.toUpperCase();
+    const result: CouponVerifyResult =
+      resultRaw === 'ALREADY_USED' || resultRaw === 'EXPIRED' ? resultRaw : 'SUCCESS';
+    return {
+      result,
+      couponId: String(data.couponId ?? ''),
+      rewardDescription: description,
+      quantity: data.quantity ?? 1,
+      unit: data.unit?.trim() ?? '',
+    };
+  } catch (error) {
+    throw mapCouponsError(error, 'Kupon doğrulanamadı.');
+  }
+}

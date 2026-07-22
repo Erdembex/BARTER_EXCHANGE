@@ -3,6 +3,7 @@ package com.takkas.modules.listing.service;
 import com.takkas.common.exception.ResourceNotFoundException;
 import com.takkas.common.pagination.PageResponse;
 import com.takkas.modules.listing.api.dto.*;
+import com.takkas.modules.listing.domain.enums.ListingStatus;
 import com.takkas.modules.listing.mapper.ListingMapper;
 import com.takkas.modules.listing.repository.ListingRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,11 @@ public class ListingQueryService {
     public ListingResponse getDetail(UUID listingId, boolean incrementView) {
         var listing = listingRepository.findById(listingId)
             .orElseThrow(() -> new ResourceNotFoundException("İlan bulunamadı."));
+        // DRAFT ilanlar yalnızca yetkili (işletme/admin) kullanıcılara görünür;
+        // public (authentication token'sız) erişimde 404 döndür
+        if (listing.getStatus() == ListingStatus.DRAFT && !incrementView) {
+            throw new ResourceNotFoundException("İlan bulunamadı.");
+        }
         if (incrementView) cacheService.incrementViewCount(listingId);
         return ListingMapper.toResponse(listing);
     }

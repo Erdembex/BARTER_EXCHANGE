@@ -1,16 +1,21 @@
 package com.takkas.modules.coupon.service;
 
 import com.takkas.common.exception.*;
+import com.takkas.modules.application.repository.ApplicationRepository;
 import com.takkas.modules.coupon.api.dto.*;
+import com.takkas.modules.coupon.domain.Coupon;
 import com.takkas.modules.coupon.domain.enums.CouponStatus;
 import com.takkas.modules.coupon.mapper.CouponMapper;
 import com.takkas.modules.coupon.repository.CouponRepository;
+import com.takkas.modules.user.repository.IndividualProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -18,6 +23,8 @@ import java.util.UUID;
 public class CouponService {
 
     private final CouponRepository couponRepository;
+    private final ApplicationRepository applicationRepository;
+    private final IndividualProfileRepository individualProfileRepository;
 
     public List<CouponResponse> getMyCoupons(UUID ownerId, CouponStatus status) {
         var coupons = status != null
@@ -45,9 +52,33 @@ public class CouponService {
             c.getQuantity(), c.getUnit(), c.getDescription(), c.getExpiresAt());
     }
 
+    public CouponResponse getByApplicationForOwner(UUID profileId, UUID applicationId) {
+        var application = applicationRepository.findById(applicationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
+        if (!application.getIndividualId().equals(profileId)) {
+            throw new ForbiddenException("Bu başvuruya erişim yetkiniz yok.");
+        }
+        var coupon = couponRepository.findByApplicationId(applicationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Bu başvuru için kupon bulunamadı."));
+        if (!coupon.getOwnerId().equals(profileId)) {
+            throw new ForbiddenException("Bu kupona erişim yetkiniz yok.");
+        }
+        return CouponMapper.toResponse(coupon);
+    }
+
     public List<CouponResponse> getIssuedCoupons(UUID businessId, CouponStatus status) {
         var coupons = couponRepository.findAllByBusinessIdAndStatus(
             businessId, status != null ? status : CouponStatus.ACTIVE);
-        return coupons.stream().map(CouponMapper::toResponse).toList();
+
+        var ownerIds = coupons.stream().map(Coupon::getOwnerId).distinct().toList();
+        Map<UUID, String> namesByOwnerId = individualProfileRepository.findFullNamesByIds(ownerIds)
+            .stream()
+            .collect(Collectors.toMap(
+                IndividualProfileRepository.IdAndFullName::getId,
+                IndividualProfileRepository.IdAndFullName::getFullName));
+
+        return coupons.stream()
+            .map(c -> CouponMapper.toResponse(c, namesByOwnerId.get(c.getOwnerId())))
+            .toList();
     }
 }

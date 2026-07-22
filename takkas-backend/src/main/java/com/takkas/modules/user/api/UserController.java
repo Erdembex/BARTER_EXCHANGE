@@ -7,7 +7,10 @@ import com.takkas.modules.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @Tag(name = "Kullanıcı Profil", description = "İşletme ve bireysel profil yönetimi")
 @RestController
@@ -37,5 +40,19 @@ public class UserController {
     public IndividualProfileResponse updateIndividualProfile(@CurrentUser UserPrincipal p,
                                                               @Valid @RequestBody UpdateIndividualProfileRequest req) {
         return userService.updateIndividualProfile(p.profileId(), req);
+    }
+
+    /** Herkese açık bireysel profil — onaylı portföy görselleri ve tamamlanan görev sayısı */
+    @GetMapping("/individual/profiles/{profileId}/public")
+    @PreAuthorize("isAuthenticated()")
+    public IndividualPublicProfileResponse getPublicProfile(@PathVariable UUID profileId) {
+        return userService.getPublicIndividualProfile(profileId);
+    }
+
+    /** userId ile herkese açık profil (eski uid linkleri için) */
+    @GetMapping("/users/{userId}/public-profile")
+    @PreAuthorize("isAuthenticated()")
+    public IndividualPublicProfileResponse getPublicProfileByUserId(@PathVariable UUID userId) {
+        return userService.getPublicIndividualProfileByUserId(userId);
     }
 }

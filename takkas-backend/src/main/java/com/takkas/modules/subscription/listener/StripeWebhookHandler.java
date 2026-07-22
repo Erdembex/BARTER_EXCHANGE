@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Component
@@ -24,6 +25,8 @@ public class StripeWebhookHandler {
     private final SubscriptionService subscriptionService;
     private final BusinessSubscriptionRepository subscriptionRepository;
     private final SubscriptionInvoiceRepository invoiceRepository;
+    private final SubscriptionPlanRepository planRepository;
+    private final FeatureGateService featureGateService;
 
     @Transactional
     public void handleWebhook(String payload, String sigHeader) {
@@ -65,9 +68,20 @@ public class StripeWebhookHandler {
     private void handleCheckoutCompleted(Event event) {
         var session = (Session) event.getDataObjectDeserializer().getObject().orElseThrow();
         UUID businessId = UUID.fromString(session.getMetadata().get("businessId"));
+        String targetPlanIdStr = session.getMetadata().get("targetPlanId");
+
         subscriptionRepository.findByBusinessId(businessId).ifPresent(sub -> {
             sub.setStripeCustomerId(session.getCustomer());
             sub.setStripeSubscriptionId(session.getSubscription());
+            if (targetPlanIdStr != null) {
+                planRepository.findById(UUID.fromString(targetPlanIdStr)).ifPresent(plan -> {
+                    // Aboneliği yeni planla aktifleştir; fatura periyodu invoice event'inde güncellenir
+                    sub.activate(plan, session.getSubscription(),
+                        Instant.now(), Instant.now().plus(30, ChronoUnit.DAYS));
+                    featureGateService.evictPlanCache(plan.getName());
+                    log.info("[StripeWebhookHandler] Plan güncellendi: business={} plan={}", businessId, plan.getName());
+                });
+            }
         });
     }
 }

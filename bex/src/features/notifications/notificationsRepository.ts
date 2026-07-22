@@ -6,6 +6,7 @@ import {
   fetchNotifications,
   fetchUnreadCount,
   markAllNotificationsRead,
+  markNotificationRead,
 } from './notificationsApi';
 
 export const notificationsRepository = {
@@ -17,7 +18,10 @@ export const notificationsRepository = {
     if (await usesRestBackend()) {
       try {
         return await fetchNotifications(userId);
-      } catch {
+      } catch (err) {
+        if (__DEV__) {
+          console.error('[notificationsRepository] getByUser hatası:', err);
+        }
         return [];
       }
     }
@@ -47,7 +51,13 @@ export const notificationsRepository = {
       return;
     }
 
-    // REST: tekil okundu uç noktası yok; yerel state yenilemesi yeterli
+    if (await usesRestBackend()) {
+      try {
+        await markNotificationRead(id);
+      } catch {
+        // sessiz
+      }
+    }
   },
 
   async markAllRead(userId: string): Promise<void> {

@@ -106,6 +106,10 @@ export async function markAllNotificationsRead(): Promise<void> {
   await apiClient.patch('/api/notifications/read-all');
 }
 
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await apiClient.patch(`/api/notifications/${notificationId}/read`);
+}
+
 export async function markNotificationReadByReference(referenceId: string): Promise<void> {
   await apiClient.patch(`/api/notifications/read-by-reference/${referenceId}`);
 }

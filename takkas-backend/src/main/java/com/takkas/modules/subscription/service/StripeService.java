@@ -26,7 +26,7 @@ public class StripeService {
     @PostConstruct
     public void init() { Stripe.apiKey = stripeSecretKey; }
 
-    public String createCheckoutSession(UUID businessId, String stripePriceId, String customerId) {
+    public String createCheckoutSession(UUID businessId, UUID targetPlanId, String stripePriceId, String customerId) {
         try {
             SessionCreateParams.Builder builder = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
@@ -34,7 +34,8 @@ public class StripeService {
                 .setCancelUrl(baseUrl + "/subscription/cancel")
                 .addLineItem(SessionCreateParams.LineItem.builder()
                     .setPrice(stripePriceId).setQuantity(1L).build())
-                .putMetadata("businessId", businessId.toString());
+                .putMetadata("businessId", businessId.toString())
+                .putMetadata("targetPlanId", targetPlanId.toString());
             if (customerId != null) builder.setCustomer(customerId);
             return Session.create(builder.build()).getUrl();
         } catch (StripeException e) {

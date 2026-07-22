@@ -57,6 +57,9 @@ public class ApplicationCouponService {
         coupon.activate();
         couponRepository.save(coupon);
 
+        app.setStatus(ApplicationStatus.REWARDED);
+        applicationRepository.save(app);
+
         UUID individualUserId = userRepository.findUserIdByIndividualProfileId(app.getIndividual().getId());
         eventPublisher.publish(new CouponIssuedEvent(
             coupon.getId(),

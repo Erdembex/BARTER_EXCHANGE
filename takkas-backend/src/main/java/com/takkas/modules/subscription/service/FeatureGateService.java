@@ -67,12 +67,38 @@ public class FeatureGateService {
     }
 
     private String getFeatureValue(UUID businessId, FeatureKey featureKey) {
-        var sub = subscriptionRepository.findByBusinessId(businessId)
-            .orElseThrow(() -> new ResourceNotFoundException("Abonelik bulunamadı."));
+        var subOpt = subscriptionRepository.findByBusinessId(businessId);
+        if (subOpt.isEmpty()) {
+            // Abonelik atanmamış işletmeler için varsayılan ücretsiz katman limitleri.
+            // Tüm özellikler kısıtlı; plan satın alınmadan erişim sağlanamaz.
+            log.debug("[FeatureGateService] Abonelik bulunamadı, ücretsiz katman limitleri uygulanıyor: businessId={} key={}", businessId, featureKey);
+            return getFreeTierValue(featureKey);
+        }
+        var sub = subOpt.get();
+        // İptal edilmiş veya süresi geçmiş abonelikler için ücretsiz katman
+        if (sub.getStatus() == SubscriptionStatus.CANCELLED) {
+            return getFreeTierValue(featureKey);
+        }
         String planName = sub.getPlan().getName();
         Map<String, String> cached = getCachedFeatures(planName);
         if (cached != null) return cached.getOrDefault(featureKey.name(), "false");
         return loadAndCacheFeatures(planName).getOrDefault(featureKey.name(), "false");
+    }
+
+    /**
+     * Ücretsiz katman (aboneliksiz) için varsayılan feature değerleri.
+     * İşletmeler temel özelliklere sahipken premium özellikler kısıtlıdır.
+     */
+    private String getFreeTierValue(FeatureKey featureKey) {
+        return switch (featureKey) {
+            case MAX_ACTIVE_LISTINGS         -> "1";
+            case MAX_UNDER_REVIEW_PER_LISTING -> "3";
+            case CAN_FEATURE_LISTING         -> "false";
+            case CAN_SEE_APPLICANT_CONTACTS  -> "false";
+            case SWAP_MARKET_ACCESS          -> "false";
+            case ANALYTICS_ACCESS            -> "false";
+            case PRIORITY_SUPPORT            -> "false";
+        };
     }
 
     @SuppressWarnings("unchecked")

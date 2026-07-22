@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Bildirimler", description = "Uygulama içi bildirimler ve FCM token yönetimi")
@@ -27,7 +28,8 @@ public class NotificationController {
             @CurrentUser UserPrincipal p,
             @RequestParam(required = false) Instant cursor,
             @RequestParam(defaultValue = "20") int pageSize) {
-        var page = notificationService.getNotifications(p.userId(), cursor, pageSize);
+        Instant effectiveCursor = (cursor != null) ? cursor : Instant.MAX;
+        var page = notificationService.getNotifications(p.userId(), effectiveCursor, pageSize);
         int unread = notificationService.getUnreadCount(p.userId());
         return ResponseEntity.ok()
             .header("X-Unread-Count", String.valueOf(unread))
@@ -49,6 +51,12 @@ public class NotificationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markReadByReference(@CurrentUser UserPrincipal p, @PathVariable UUID referenceId) {
         notificationService.markReadByReference(p.userId(), referenceId);
+    }
+
+    @PatchMapping("/api/notifications/{id}/read")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void markReadById(@CurrentUser UserPrincipal p, @PathVariable UUID id) {
+        notificationService.markReadById(p.userId(), id);
     }
 
     // ── FCM Token ─────────────────────────────────────────

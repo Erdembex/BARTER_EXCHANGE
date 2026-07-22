@@ -41,7 +41,7 @@ export async function getBusinessAnalytics(
   }
   const topCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0];
   const distributed = coupons.length;
-  const used = coupons.reduce((sum, c) => sum + c.usedCount, 0);
+  const used = coupons.filter((c) => c.status === 'exhausted').length;
 
   return {
     publishedTasks: tasks.length,

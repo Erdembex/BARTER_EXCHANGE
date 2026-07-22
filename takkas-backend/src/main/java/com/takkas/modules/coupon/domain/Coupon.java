@@ -26,7 +26,7 @@ public class Coupon {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "application_id", nullable = false, unique = true)
+    @Column(name = "application_id", unique = true)
     private UUID applicationId;
 
     @Column(name = "owner_id",    nullable = false) private UUID ownerId;
@@ -74,6 +74,17 @@ public class Coupon {
             throw new BusinessRuleException("Sadece aktif kuponlar takas edilebilir.");
         status  = CouponStatus.SWAPPED;
         ownerId = newOwnerId;
+    }
+
+    /**
+     * Takas sırasında eski kuponu imha eder (arşivler). Sahip değişmez;
+     * yeni kupon karşı taraf için ayrıca oluşturulur. Böylece eski QR kodu
+     * geçersiz kalır ve ekran görüntüsüyle tekrar kullanılamaz.
+     */
+    public void archiveSwapped() {
+        if (status != CouponStatus.ACTIVE)
+            throw new BusinessRuleException("Sadece aktif kuponlar takas edilebilir.");
+        status = CouponStatus.SWAPPED;
     }
 
     public boolean isActive() {

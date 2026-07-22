@@ -84,3 +84,68 @@ export async function issueBusinessCoupon(
     throw mapError(error, 'Kupon oluşturulamadı.');
   }
 }
+
+type IssuedCouponDto = CouponDto & {
+  usedAt?: string | null;
+  recipientName?: string | null;
+};
+
+/** İşletmenin dağıttığı bir kupon kaydı (geçmiş/istatistik için) */
+export type BusinessIssuedCoupon = {
+  id: string;
+  rewardDescription: string;
+  quantity: number;
+  /** ham backend durumu */
+  statusRaw: 'DRAFT' | 'ACTIVE' | 'USED' | 'EXPIRED' | 'SWAPPED';
+  issuedAt: Timestamp | null;
+  usedAt: Timestamp | null;
+  recipientName: string | null;
+};
+
+const ISSUED_STATUSES = ['ACTIVE', 'USED', 'EXPIRED', 'SWAPPED'] as const;
+
+function toTimestampOrNull(value?: string | null): Timestamp | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : Timestamp.fromDate(date);
+}
+
+function mapIssuedCoupon(dto: IssuedCouponDto): BusinessIssuedCoupon {
+  const rewardDescription =
+    dto.description?.trim() ||
+    [dto.quantity, dto.unit, dto.rewardType].filter(Boolean).join(' ') ||
+    'Ödül';
+  const statusRaw = (dto.status?.toUpperCase() ?? 'ACTIVE') as BusinessIssuedCoupon['statusRaw'];
+  return {
+    id: String(dto.id),
+    rewardDescription,
+    quantity: dto.quantity ?? 1,
+    statusRaw,
+    issuedAt: toTimestampOrNull(dto.issuedAt),
+    usedAt: toTimestampOrNull(dto.usedAt),
+    recipientName: dto.recipientName?.trim() || null,
+  };
+}
+
+/**
+ * İşletmenin dağıttığı TÜM kuponlar (her durum için ayrı sorgu birleştirilir).
+ * Backend /api/business/coupons/issued tek seferde tek durum döndürür.
+ */
+export async function fetchIssuedCoupons(): Promise<BusinessIssuedCoupon[]> {
+  try {
+    const batches = await Promise.all(
+      ISSUED_STATUSES.map((status) =>
+        apiClient
+          .get<IssuedCouponDto[]>('/api/business/coupons/issued', { params: { status } })
+          .then((r) => (Array.isArray(r.data) ? r.data : []))
+          .catch(() => [] as IssuedCouponDto[])
+      )
+    );
+    return batches
+      .flat()
+      .map(mapIssuedCoupon)
+      .sort((a, b) => (b.issuedAt?.toMillis() ?? 0) - (a.issuedAt?.toMillis() ?? 0));
+  } catch (error) {
+    throw mapError(error, 'Dağıtılan kuponlar yüklenemedi.');
+  }
+}

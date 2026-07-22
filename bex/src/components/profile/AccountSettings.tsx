@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
+import { getRestProfileId } from '@/lib/auth/sessionClaims';
 import { BexUser } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
@@ -180,7 +181,10 @@ export function AccountSettings({
         <Button
           title="Herkese Açık Profilim"
           variant="outline"
-          onPress={() => router.push(`/user/${firebaseUser.uid}` as Href)}
+          onPress={async () => {
+            const profileId = (await getRestProfileId()) ?? firebaseUser.uid;
+            router.push(`/user/${profileId}` as Href);
+          }}
         />
       ) : null}
 

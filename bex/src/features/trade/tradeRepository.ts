@@ -11,11 +11,16 @@ import {
 } from './tradeNotifications';
 import { executeTradeSwap } from './tradeCouponSwap';
 import {
+  acceptSwapOffer,
   createSwapListing,
   fetchMySwapListings,
+  fetchMySwapOffers,
   fetchSwapEligibleCoupons,
   fetchSwapListings,
+  fetchSwapOffersForListing,
   isBackendCouponId,
+  rejectSwapOffer,
+  sendSwapOffer,
   useSwapRestBackend,
 } from './swapListingsApi';
 import {
@@ -74,6 +79,30 @@ async function getLockedCouponIdsForUser(userId: string): Promise<Set<string>> {
   if (shouldUseDemoData()) {
     return getLockedCouponIds(userId);
   }
+
+  if (await useSwapRestBackend()) {
+    const locked = new Set<string>();
+    try {
+      const [listings, offers] = await Promise.all([
+        fetchMySwapListings(),
+        fetchMySwapOffers(),
+      ]);
+      for (const listing of listings) {
+        if (listing.status === 'active' && listing.couponId) {
+          locked.add(listing.couponId);
+        }
+      }
+      for (const offer of offers) {
+        if (offer.status === 'pending' && offer.counterCouponId) {
+          locked.add(offer.counterCouponId);
+        }
+      }
+    } catch {
+      // sessiz
+    }
+    return locked;
+  }
+
   return new Set<string>();
 }
 
@@ -317,6 +346,10 @@ export const tradeRepository = {
       });
     }
 
+    if ((await useSwapRestBackend()) && isBackendCouponId(input.counterCouponId)) {
+      return sendSwapOffer(listingId, input.counterCouponId, input.message);
+    }
+
     const listing = await this.getListingById(listingId);
     if (!listing || listing.status !== 'active') {
       throw Object.assign(new Error('İlan bulunamadı veya artık aktif değil.'), {
@@ -416,6 +449,15 @@ export const tradeRepository = {
         .map(toPublicOffer);
     }
 
+    if (await useSwapRestBackend()) {
+      try {
+        const listing = await this.getListingById(listingId);
+        return await fetchSwapOffersForListing(listingId, listing?.title ?? 'Takas ilanı');
+      } catch {
+        return [];
+      }
+    }
+
     return [];
   },
 
@@ -426,6 +468,14 @@ export const tradeRepository = {
         .filter((offer) => offer.fromUserId === fromUserId)
         .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
         .map(toPublicOffer);
+    }
+
+    if (await useSwapRestBackend()) {
+      try {
+        return await fetchMySwapOffers();
+      } catch {
+        return [];
+      }
     }
 
     return [];
@@ -481,7 +531,30 @@ export const tradeRepository = {
       return;
     }
 
+    if (await useSwapRestBackend()) {
+      const listing = await this.findListingForOffer(offerId, ownerId);
+      if (!listing) {
+        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+      }
+      await rejectSwapOffer(listing.id, offerId);
+      return;
+    }
+
     throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
+  },
+
+  /** REST: bir teklifin ait olduğu (bana ait) ilanı bulur */
+  async findListingForOffer(offerId: string, ownerId: string): Promise<TradeListing | null> {
+    const myListings = await this.getMyListings(ownerId);
+    for (const listing of myListings) {
+      try {
+        const offers = await fetchSwapOffersForListing(listing.id, listing.title);
+        if (offers.some((offer) => offer.id === offerId)) return listing;
+      } catch {
+        // yoksay
+      }
+    }
+    return null;
   },
 
   async acceptOffer(ownerId: string, offerId: string): Promise<TradeSwapResult> {
@@ -556,6 +629,16 @@ export const tradeRepository = {
       );
 
       return swapResult;
+    }
+
+    if (await useSwapRestBackend()) {
+      const listing = await this.findListingForOffer(offerId, ownerId);
+      if (!listing) {
+        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+      }
+      await acceptSwapOffer(listing.id, offerId);
+      // Backend takası tamamlar ve yeni kuponları oluşturur; kodları burada dönmüyoruz.
+      return { ownerNewCouponId: '', offererNewCouponId: '' };
     }
 
     throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');

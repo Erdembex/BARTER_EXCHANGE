@@ -18,14 +18,23 @@ import { Colors, Typography, Spacing } from '@/theme';
 export default function PublicUserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [displayName, setDisplayName] = useState('');
+  const [completedCount, setCompletedCount] = useState(0);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    setDisplayName(await usersRepository.getDisplayName(id));
-    setPortfolio(await usersRepository.getPortfolio(id));
+    const stats = await usersRepository.getPublicProfileStats(id);
+    if (stats) {
+      setDisplayName(stats.displayName);
+      setCompletedCount(stats.completedTaskCount);
+      setPortfolio(stats.portfolio);
+    } else {
+      setDisplayName(await usersRepository.getDisplayName(id));
+      setCompletedCount(0);
+      setPortfolio(await usersRepository.getPortfolio(id));
+    }
     setLoading(false);
   }, [id]);
 
@@ -52,7 +61,7 @@ export default function PublicUserProfileScreen() {
 
         <Text style={styles.title}>{displayName}</Text>
         <Text style={styles.subtitle}>
-          {portfolio.length} onaylı çalışma · portföy herkese açık (işletmeler için)
+          {completedCount} tamamlanan görev · {portfolio.length} onaylı görsel
         </Text>
 
         <UserPortfolioGallery

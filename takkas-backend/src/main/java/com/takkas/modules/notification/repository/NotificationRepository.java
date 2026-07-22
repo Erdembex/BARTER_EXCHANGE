@@ -16,7 +16,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Query("""
         SELECT n FROM Notification n
         WHERE n.userId = :userId
-          AND n.createdAt < COALESCE(:cursor, :#{T(java.time.Instant).MAX})
+          AND n.createdAt < :cursor
         ORDER BY n.createdAt DESC
         """)
     List<Notification> findByUserWithCursor(
@@ -37,6 +37,13 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
         WHERE n.userId = :userId AND n.referenceId = :referenceId AND n.isRead = false
         """)
     int markReadByReference(@Param("userId") UUID userId, @Param("referenceId") UUID referenceId);
+
+    @Modifying
+    @Query("""
+        UPDATE Notification n SET n.isRead = true
+        WHERE n.id = :id AND n.userId = :userId AND n.isRead = false
+        """)
+    int markReadById(@Param("userId") UUID userId, @Param("id") UUID id);
 
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.createdAt < :threshold AND n.isRead = true")

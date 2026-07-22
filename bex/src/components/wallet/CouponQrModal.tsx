@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -10,6 +10,11 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Coupon } from '@/types';
+import {
+  fetchCouponQrToken,
+  hasRestAuthSession,
+  isBackendCouponId,
+} from '@/features/coupon/couponsApi';
 import {
   encodeCouponQr,
   getCouponDisplayStatus,
@@ -33,9 +38,33 @@ export function CouponQrModal({
   visible,
   onClose,
 }: CouponQrModalProps) {
+  const [restQrToken, setRestQrToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRestQrToken(null);
+    if (!visible || !coupon) return;
+
+    (async () => {
+      if ((await hasRestAuthSession()) && isBackendCouponId(coupon.id)) {
+        try {
+          const token = await fetchCouponQrToken(coupon.id);
+          if (!cancelled) setRestQrToken(token);
+        } catch {
+          if (!cancelled) setRestQrToken(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, coupon]);
+
   if (!coupon) return null;
 
-  const qrValue = encodeCouponQr(coupon);
+  // REST modunda backend'in gerçek qrToken'ı kullanılır; demo modda yerel payload.
+  const qrValue = restQrToken ?? encodeCouponQr(coupon);
   const remaining = getCouponRemainingUses(coupon);
   const displayStatus = getCouponDisplayStatus(coupon);
   const isActive = displayStatus === 'active';

@@ -60,6 +60,12 @@ public class SwapController {
         return swapOfferService.getOffersForListing(p.profileId(), id);
     }
 
+    @GetMapping("/api/individual/swap-offers")
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public List<SwapOfferResponse> getMyOffers(@CurrentUser UserPrincipal p) {
+        return swapOfferService.getMyOffers(p.profileId());
+    }
+
     @PostMapping("/api/swap-listings/{id}/offers")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('INDIVIDUAL')")

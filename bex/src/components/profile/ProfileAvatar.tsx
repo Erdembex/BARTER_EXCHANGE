@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Colors } from '@/theme';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 interface ProfileAvatarProps {
   name?: string | null;
@@ -28,14 +29,15 @@ export function ProfileAvatar({
 }: ProfileAvatarProps) {
   const initial = (name ?? '?').charAt(0).toUpperCase();
   const radius = size / 2;
+  const resolvedAvatarUrl = avatarUrl ? resolveMediaUrl(avatarUrl) : null;
 
   const avatarContent = loading ? (
     <View style={[styles.fallback, { width: size, height: size, borderRadius: radius }]}>
       <ActivityIndicator color={Colors.primary} />
     </View>
-  ) : avatarUrl ? (
+  ) : resolvedAvatarUrl ? (
     <Image
-      source={{ uri: avatarUrl }}
+      source={{ uri: resolvedAvatarUrl }}
       style={{ width: size, height: size, borderRadius: radius }}
     />
   ) : (

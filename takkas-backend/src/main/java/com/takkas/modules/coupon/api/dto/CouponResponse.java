@@ -7,4 +7,4 @@ public record CouponResponse(
     UUID id, UUID businessId, String businessName, String businessLogoUrl,
     RewardType rewardType, Integer quantity, String unit, String description,
     CouponStatus status, Instant issuedAt, Instant expiresAt, Instant usedAt,
-    boolean isExpiringSoon) {}
+    boolean isExpiringSoon, String recipientName) {}

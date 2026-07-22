@@ -47,8 +47,10 @@ export default function AdminTasksScreen() {
       await adminRepository.approveTask(task.id);
       showToast('Görev onaylandı — kullanıcılara görünür.');
       await load();
-    } catch {
-      showToast('Onaylama başarısız.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Onaylama başarısız.';
+      showToast(msg);
+      console.error('[AdminTasks] approveTask hatası:', msg);
     }
     setLoadingId(null);
   };

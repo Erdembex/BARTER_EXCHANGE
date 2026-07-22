@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Auth", description = "Kayıt, giriş, token yenileme")
@@ -40,15 +41,19 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public AuthResponse refresh(@RequestBody RefreshTokenRequest req) {
+    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest req) {
         return tokenRefreshService.refresh(req.refreshToken());
     }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
     public void logout(@CurrentUser UserPrincipal principal,
-                       @RequestBody RefreshTokenRequest req) {
+                       @Valid @RequestBody RefreshTokenRequest req) {
         refreshTokenRepository.findByToken(req.refreshToken())
-            .ifPresent(rt -> rt.setRevoked(true));
+            .ifPresent(rt -> {
+                rt.setRevoked(true);
+                refreshTokenRepository.save(rt);
+            });
     }
 }

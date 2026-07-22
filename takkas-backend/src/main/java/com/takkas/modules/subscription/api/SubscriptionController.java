@@ -3,6 +3,7 @@ package com.takkas.modules.subscription.api;
 import com.takkas.common.exception.ResourceNotFoundException;
 import com.takkas.common.security.*;
 import com.takkas.modules.subscription.api.dto.*;
+import com.takkas.modules.subscription.domain.enums.BillingPeriod;
 import com.takkas.modules.subscription.listener.StripeWebhookHandler;
 import com.takkas.modules.subscription.mapper.SubscriptionMapper;
 import com.takkas.modules.subscription.repository.*;
@@ -57,11 +58,13 @@ public class SubscriptionController {
                                             @Valid @RequestBody CheckoutRequest req) {
         var sub = subscriptionRepository.findByBusinessId(p.profileId())
             .orElseThrow(() -> new ResourceNotFoundException("Abonelik bulunamadı."));
-        String priceId = req.billingPeriod() == com.takkas.modules.subscription.domain.enums.BillingPeriod.YEARLY
-            ? sub.getPlan().getStripePriceIdYearly()
-            : sub.getPlan().getStripePriceIdMonthly();
+        var targetPlan = planRepository.findById(req.targetPlanId())
+            .orElseThrow(() -> new ResourceNotFoundException("Hedef plan bulunamadı."));
+        String priceId = req.billingPeriod() == BillingPeriod.YEARLY
+            ? targetPlan.getStripePriceIdYearly()
+            : targetPlan.getStripePriceIdMonthly();
         return new CheckoutResponse(stripeService.createCheckoutSession(
-            p.profileId(), priceId, sub.getStripeCustomerId()));
+            p.profileId(), req.targetPlanId(), priceId, sub.getStripeCustomerId()));
     }
 
     @PostMapping("/api/business/subscription/portal")

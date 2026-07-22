@@ -2,7 +2,13 @@ import axios from 'axios';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { fetchSwapEligibleCoupons, isBackendCouponId } from '@/features/coupon/couponsApi';
-import { CreateTradeListingInput, TradeListing, TradeListingStatus } from './types';
+import {
+  CreateTradeListingInput,
+  TradeListing,
+  TradeListingStatus,
+  TradeOffer,
+  TradeOfferStatus,
+} from './types';
 
 /** Takkas JWT oturumu varsa takas işlemleri REST üzerinden yapılır */
 export async function useSwapRestBackend(): Promise<boolean> {
@@ -223,5 +229,102 @@ export async function createSwapListing(input: CreateTradeListingInput): Promise
     return String(data.id);
   } catch (error) {
     throw mapSwapListingsError(error, 'İlan oluşturulamadı.');
+  }
+}
+
+/** Spring Boot SwapOfferResponse */
+type SwapOfferDto = {
+  id: string;
+  swapListingId?: string;
+  offererId?: string;
+  offeredCouponId?: string;
+  message?: string | null;
+  status?: string;
+  createdAt?: string;
+};
+
+function normalizeOfferStatus(status?: string): TradeOfferStatus {
+  const value = status?.toUpperCase();
+  if (value === 'ACCEPTED') return 'accepted';
+  if (value === 'REJECTED') return 'rejected';
+  return 'pending';
+}
+
+function mapSwapOffer(dto: SwapOfferDto, listingTitle: string): TradeOffer {
+  return {
+    id: String(dto.id),
+    listingId: String(dto.swapListingId ?? ''),
+    listingTitle,
+    fromUserId: dto.offererId ? String(dto.offererId) : '',
+    fromUserName: 'Kullanıcı',
+    counterCouponId: dto.offeredCouponId ? String(dto.offeredCouponId) : '',
+    counterRewardLabel: 'Kupon',
+    message: dto.message?.trim() ?? '',
+    status: normalizeOfferStatus(dto.status),
+    createdAtLabel: formatCreatedAtLabel(dto.createdAt),
+  };
+}
+
+/** Teklif gönder — POST /api/swap-listings/{id}/offers */
+export async function sendSwapOffer(
+  listingId: string,
+  offeredCouponId: string,
+  message?: string
+): Promise<string> {
+  try {
+    const { data } = await apiClient.post<SwapOfferDto>(
+      `/api/swap-listings/${listingId}/offers`,
+      { offeredCouponId, message: message?.trim() || undefined }
+    );
+    return String(data.id);
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Takas teklifi gönderilemedi.');
+  }
+}
+
+/** İlana gelen teklifler — GET /api/individual/swap-listings/{id}/offers (yalnızca ilan sahibi) */
+export async function fetchSwapOffersForListing(
+  listingId: string,
+  listingTitle: string
+): Promise<TradeOffer[]> {
+  try {
+    const { data } = await apiClient.get<SwapOfferDto[]>(
+      `/api/individual/swap-listings/${listingId}/offers`
+    );
+    return (Array.isArray(data) ? data : []).map((dto) => mapSwapOffer(dto, listingTitle));
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Teklifler yüklenemedi.');
+  }
+}
+
+/** Teklifi kabul et — PATCH /api/individual/swap-listings/{id}/offers/{offerId}/accept */
+export async function acceptSwapOffer(listingId: string, offerId: string): Promise<void> {
+  try {
+    await apiClient.patch(
+      `/api/individual/swap-listings/${listingId}/offers/${offerId}/accept`
+    );
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Teklif kabul edilemedi.');
+  }
+}
+
+/** Teklifi reddet — PATCH /api/individual/swap-listings/{id}/offers/{offerId}/reject */
+export async function rejectSwapOffer(listingId: string, offerId: string): Promise<void> {
+  try {
+    await apiClient.patch(
+      `/api/individual/swap-listings/${listingId}/offers/${offerId}/reject`
+    );
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Teklif reddedilemedi.');
+  }
+}
+
+/** Gönderdiğim teklifler — GET /api/individual/swap-offers */
+export async function fetchMySwapOffers(): Promise<TradeOffer[]> {
+  try {
+    const { data } = await apiClient.get<SwapOfferDto[]>('/api/individual/swap-offers');
+    return (Array.isArray(data) ? data : []).map((dto) => mapSwapOffer(dto, 'Takas ilanı'));
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Tekliflerin yüklenemedi.');
   }
 }

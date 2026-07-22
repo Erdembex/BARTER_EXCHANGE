@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
-  Image,
 } from 'react-native';
 import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,9 +25,9 @@ import { Application, Task, PortfolioItem } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
 import { canUseApplicationMessages } from '@/features/messages';
-import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplicationDetailScreen() {
@@ -238,33 +237,7 @@ export default function ApplicationDetailScreen() {
         {application.submissionFiles.length > 0 ? (
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Teslim dosyaları</Text>
-            <View style={styles.fileGrid}>
-              {application.submissionFiles
-                .filter((url) => url?.trim())
-                .map((url, i) => {
-                const resolvedUrl = resolveMediaUrl(url);
-                const isImage =
-                  resolvedUrl.startsWith('file:') ||
-                  resolvedUrl.startsWith('content:') ||
-                  /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(resolvedUrl);
-
-                if (isImage) {
-                  return (
-                    <Image key={i} source={{ uri: resolvedUrl }} style={styles.fileImage} />
-                  );
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => Linking.openURL(resolvedUrl)}
-                    style={styles.fileLink}
-                  >
-                    <Text style={styles.file}>📎 Dosyayı aç</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <ImagePreviewGrid urls={application.submissionFiles} />
           </View>
         ) : null}
 

@@ -32,13 +32,27 @@ export default function ProfileScreen() {
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
         })
-        .then((user) => {
-          setBexUser(user);
-          if (user?.role === 'user') {
-            usersRepository.getPortfolio(firebaseUser.uid).then(setPortfolio);
+        .then(async (user) => {
+          if (!user) return;
+
+          if (user.role === 'user') {
+            const stats = await usersRepository.getMyPublicProfileStats();
+            if (stats) {
+              user = {
+                ...user,
+                displayName: stats.displayName || user.displayName,
+                completedTaskCount: stats.completedTaskCount,
+                portfolioItems: stats.portfolio,
+              };
+              setPortfolio(stats.portfolio);
+            } else {
+              setPortfolio(await usersRepository.getPortfolio(firebaseUser.uid));
+            }
           } else {
             setPortfolio([]);
           }
+
+          setBexUser(user);
         });
     }, [firebaseUser, setBexUser])
   );

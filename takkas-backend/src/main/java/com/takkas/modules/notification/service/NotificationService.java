@@ -66,9 +66,21 @@ public class NotificationService {
     public void markReadByReference(UUID userId, UUID referenceId) {
         int updated = notificationRepository.markReadByReference(userId, referenceId);
         if (updated > 0) {
-            long count = notificationRepository.countByUserIdAndIsReadFalse(userId);
-            redisTemplate.opsForValue().set(UNREAD_KEY.formatted(userId), String.valueOf(count));
+            syncUnreadCount(userId);
         }
+    }
+
+    @Transactional
+    public void markReadById(UUID userId, UUID notificationId) {
+        int updated = notificationRepository.markReadById(userId, notificationId);
+        if (updated > 0) {
+            syncUnreadCount(userId);
+        }
+    }
+
+    private void syncUnreadCount(UUID userId) {
+        long count = notificationRepository.countByUserIdAndIsReadFalse(userId);
+        redisTemplate.opsForValue().set(UNREAD_KEY.formatted(userId), String.valueOf(count));
     }
 
     private void incrementUnread(UUID userId) {

@@ -16,6 +16,8 @@ import {
 } from './authApi';
 import { refreshAccessToken } from '../../lib/auth/authTokenRefresh';
 import { uploadLocalFiles } from '../../lib/storageUpload';
+import { resolveMediaUrl } from '../../lib/mediaUrl';
+import { fetchMyPublicProfile } from '../portfolio/publicProfileApi';
 
 export type { AuthSession } from './authTypes';
 
@@ -60,7 +62,14 @@ function sessionFromAccessToken(accessToken: string, displayName?: string | null
 function mapProfileToBexUser(
   session: AuthSession,
   userType: string | undefined,
-  profile: { displayName: string; phone?: string; avatarUrl?: string; verified?: boolean }
+  profile: {
+    displayName: string;
+    phone?: string;
+    avatarUrl?: string;
+    verified?: boolean;
+    completedTaskCount?: number;
+    reputationScore?: number;
+  }
 ): BexUser {
   const email = session.email ?? '';
   const role = mapUserTypeToRole(userType, email);
@@ -72,8 +81,8 @@ function mapProfileToBexUser(
     phone: profile.phone ?? '',
     phoneVerified: false,
     avatarUrl: profile.avatarUrl ?? '',
-    reputationScore: 0,
-    completedTaskCount: 0,
+    reputationScore: profile.reputationScore ?? 0,
+    completedTaskCount: profile.completedTaskCount ?? 0,
     portfolioItems: [],
     joinedAt: Timestamp.now(),
     isBanned: false,
@@ -108,15 +117,27 @@ async function fetchProfileForSession(
       return mapProfileToBexUser(session, userType, {
         displayName: profile.businessName,
         phone: profile.phone ?? '',
-        avatarUrl: profile.logoUrl ?? '',
+        avatarUrl: resolveMediaUrl(profile.logoUrl ?? ''),
         verified: profile.verified,
       });
     }
 
     const profile = await fetchIndividualProfile();
+    let completedTaskCount = 0;
+    try {
+      const publicProfile = await fetchMyPublicProfile();
+      if (publicProfile) {
+        completedTaskCount = publicProfile.completedTaskCount;
+      }
+    } catch {
+      // istatistikler opsiyonel
+    }
+
     return mapProfileToBexUser(session, userType, {
       displayName: profile.fullName,
-      avatarUrl: profile.avatarUrl ?? '',
+      avatarUrl: resolveMediaUrl(profile.avatarUrl ?? ''),
+      completedTaskCount,
+      reputationScore: completedTaskCount,
     });
   } catch {
     return mapProfileToBexUser(session, userType, {

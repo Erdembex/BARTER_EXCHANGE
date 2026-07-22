@@ -61,4 +61,10 @@ public class SwapOfferService {
         return swapOfferRepository.findAllBySwapListingIdOrderByCreatedAtDesc(swapListingId)
             .stream().map(o -> SwapMapper.toOfferResponse(o, null)).toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<SwapOfferResponse> getMyOffers(UUID offererId) {
+        return swapOfferRepository.findAllByOffererIdOrderByCreatedAtDesc(offererId)
+            .stream().map(o -> SwapMapper.toOfferResponse(o, null)).toList();
+    }
 }

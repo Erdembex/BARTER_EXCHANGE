@@ -1,6 +1,7 @@
 package com.takkas.modules.messaging.api;
 
 import com.takkas.common.exception.ForbiddenException;
+import jakarta.validation.Valid;
 import com.takkas.common.pagination.PageResponse;
 import com.takkas.common.security.*;
 import com.takkas.modules.messaging.api.dto.*;
@@ -59,7 +60,8 @@ public class ConversationController {
                                                        @RequestParam(defaultValue = "20") int pageSize) {
         if (!conversationRepository.isParticipant(id, p.userId()))
             throw new ForbiddenException("Erişim yetkiniz yok.");
-        var messages = messageRepository.findByConversationWithCursor(id, cursor, PageRequest.of(0, pageSize));
+        Instant effectiveCursor = (cursor != null) ? cursor : Instant.MAX;
+        var messages = messageRepository.findByConversationWithCursor(id, effectiveCursor, PageRequest.of(0, pageSize));
         return PageResponse.of(messages.stream().map(MessageMapper::toResponse).toList(),
             messages.isEmpty() ? null : messages.getLast().getCreatedAt());
     }
@@ -68,13 +70,15 @@ public class ConversationController {
     @ResponseStatus(HttpStatus.CREATED)
     public MessageResponse sendMessage(@CurrentUser UserPrincipal p,
                                         @PathVariable UUID id,
-                                        @RequestBody SendMessageRequest req) {
+                                        @Valid @RequestBody SendMessageRequest req) {
         return messageService.sendText(id, p.userId(), req.content());
     }
 
     @PatchMapping("/{id}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markAsRead(@CurrentUser UserPrincipal p, @PathVariable UUID id) {
+        if (!conversationRepository.isParticipant(id, p.userId()))
+            throw new ForbiddenException("Erişim yetkiniz yok.");
         messageRepository.markAllAsRead(id, p.userId());
         bufferService.clearUnread(id, p.userId());
     }
@@ -82,7 +86,7 @@ public class ConversationController {
     @PostMapping("/{id}/offers")
     @ResponseStatus(HttpStatus.CREATED)
     public OfferResponse sendOffer(@CurrentUser UserPrincipal p, @PathVariable UUID id,
-                                    @RequestBody SendOfferRequest req) {
+                                    @Valid @RequestBody SendOfferRequest req) {
         return offerService.sendOffer(id, p.userId(), req);
     }
 

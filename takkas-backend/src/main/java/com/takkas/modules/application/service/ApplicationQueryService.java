@@ -5,6 +5,7 @@ import com.takkas.modules.application.api.dto.*;
 import com.takkas.modules.application.domain.enums.ApplicationStatus;
 import com.takkas.modules.application.mapper.ApplicationMapper;
 import com.takkas.modules.application.repository.ApplicationRepository;
+import com.takkas.modules.listing.repository.ListingRepository;
 import com.takkas.modules.user.UserFacade;
 import com.takkas.modules.user.domain.enums.UserType;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +21,14 @@ import java.util.UUID;
 public class ApplicationQueryService {
 
     private final ApplicationRepository applicationRepository;
+    private final ListingRepository listingRepository;
     private final UserFacade userFacade;
 
     public List<ApplicantResponse> getApplicantsByListing(UUID businessId,
                                                             UUID listingId,
                                                             ApplicationStatus statusFilter) {
+        if (!listingRepository.existsByIdAndBusinessId(listingId, businessId))
+            throw new ForbiddenException("Bu ilana erişim yetkiniz yok.");
         var apps = statusFilter != null
             ? applicationRepository.findAllByListingIdAndStatus(listingId, statusFilter)
             : applicationRepository.findAllByListingIdOrderByAppliedAtDesc(listingId);

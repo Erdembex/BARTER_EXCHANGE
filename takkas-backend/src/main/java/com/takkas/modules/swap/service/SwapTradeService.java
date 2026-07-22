@@ -54,14 +54,20 @@ public class SwapTradeService {
                 }
             });
 
-        // Kupon sahipliklerini takas et
-        couponFacade.markAsSwapped(initiatorCoupon.id(), offer.getOffererId());
-        couponFacade.markAsSwapped(receiverCoupon.id(), ownerId);
+        // Yeni sahipler için sıfırdan yeni kuponlar (yeni QR kodu) oluştur:
+        //  - İlan sahibinin kuponu -> teklif verene yeni kupon
+        //  - Teklif verenin kuponu -> ilan sahibine yeni kupon
+        UUID offererNewCouponId = couponFacade.issueSwapCoupon(initiatorCoupon.id(), offer.getOffererId());
+        UUID ownerNewCouponId   = couponFacade.issueSwapCoupon(receiverCoupon.id(), ownerId);
+
+        // Eski kuponları imha et (arşivle) — eski QR kodları geçersizleşir
+        couponFacade.archiveSwapped(initiatorCoupon.id());
+        couponFacade.archiveSwapped(receiverCoupon.id());
 
         var trade = swapTradeRepository.save(SwapTrade.builder()
             .swapListing(listing).swapOffer(offer)
-            .initiatorCouponId(initiatorCoupon.id())
-            .receiverCouponId(receiverCoupon.id())
+            .initiatorCouponId(offererNewCouponId)
+            .receiverCouponId(ownerNewCouponId)
             .initiatorNewOwnerId(offer.getOffererId())
             .receiverNewOwnerId(ownerId).build());
 
