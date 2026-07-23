@@ -21,6 +21,8 @@ export interface IndividualProfileDto {
   avatarUrl?: string | null;
   bio?: string | null;
   skills?: string[];
+  phone?: string | null;
+  phoneVerified?: boolean;
 }
 
 export interface BusinessProfileDto {
@@ -33,4 +35,8 @@ export interface BusinessProfileDto {
   logoUrl?: string | null;
   bio?: string | null;
   verified?: boolean;
+  verificationStatus?: string | null;
+  verificationDocumentUrl?: string | null;
+  verificationDocumentName?: string | null;
+  phoneVerified?: boolean;
 }

@@ -113,8 +113,8 @@ export default function CreateTaskScreen() {
       await tasksRepository.create(business.id, data);
 
       Alert.alert(
-        'Görev gönderildi',
-        'Görevin admin onayına gönderildi. Onaylandıktan sonra kullanıcılara görünür olacak.',
+        'Görev yayınlandı',
+        'Görevin kullanıcılar tarafından Görevler sekmesinde görünecek.',
         [
           {
             text: 'Tamam',
@@ -272,7 +272,7 @@ export default function CreateTaskScreen() {
               </View>
               <View style={styles.previewNote}>
                 <Text style={styles.previewNoteText}>
-                  Görev yayınlandığında kullanıcılar Görevler sekmesinde görebilir.
+                  Yayınlandığında kullanıcılar Görevler sekmesinde görebilir.
                 </Text>
               </View>
             </View>

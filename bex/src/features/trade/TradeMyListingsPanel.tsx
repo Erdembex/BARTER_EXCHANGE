@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { createBox } from '@shopify/restyle';
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,7 @@ import { tradeTheme, TradeTheme } from './tradeTheme';
 import { TradeListing } from './types';
 import { TradeCreateListingModal } from './TradeCreateListingModal';
 import { TradeListingOffersModal } from './TradeListingOffersModal';
+import { tradeRepository } from './tradeRepository';
 
 const Box = createBox<TradeTheme>();
 
@@ -31,6 +32,35 @@ export function TradeMyListingsPanel({
 }: TradeMyListingsPanelProps) {
   const [createVisible, setCreateVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<TradeListing | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  const handleCancel = (listing: TradeListing) => {
+    Alert.alert(
+      'İlanı iptal et',
+      'Bu takas ilanı kaldırılacak. Devam etmek istiyor musun?',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'İptal et',
+          style: 'destructive',
+          onPress: async () => {
+            setCancellingId(listing.id);
+            try {
+              await tradeRepository.cancelListing(ownerId, listing.id);
+              await onRefresh();
+            } catch (err) {
+              Alert.alert(
+                'Hata',
+                err instanceof Error ? err.message : 'İlan iptal edilemedi.'
+              );
+            } finally {
+              setCancellingId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <Box flex={1}>
@@ -111,18 +141,37 @@ export function TradeMyListingsPanel({
                 {item.offerCount > 0 ? `${item.offerCount} teklif` : 'Henüz teklif yok'}
               </Text>
               {item.status === 'active' ? (
-                <TouchableOpacity activeOpacity={0.82} onPress={() => setSelectedListing(item)}>
-                  <Box
-                    backgroundColor="tradePrimary"
-                    paddingHorizontal="md"
-                    paddingVertical="sm"
-                    borderRadius="md"
+                <Box flexDirection="row" gap="sm">
+                  <TouchableOpacity activeOpacity={0.82} onPress={() => setSelectedListing(item)}>
+                    <Box
+                      backgroundColor="tradePrimary"
+                      paddingHorizontal="md"
+                      paddingVertical="sm"
+                      borderRadius="md"
+                    >
+                      <Text variant="buttonPrimary" style={{ color: '#FFFFFF' }}>
+                        Teklifleri Gör
+                      </Text>
+                    </Box>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.82}
+                    onPress={() => handleCancel(item)}
+                    disabled={cancellingId === item.id}
                   >
-                    <Text variant="buttonPrimary" style={{ color: '#FFFFFF' }}>
-                      Teklifleri Gör
-                    </Text>
-                  </Box>
-                </TouchableOpacity>
+                    <Box
+                      paddingHorizontal="md"
+                      paddingVertical="sm"
+                      borderRadius="md"
+                      borderWidth={1}
+                      borderColor="border"
+                    >
+                      <Text variant="caption">
+                        {cancellingId === item.id ? '...' : 'İptal'}
+                      </Text>
+                    </Box>
+                  </TouchableOpacity>
+                </Box>
               ) : null}
             </Box>
           </Box>

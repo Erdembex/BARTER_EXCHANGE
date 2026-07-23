@@ -31,17 +31,27 @@ public class AdminUserSeeder implements ApplicationRunner {
     @Value("${app.admin.password:Admin123!}")
     private String adminPassword;
 
+    @Value("${app.admin.sync-password-on-startup:false}")
+    private boolean syncPasswordOnStartup;
+
     @Override
     public void run(ApplicationArguments args) {
         if (!seedEnabled) return;
 
         userRepository.findByEmail(adminEmail).ifPresentOrElse(
             user -> {
+                boolean changed = false;
                 if (user.getUserType() != UserType.ADMIN) {
                     user.setUserType(UserType.ADMIN);
-                    userRepository.save(user);
+                    changed = true;
                     log.info("[AdminUserSeeder] Mevcut kullanıcı admin yapıldı: {}", adminEmail);
                 }
+                if (syncPasswordOnStartup && !passwordEncoder.matches(adminPassword, user.getPasswordHash())) {
+                    user.setPasswordHash(passwordEncoder.encode(adminPassword));
+                    changed = true;
+                    log.info("[AdminUserSeeder] Admin şifresi yapılandırmayla eşitlendi: {}", adminEmail);
+                }
+                if (changed) userRepository.save(user);
             },
             () -> {
                 userRepository.save(User.builder()

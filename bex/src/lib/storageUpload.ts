@@ -10,7 +10,7 @@ export interface LocalUploadFile {
 
 /**
  * Demo modda yerel URI döner.
- * REST modda dosyalar backend'e yüklenir ve public URL döner.
+ * REST modda dosyalar backend'e yüklenir; dönen `/uploads/...` URL'leri JWT ile okunur.
  */
 export async function uploadLocalFiles(
   _basePath: string,

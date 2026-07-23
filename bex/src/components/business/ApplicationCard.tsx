@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Application, ApplicationStatus } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 interface ApplicationCardProps {
@@ -48,7 +49,7 @@ export function ApplicationCard({
       {thumbs.length > 0 ? (
         <View style={styles.thumbRow}>
           {thumbs.map((url, i) => (
-            <Image key={`${url}-${i}`} source={{ uri: url }} style={styles.thumb} />
+            <AuthenticatedImage key={`${url}-${i}`} uri={url} style={styles.thumb} />
           ))}
           <Text style={styles.thumbHint}>
             {thumbs.length} onaylı çalışma

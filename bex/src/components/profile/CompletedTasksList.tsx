@@ -7,21 +7,18 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { CompletedTask } from '@/types';
 import { formatShortDate } from '@/lib/dateUtils';
-import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { COMPLETED_TASKS_PREVIEW_LIMIT } from '@/features/portfolio/profileLimits';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 function TaskRow({ task }: { task: CompletedTask }) {
-  const previewUri = task.previewImageUrl ? resolveMediaUrl(task.previewImageUrl) : null;
-
   return (
     <View style={styles.row}>
-      {previewUri ? (
-        <Image source={{ uri: previewUri }} style={styles.thumb} />
+      {task.previewImageUrl ? (
+        <AuthenticatedImage uri={task.previewImageUrl} style={styles.thumb} />
       ) : (
         <View style={[styles.thumb, styles.thumbPlaceholder]}>
           <Text style={styles.thumbEmoji}>✓</Text>

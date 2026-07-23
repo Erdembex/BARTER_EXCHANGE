@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,17 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { tasksRepository, EnrichedTask } from '@/features/data';
+import { shouldUseListingsRest } from '@/features/listing/listingsApi';
 import { TaskCategory, TaskDifficulty } from '@/types';
 import { SearchBar, CategoryFilter, TaskCard } from '@/components/tasks';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { AppHeader } from '@/components/navigation/AppHeader';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
 const DIFF_LABELS: Record<string, string> = {
@@ -27,8 +29,10 @@ const DIFF_LABELS: Record<string, string> = {
 
 export default function TasksScreen() {
   const [search, setSearch] = useState('');
+  const [city, setCity] = useState('');
   const [category, setCategory] = useState<TaskCategory | null>(null);
   const [difficulty, setDifficulty] = useState<TaskDifficulty | null>(null);
+  const [restListings, setRestListings] = useState(false);
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -36,6 +40,10 @@ export default function TasksScreen() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    shouldUseListingsRest().then(setRestListings);
+  }, []);
 
   const filterTasks = useCallback(
     (list: EnrichedTask[]) =>
@@ -50,13 +58,17 @@ export default function TasksScreen() {
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
-    const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(10);
+    const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
+      10,
+      null,
+      { city, category }
+    );
     setTasks(fetched);
     setLastDoc(doc);
     setNextCursor(cursor);
     setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
     setLoading(false);
-  }, []);
+  }, [city, category]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -65,7 +77,8 @@ export default function TasksScreen() {
     const cursorArg = nextCursor ?? lastDoc ?? undefined;
     const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
       10,
-      cursorArg
+      cursorArg,
+      { city, category }
     );
     setTasks((prev) => [...prev, ...fetched]);
     setLastDoc(doc);
@@ -80,7 +93,7 @@ export default function TasksScreen() {
     setRefreshing(false);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadInitial();
   }, [loadInitial]);
 
@@ -95,22 +108,33 @@ export default function TasksScreen() {
 
       <View style={styles.filters}>
         <SearchBar value={search} onChangeText={setSearch} />
+        <TextInput
+          style={styles.cityInput}
+          placeholder="Şehir filtrele (ör. İstanbul)"
+          placeholderTextColor={Colors.textTertiary}
+          value={city}
+          onChangeText={setCity}
+          onSubmitEditing={loadInitial}
+          returnKeyType="search"
+        />
         <CategoryFilter selected={category} onSelect={setCategory} />
-        <View style={styles.diffRow}>
-          {DIFFICULTIES.map((d) => {
-            const key = d ?? 'all';
-            const active = difficulty === d;
-            return (
-              <Text
-                key={key}
-                style={[styles.diffChip, active && styles.diffChipActive]}
-                onPress={() => setDifficulty(d)}
-              >
-                {DIFF_LABELS[key]}
-              </Text>
-            );
-          })}
-        </View>
+        {!restListings ? (
+          <View style={styles.diffRow}>
+            {DIFFICULTIES.map((d) => {
+              const key = d ?? 'all';
+              const active = difficulty === d;
+              return (
+                <Text
+                  key={key}
+                  style={[styles.diffChip, active && styles.diffChipActive]}
+                  onPress={() => setDifficulty(d)}
+                >
+                  {DIFF_LABELS[key]}
+                </Text>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
 
       {loading ? (
@@ -153,6 +177,16 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[1], paddingBottom: Spacing[2] },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary },
   filters: { paddingHorizontal: Spacing[5], gap: Spacing[3], paddingBottom: Spacing[3] },
+  cityInput: {
+    ...Typography.bodyMedium,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+  },
   diffRow: { flexDirection: 'row', gap: Spacing[2] },
   diffChip: {
     ...Typography.caption,

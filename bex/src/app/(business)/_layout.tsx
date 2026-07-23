@@ -67,6 +67,13 @@ export default function BusinessTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="analytics"
         options={{
           href: null,
@@ -103,7 +110,19 @@ export default function BusinessTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="complaints/index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="verification"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="subscription"
         options={{
           href: null,
         }}

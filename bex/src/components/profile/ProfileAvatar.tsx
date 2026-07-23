@@ -2,13 +2,12 @@ import React from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { Colors } from '@/theme';
-import { resolveMediaUrl } from '@/lib/mediaUrl';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 
 interface ProfileAvatarProps {
   name?: string | null;
@@ -29,21 +28,25 @@ export function ProfileAvatar({
 }: ProfileAvatarProps) {
   const initial = (name ?? '?').charAt(0).toUpperCase();
   const radius = size / 2;
-  const resolvedAvatarUrl = avatarUrl ? resolveMediaUrl(avatarUrl) : null;
+
+  const fallback = (
+    <View style={[styles.fallback, { width: size, height: size, borderRadius: radius }]}>
+      <Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text>
+    </View>
+  );
 
   const avatarContent = loading ? (
     <View style={[styles.fallback, { width: size, height: size, borderRadius: radius }]}>
       <ActivityIndicator color={Colors.primary} />
     </View>
-  ) : resolvedAvatarUrl ? (
-    <Image
-      source={{ uri: resolvedAvatarUrl }}
+  ) : avatarUrl?.trim() ? (
+    <AuthenticatedImage
+      uri={avatarUrl}
       style={{ width: size, height: size, borderRadius: radius }}
+      fallback={fallback}
     />
   ) : (
-    <View style={[styles.fallback, { width: size, height: size, borderRadius: radius }]}>
-      <Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text>
-    </View>
+    fallback
   );
 
   if (!onPress) {

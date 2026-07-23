@@ -7,6 +7,7 @@ import {
   hasRestAuthSession,
 } from '@/lib/auth/sessionClaims';
 import { fetchBusinessListings, fetchListingDetail } from '@/features/listing/listingsApi';
+import { normalizeUploadPath } from '@/lib/mediaUrl';
 import { Application, ApplicationStatus, CreateApplication } from '@/types';
 
 type BackendApplicationStatus =
@@ -73,13 +74,18 @@ const STATUS_MAP: Record<string, ApplicationStatus> = {
   REWARDED: 'rewarded',
 };
 
+function mapSubmissionFiles(urls?: string[] | null): string[] {
+  if (!Array.isArray(urls)) return [];
+  return urls.map((url) => normalizeUploadPath(url)).filter(Boolean);
+}
+
 function mapDetailFields(dto: ApplicationDetailDto): Pick<
   Application,
   'submissionText' | 'submissionFiles' | 'submittedAt' | 'reviewedAt' | 'reviewNote'
 > {
   return {
     submissionText: dto.submissionText?.trim() ?? '',
-    submissionFiles: Array.isArray(dto.submissionImageUrls) ? dto.submissionImageUrls : [],
+    submissionFiles: mapSubmissionFiles(dto.submissionImageUrls),
     submittedAt: dto.submittedAt ? toTimestamp(dto.submittedAt) : undefined,
     reviewedAt: dto.reviewedAt ? toTimestamp(dto.reviewedAt) : undefined,
     reviewNote: dto.reviewNote?.trim() ?? undefined,
@@ -208,19 +214,13 @@ export async function fetchApplicationById(applicationId: string): Promise<Appli
 
   try {
     if (userType === 'BUSINESS') {
-      const apps = await fetchBusinessApplications();
-      const base = apps.find((app) => app.id === applicationId);
-      if (!base) return null;
-
       const { data } = await apiClient.get<ApplicationDetailDto>(
         `/api/business/applications/${applicationId}`
       );
-      return {
-        ...base,
-        coverLetter: data.coverLetter?.trim() ?? base.coverLetter,
-        status: mapBackendStatus(data.status),
-        ...mapDetailFields(data),
-      };
+      const listingId = String(data.listingId ?? '');
+      const businessId = String(data.businessId ?? '');
+      const userId = String(data.individualId ?? '');
+      return mapDetailToApplication(data, listingId, businessId, userId);
     }
 
     const { data } = await apiClient.get<ApplicationDetailDto>(
@@ -305,7 +305,7 @@ export async function submitApplicationSubmission(
   try {
     await apiClient.post(`/api/individual/applications/${applicationId}/submission`, {
       description,
-      imageUrls,
+      imageUrls: imageUrls.map((url) => normalizeUploadPath(url)).filter(Boolean),
     });
   } catch (error) {
     throw mapApplicationsError(error, 'Görev teslim edilemedi.');

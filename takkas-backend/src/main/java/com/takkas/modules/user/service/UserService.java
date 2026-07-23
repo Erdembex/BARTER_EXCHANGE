@@ -248,13 +248,31 @@ public class UserService {
     }
 
     private BusinessProfileResponse toResponse(BusinessProfile p) {
-        return new BusinessProfileResponse(p.getId(), p.getBusinessName(), p.getCategory(),
-            p.getCity(), p.getDistrict(), p.getPhone(), p.getLogoUrl(), p.getBio(), p.isVerified());
+        User user = p.getUser();
+        return new BusinessProfileResponse(
+            p.getId(),
+            p.getBusinessName(),
+            p.getCategory(),
+            p.getCity(),
+            p.getDistrict(),
+            p.getPhone(),
+            p.getLogoUrl(),
+            p.getBio(),
+            p.isVerified(),
+            p.getVerificationStatus(),
+            p.getVerificationDocumentUrl(),
+            p.getVerificationDocumentName(),
+            user != null && user.isPhoneVerified()
+        );
     }
 
     private IndividualProfileResponse toResponse(IndividualProfile p) {
-        return new IndividualProfileResponse(p.getId(), p.getUsername(), p.getFullName(), p.getCity(),
+        User user = p.getUser();
+        return new IndividualProfileResponse(
+            p.getId(), p.getUsername(), p.getFullName(), p.getCity(),
             p.getDistrict(), p.getAvatarUrl(), p.getBio(),
-            p.getSkills().stream().map(IndividualSkill::getSkill).toList());
+            p.getSkills().stream().map(IndividualSkill::getSkill).toList(),
+            user != null ? user.getPhone() : null,
+            user != null && user.isPhoneVerified());
     }
 }

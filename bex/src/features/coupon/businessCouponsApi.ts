@@ -14,14 +14,21 @@ type CouponDto = {
   status?: string;
   issuedAt?: string;
   expiresAt?: string;
+  usedAt?: string | null;
 };
 
-function mapCouponStatus(status?: string): Coupon['status'] {
+function mapCouponStatus(status?: string, usedAt?: string | null, quantity = 1): {
+  status: Coupon['status'];
+  usedCount: number;
+} {
   const key = status?.toUpperCase() ?? '';
-  if (key === 'USED' || key === 'EXHAUSTED') return 'exhausted';
-  if (key === 'EXPIRED') return 'expired';
-  if (key === 'SWAPPED') return 'traded';
-  return 'active';
+  const total = quantity ?? 1;
+  if (key === 'DRAFT') return { status: 'pending', usedCount: 0 };
+  if (key === 'USED' || key === 'EXHAUSTED') return { status: 'exhausted', usedCount: total };
+  if (key === 'EXPIRED') return { status: 'expired', usedCount: 0 };
+  if (key === 'SWAPPED') return { status: 'traded', usedCount: 0 };
+  if (usedAt) return { status: 'exhausted', usedCount: total };
+  return { status: 'active', usedCount: 0 };
 }
 
 function toTimestamp(value?: string): Timestamp {
@@ -41,6 +48,9 @@ export function mapCouponDto(
     [dto.quantity, dto.unit, dto.rewardType].filter(Boolean).join(' ') ||
     'Ödül';
 
+  const totalUses = dto.quantity ?? 1;
+  const mapped = mapCouponStatus(dto.status, dto.usedAt, totalUses);
+
   return {
     id: String(dto.id),
     userId,
@@ -48,13 +58,13 @@ export function mapCouponDto(
     taskId,
     applicationId,
     rewardDescription: description,
-    totalUses: dto.quantity ?? 1,
-    usedCount: 0,
+    totalUses,
+    usedCount: mapped.usedCount,
     qrCode: String(dto.id),
     couponCode: `BEX-${String(dto.id).slice(0, 8).toUpperCase()}`,
     expiresAt: toTimestamp(dto.expiresAt),
     usageHistory: [],
-    status: mapCouponStatus(dto.status),
+    status: mapped.status,
     createdAt: toTimestamp(dto.issuedAt),
     businessName: dto.businessName?.trim() || undefined,
   };

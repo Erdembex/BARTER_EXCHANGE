@@ -3,6 +3,8 @@ package com.takkas.modules.user.api;
 import com.takkas.common.security.CurrentUser;
 import com.takkas.common.security.UserPrincipal;
 import com.takkas.modules.user.api.dto.*;
+import com.takkas.modules.user.service.BusinessAnalyticsService;
+import com.takkas.modules.user.service.BusinessVerificationService;
 import com.takkas.modules.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,8 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final BusinessVerificationService businessVerificationService;
+    private final BusinessAnalyticsService businessAnalyticsService;
 
     @GetMapping("/business/profile")
     public BusinessProfileResponse getBusinessProfile(@CurrentUser UserPrincipal p) {
@@ -30,6 +34,18 @@ public class UserController {
     public BusinessProfileResponse updateBusinessProfile(@CurrentUser UserPrincipal p,
                                                          @Valid @RequestBody UpdateBusinessProfileRequest req) {
         return userService.updateBusinessProfile(p.profileId(), req);
+    }
+
+    @PostMapping("/business/verification")
+    public BusinessProfileResponse submitBusinessVerification(@CurrentUser UserPrincipal p,
+                                                              @Valid @RequestBody SubmitBusinessVerificationRequest req) {
+        return businessVerificationService.submitVerification(p.profileId(), req);
+    }
+
+    @GetMapping("/business/analytics")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public BusinessAnalyticsResponse getBusinessAnalytics(@CurrentUser UserPrincipal p) {
+        return businessAnalyticsService.getSummary(p.profileId());
     }
 
     @GetMapping("/individual/profile")

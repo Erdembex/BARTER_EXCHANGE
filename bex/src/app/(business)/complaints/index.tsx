@@ -1,0 +1,144 @@
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+} from 'react-native';
+import { router, Href } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { AppHeader } from '@/components/navigation/AppHeader';
+import { Button } from '@/components/ui';
+import {
+  COMPLAINT_REASON_LABELS,
+  fetchMyIndividualComplaintsBusiness,
+  type IndividualComplaintDto,
+} from '@/features/complaint/complaintsApi';
+import { formatShortDate } from '@/lib/dateUtils';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'İnceleniyor',
+  APPROVED: 'Onaylandı',
+  REJECTED: 'Reddedildi',
+};
+
+export default function BusinessComplaintsScreen() {
+  const [items, setItems] = useState<IndividualComplaintDto[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const list = await fetchMyIndividualComplaintsBusiness();
+      setItems(list);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Şikayetler yüklenemedi.');
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <AppHeader title="Şikayetlerim" showMenu={false} onBack={() => router.back()} />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
+      >
+        <Text style={styles.lead}>
+          Tehlikeli veya uygunsuz adaylara yönelik gönderdiğin şikayetlerin durumu.
+        </Text>
+
+        <Button
+          title="Yeni Kullanıcı Şikayeti"
+          onPress={() => router.push('/complaint/submit-user' as Href)}
+        />
+
+        {loadError ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{loadError}</Text>
+            <Button title="Tekrar dene" variant="outline" onPress={load} />
+          </View>
+        ) : null}
+
+        <Text style={styles.sectionTitle}>Gönderilen şikayetler ({items.length})</Text>
+
+        {items.length === 0 && !loadError ? (
+          <Text style={styles.empty}>Henüz şikayet göndermedin.</Text>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.targetName}>{item.individualDisplayName}</Text>
+                <Text style={[styles.status, statusStyle(item.status)]}>
+                  {STATUS_LABELS[item.status] ?? item.status}
+                </Text>
+              </View>
+              <Text style={styles.reason}>{COMPLAINT_REASON_LABELS[item.reason]}</Text>
+              <Text style={styles.description} numberOfLines={3}>
+                {item.description}
+              </Text>
+              {item.createdAt ? (
+                <Text style={styles.date}>{formatShortDate(new Date(item.createdAt))}</Text>
+              ) : null}
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function statusStyle(status: string) {
+  if (status === 'APPROVED') return { color: Colors.success };
+  if (status === 'REJECTED') return { color: Colors.error };
+  return { color: Colors.warning };
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.background },
+  scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
+  lead: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  sectionTitle: { ...Typography.labelLarge, color: Colors.textPrimary, fontWeight: '700' },
+  empty: { ...Typography.bodyMedium, color: Colors.textMuted },
+  card: {
+    padding: Spacing[4],
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing[2],
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  targetName: { ...Typography.labelLarge, color: Colors.textPrimary, fontWeight: '700', flex: 1 },
+  status: { ...Typography.caption, fontWeight: '700' },
+  reason: { ...Typography.labelMedium, color: Colors.primary },
+  description: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  date: { ...Typography.caption, color: Colors.textMuted },
+  errorBox: {
+    padding: Spacing[4],
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    gap: Spacing[3],
+  },
+  errorText: { ...Typography.bodySmall, color: Colors.error },
+});

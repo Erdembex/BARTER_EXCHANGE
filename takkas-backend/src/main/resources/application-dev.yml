@@ -35,6 +35,14 @@ app:
     secret: dev-secret-key-for-local-development-only-min32!!
     access-token-expiry-ms: 3600000
   base-url: http://localhost:8080
+  admin:
+    seed-enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 
 stripe:
   secret-key: sk_test_placeholder

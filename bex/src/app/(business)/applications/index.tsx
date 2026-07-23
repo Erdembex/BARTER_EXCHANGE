@@ -96,7 +96,7 @@ export default function BusinessApplicationsScreen() {
 
   const taskFilterTitle = taskId ? taskTitles[taskId] : null;
 
-  if (bizLoading || loading) {
+  if ((bizLoading && !business) || (loading && applications.length === 0)) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />

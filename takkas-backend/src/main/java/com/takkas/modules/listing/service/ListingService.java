@@ -11,6 +11,7 @@ import com.takkas.modules.subscription.service.FeatureGateService;
 import com.takkas.modules.user.domain.BusinessProfile;
 import com.takkas.modules.user.repository.BusinessProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,9 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final BusinessProfileRepository businessProfileRepository;
     private final FeatureGateService featureGateService;
+
+    @Value("${app.listings.auto-approve-on-create:false}")
+    private boolean autoApproveOnCreate;
 
     public ListingResponse create(UUID businessId, CreateListingRequest req) {
         BusinessProfile business = businessProfileRepository.findById(businessId)
@@ -44,7 +48,16 @@ public class ListingService {
             .description(req.reward().description())
             .build());
 
-        return ListingMapper.toResponse(listingRepository.save(listing));
+        listing = listingRepository.save(listing);
+
+        if (autoApproveOnCreate) {
+            long activeCount = listingRepository.countByBusinessIdAndStatus(businessId, ListingStatus.ACTIVE);
+            featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, (int) activeCount);
+            listing.publish();
+            listing = listingRepository.save(listing);
+        }
+
+        return ListingMapper.toResponse(listing);
     }
 
     public ListingResponse publish(UUID businessId, UUID listingId) {

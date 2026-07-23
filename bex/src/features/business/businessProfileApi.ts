@@ -5,7 +5,10 @@ import { isBackendId } from '@/lib/api/backendId';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { Business, BusinessCategory } from '@/types';
-import { fetchBusinessProfile } from '@/features/auth/authApi';
+import {
+  fetchBusinessWithVerification,
+  mapBackendVerificationStatus,
+} from '@/features/business/businessVerificationApi';
 
 type BusinessPublicProfileDto = {
   profileId?: string;
@@ -55,7 +58,7 @@ function mapPublicBusiness(dto: BusinessPublicProfileDto): Business {
     address,
     location: new GeoPoint(41.0082, 28.9784),
     isVerified: dto.verified ?? false,
-    verificationStatus: dto.verified ? 'verified' : 'none',
+    verificationStatus: mapBackendVerificationStatus(undefined, dto.verified),
     reputationScore: Math.round((dto.averageRating ?? 0) * 10),
     complaintListed: dto.complaintListed ?? false,
     isDangerous: dto.isDangerous ?? false,
@@ -93,25 +96,7 @@ export async function fetchPublicBusinessProfile(profileId: string): Promise<Bus
 
 /** Oturum açmış işletmenin kendi profilini Business tipine çevirir */
 export async function fetchOwnBusinessProfile(ownerUid: string): Promise<Business | null> {
-  try {
-    const profile = await fetchBusinessProfile();
-    return {
-      id: profile.id,
-      ownerUid,
-      name: profile.businessName?.trim() || 'İşletme',
-      category: mapBusinessCategory(profile.category),
-      logoUrl: resolveMediaUrl(profile.logoUrl?.trim() ?? ''),
-      address: `${profile.district ?? ''}, ${profile.city ?? ''}`.trim() || 'Türkiye',
-      location: new GeoPoint(41.0082, 28.9784),
-      isVerified: profile.verified ?? false,
-      verificationStatus: profile.verified ? 'verified' : 'none',
-      reputationScore: 0,
-      totalTasksPublished: 0,
-      createdAt: Timestamp.now(),
-    };
-  } catch {
-    return null;
-  }
+  return fetchBusinessWithVerification(ownerUid);
 }
 
 export async function canFetchBusinessProfiles(): Promise<boolean> {

@@ -21,10 +21,16 @@ public interface IndividualProfileRepository extends JpaRepository<IndividualPro
 
     java.util.List<IndividualProfile> findTop20ByUsernameContainingIgnoreCaseOrderByUsernameAsc(String username);
 
+    java.util.List<IndividualProfile> findTop20ByFullNameContainingIgnoreCaseOrderByFullNameAsc(String fullName);
+
     java.util.List<IndividualProfile> findTop20ByOrderByUsernameAsc();
 
     @Query("SELECT p.id AS id, p.fullName AS fullName FROM IndividualProfile p WHERE p.id IN :ids")
     List<IdAndFullName> findFullNamesByIds(@Param("ids") Collection<UUID> ids);
+
+    boolean existsByAvatarUrl(String avatarUrl);
+
+    boolean existsByAvatarUrlContaining(String suffix);
 
     interface IdAndFullName {
         UUID getId();

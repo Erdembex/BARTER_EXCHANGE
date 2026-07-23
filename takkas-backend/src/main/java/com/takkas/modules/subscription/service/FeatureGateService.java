@@ -40,6 +40,8 @@ public class FeatureGateService {
                     "Plan limitinize ulaştınız. Daha fazlası için planınızı yükseltin.");
         } catch (NumberFormatException e) {
             log.error("[FeatureGateService] Geçersiz limit: key={} value={}", featureKey, value);
+            throw new IllegalStateException(
+                "Geçersiz plan limiti yapılandırması: " + featureKey.name(), e);
         }
     }
 

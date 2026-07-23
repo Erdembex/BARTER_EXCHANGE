@@ -4,4 +4,5 @@ import java.util.List;
 import java.util.UUID;
 public record IndividualProfileResponse(
     UUID id, String username, String fullName, String city, String district,
-    String avatarUrl, String bio, List<Skill> skills) {}
+    String avatarUrl, String bio, List<Skill> skills,
+    String phone, boolean phoneVerified) {}

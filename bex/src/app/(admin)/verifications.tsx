@@ -8,8 +8,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-  Linking,
-  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,11 +16,8 @@ import { Business } from '@/types';
 import { BUSINESS_CATEGORY_LABELS, VERIFICATION_STATUS_LABELS } from '@/constants/businessLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-function isLocalDocumentUrl(url: string): boolean {
-  return url.startsWith('file://') || url.startsWith('content://');
-}
 
 export default function AdminVerificationsScreen() {
   const { showToast } = useToast();
@@ -112,19 +107,11 @@ export default function AdminVerificationsScreen() {
             </Text>
             <Text style={styles.address}>📍 {item.address}</Text>
             {item.verificationDocumentUrl ? (
-              isLocalDocumentUrl(item.verificationDocumentUrl) ? (
-                <Image
-                  source={{ uri: item.verificationDocumentUrl }}
-                  style={styles.docPreview}
-                  resizeMode="contain"
-                />
-              ) : (
-                <TouchableOpacity
-                  onPress={() => Linking.openURL(item.verificationDocumentUrl!)}
-                >
-                  <Text style={styles.docLink}>Evrakı görüntüle →</Text>
-                </TouchableOpacity>
-              )
+              <AuthenticatedImage
+                uri={item.verificationDocumentUrl}
+                style={styles.docPreview}
+                resizeMode="contain"
+              />
             ) : null}
             <View style={styles.actions}>
               <Button

@@ -15,6 +15,7 @@ public interface CouponRepository extends JpaRepository<Coupon, UUID> {
     List<Coupon> findAllByOwnerIdAndStatusOrderByCreatedAtDesc(UUID ownerId, CouponStatus status);
     List<Coupon> findAllByOwnerIdOrderByCreatedAtDesc(UUID ownerId);
     List<Coupon> findAllByBusinessIdAndStatus(UUID businessId, CouponStatus status);
+    List<Coupon> findAllByBusinessIdOrderByCreatedAtDesc(UUID businessId);
     Optional<Coupon> findByQrToken(String qrToken);
     Optional<Coupon> findByApplicationId(UUID applicationId);
     boolean existsByApplicationId(UUID applicationId);

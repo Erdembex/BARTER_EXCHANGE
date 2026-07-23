@@ -9,6 +9,14 @@ import {
 import { auth, getAuthEmulatorHost } from '@/lib/firebase';
 import { isAuthEmulatorActive, shouldUseDemoData } from '@/lib/devMode';
 import { setDevProfile } from '@/lib/devProfileStore';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
+import {
+  sendRestPhoneCode,
+  verifyRestPhoneCode,
+  clearPendingRestPhone,
+  getPendingRestPhone,
+} from './phoneAuthApi';
+import { authService } from './authService';
 
 const PROJECT_ID = 'bexcursor';
 
@@ -155,17 +163,22 @@ export function getLastDevVerificationCode(): string | null {
 }
 
 export async function sendPhoneVerificationCode(phoneInput: string): Promise<string> {
-  if (!shouldUseDemoData() && !isAuthEmulatorActive()) {
-    throw Object.assign(new Error('Telefon doğrulama REST modunda henüz desteklenmiyor.'), {
-      code: 'auth/not-supported-yet',
-    });
-  }
-  if (!auth) {
-    throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
-  }
-
   if (!validateTurkishPhone(phoneInput)) {
     throw Object.assign(new Error('invalid-phone'), { code: 'invalid-phone' });
+  }
+
+  const phoneNumber = formatTurkishPhone(phoneInput);
+
+  if (!shouldUseDemoData() && !isAuthEmulatorActive()) {
+    if (!(await hasRestAuthSession())) {
+      throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
+    }
+    await sendRestPhoneCode(phoneNumber);
+    return phoneNumber;
+  }
+
+  if (!auth) {
+    throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
   }
 
   const user = auth.currentUser;
@@ -173,7 +186,6 @@ export async function sendPhoneVerificationCode(phoneInput: string): Promise<str
     throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
   }
 
-  const phoneNumber = formatTurkishPhone(phoneInput);
   pendingSessionInfo = null;
   pendingDevCode = null;
 
@@ -190,11 +202,22 @@ export async function sendPhoneVerificationCode(phoneInput: string): Promise<str
 }
 
 export async function verifyPhoneCode(code: string, phoneInput: string): Promise<void> {
+  const phone = formatTurkishPhone(phoneInput);
+
   if (!shouldUseDemoData() && !isAuthEmulatorActive()) {
-    throw Object.assign(new Error('Telefon doğrulama REST modunda henüz desteklenmiyor.'), {
-      code: 'auth/not-supported-yet',
-    });
+    if (!(await hasRestAuthSession())) {
+      throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
+    }
+    if (!getPendingRestPhone()) {
+      throw Object.assign(new Error('no-pending-verification'), {
+        code: 'no-pending-verification',
+      });
+    }
+    await verifyRestPhoneCode(phone, code.trim());
+    await authService.refreshProfile();
+    return;
   }
+
   if (!auth) {
     throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
   }
@@ -215,17 +238,20 @@ export async function verifyPhoneCode(code: string, phoneInput: string): Promise
   pendingSessionInfo = null;
   pendingDevCode = null;
 
-  const phone = formatTurkishPhone(phoneInput);
   await setDevProfile(user.uid, { phone, phoneVerified: true });
 }
 
 export function clearPendingPhoneVerification() {
   pendingSessionInfo = null;
   pendingDevCode = null;
+  clearPendingRestPhone();
 }
 
-export function isPhoneAuthSupported(): boolean {
-  return shouldUseDemoData() && (isAuthEmulatorActive() || Platform.OS === 'web');
+export async function isPhoneAuthSupported(): Promise<boolean> {
+  if (shouldUseDemoData()) {
+    return isAuthEmulatorActive() || Platform.OS === 'web';
+  }
+  return hasRestAuthSession();
 }
 
 export { extractErrorCode as getPhoneAuthErrorCode };

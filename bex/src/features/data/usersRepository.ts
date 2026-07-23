@@ -1,10 +1,12 @@
 import { shouldUseDemoData } from '@/lib/devMode';
+import { isBackendId } from '@/lib/api/backendId';
 import { getDevProfile, loadDevProfiles, setDevProfile } from '@/lib/devProfileStore';
 import { getUserPortfolio } from '@/features/portfolio';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import {
   fetchMyPublicProfile,
   fetchPublicProfile,
+  fetchPublicProfileByProfileId,
   fetchPublicProfileByUsername,
 } from '@/features/portfolio/publicProfileApi';
 import { PortfolioItem, CompletedTask } from '@/types';
@@ -13,7 +15,9 @@ export const usersRepository = {
   async getDisplayName(uid: string): Promise<string> {
     if (await hasRestAuthSession()) {
       try {
-        const profile = await fetchPublicProfile(uid);
+        const profile = isBackendId(uid)
+          ? await fetchPublicProfileByProfileId(uid)
+          : await fetchPublicProfile(uid);
         if (profile?.fullName) return profile.fullName;
       } catch {
         // devProfile yedeğine düş
@@ -31,7 +35,9 @@ export const usersRepository = {
   async getPortfolio(userId: string): Promise<PortfolioItem[]> {
     if (await hasRestAuthSession()) {
       try {
-        const profile = await fetchPublicProfile(userId);
+        const profile = isBackendId(userId)
+          ? await fetchPublicProfileByProfileId(userId)
+          : await fetchPublicProfile(userId);
         return profile?.portfolio ?? [];
       } catch {
         return [];

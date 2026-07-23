@@ -4,6 +4,7 @@ import { Coupon } from '@/types';
 import {
   getCouponRemainingUses,
   getCouponDisplayStatus,
+  isCouponExpiringSoon,
   COUPON_STATUS_LABELS,
 } from '@/lib/couponUtils';
 import { getCouponVisual } from '@/lib/couponVisuals';
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<
   string
 > = {
   active: Colors.primary,
+  pending: Colors.warning,
   exhausted: Colors.textMuted,
   expired: Colors.warning,
   traded: Colors.accent,
@@ -38,8 +40,9 @@ export function CouponCard({
   style,
 }: CouponCardProps) {
   const displayStatus = getCouponDisplayStatus(coupon);
+  const expiringSoon = isCouponExpiringSoon(coupon);
   const remaining = getCouponRemainingUses(coupon);
-  const statusColor = STATUS_COLORS[displayStatus];
+  const statusColor = expiringSoon ? Colors.warning : STATUS_COLORS[displayStatus];
   const visual = getCouponVisual(coupon.rewardDescription);
   const isHero = variant === 'hero';
   const isCarousel = layout === 'carousel';
@@ -78,7 +81,7 @@ export function CouponCard({
             </View>
             <View style={[styles.badge, { borderColor: statusColor + '55' }]}>
               <Text style={[styles.badgeText, { color: statusColor }]}>
-                {COUPON_STATUS_LABELS[displayStatus]}
+                {expiringSoon ? 'Yakında bitiyor' : COUPON_STATUS_LABELS[displayStatus]}
               </Text>
             </View>
           </View>

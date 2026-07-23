@@ -81,7 +81,8 @@ export const tasksRepository = {
 
   async getActive(
     pageSize = 10,
-    cursor?: QueryDocumentSnapshot<DocumentData> | string | null
+    cursor?: QueryDocumentSnapshot<DocumentData> | string | null,
+    filters?: { city?: string; category?: TaskCategory | null }
   ): Promise<{
     tasks: EnrichedTask[];
     lastDoc: QueryDocumentSnapshot<DocumentData> | null;
@@ -91,7 +92,17 @@ export const tasksRepository = {
 
     if (await shouldUseListingsRest()) {
       try {
-        const page = await discoverListings({ pageSize, cursor: restCursor });
+        const { mapCategoryToBackendSkill } = await import('../listing/listingsApi');
+        const skills =
+          filters?.category != null
+            ? [mapCategoryToBackendSkill(filters.category)]
+            : undefined;
+        const page = await discoverListings({
+          pageSize,
+          cursor: restCursor,
+          city: filters?.city?.trim() || undefined,
+          skills,
+        });
         return {
           tasks: asEnriched(page.tasks),
           lastDoc: null,

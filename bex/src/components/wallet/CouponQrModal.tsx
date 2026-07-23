@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Coupon } from '@/types';
@@ -39,20 +40,33 @@ export function CouponQrModal({
   onClose,
 }: CouponQrModalProps) {
   const [restQrToken, setRestQrToken] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [useRestMode, setUseRestMode] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setRestQrToken(null);
+    setQrError(null);
+    setQrLoading(false);
+    setUseRestMode(false);
     if (!visible || !coupon) return;
 
     (async () => {
-      if ((await hasRestAuthSession()) && isBackendCouponId(coupon.id)) {
-        try {
-          const token = await fetchCouponQrToken(coupon.id);
-          if (!cancelled) setRestQrToken(token);
-        } catch {
-          if (!cancelled) setRestQrToken(null);
+      const rest = (await hasRestAuthSession()) && isBackendCouponId(coupon.id);
+      if (!rest) return;
+
+      setUseRestMode(true);
+      setQrLoading(true);
+      try {
+        const token = await fetchCouponQrToken(coupon.id);
+        if (!cancelled) setRestQrToken(token);
+      } catch {
+        if (!cancelled) {
+          setQrError('QR kodu alınamadı. Tekrar deneyin.');
         }
+      } finally {
+        if (!cancelled) setQrLoading(false);
       }
     })();
 
@@ -61,13 +75,27 @@ export function CouponQrModal({
     };
   }, [visible, coupon]);
 
+  const retryQr = async () => {
+    if (!coupon || !isBackendCouponId(coupon.id)) return;
+    setQrLoading(true);
+    setQrError(null);
+    try {
+      const token = await fetchCouponQrToken(coupon.id);
+      setRestQrToken(token);
+    } catch {
+      setQrError('QR kodu alınamadı. Tekrar deneyin.');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
   if (!coupon) return null;
 
-  // REST modunda backend'in gerçek qrToken'ı kullanılır; demo modda yerel payload.
-  const qrValue = restQrToken ?? encodeCouponQr(coupon);
-  const remaining = getCouponRemainingUses(coupon);
   const displayStatus = getCouponDisplayStatus(coupon);
   const isActive = displayStatus === 'active';
+  const demoQrValue = encodeCouponQr(coupon);
+  const qrValue = useRestMode ? restQrToken : demoQrValue;
+  const remaining = getCouponRemainingUses(coupon);
   const visual = getCouponVisual(coupon.rewardDescription);
 
   return (
@@ -126,26 +154,43 @@ export function CouponQrModal({
           {isActive ? (
             <View style={styles.qrSection}>
               <Text style={styles.qrTitle}>Doğrulama Kodu</Text>
-              <View style={styles.qrWrap}>
-                <QRCode
-                  value={qrValue}
-                  size={220}
-                  color={Colors.textPrimary}
-                  backgroundColor={Colors.white}
-                />
-              </View>
-              <Text style={styles.hint}>
-                İşletme bu kodu okutarak kuponunu doğrular.
-              </Text>
+              {qrLoading ? (
+                <ActivityIndicator size="large" color={Colors.primary} />
+              ) : qrError ? (
+                <View style={styles.qrErrorBox}>
+                  <Text style={styles.qrErrorText}>{qrError}</Text>
+                  <TouchableOpacity style={styles.retryBtn} onPress={retryQr}>
+                    <Text style={styles.retryText}>Tekrar dene</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : qrValue ? (
+                <>
+                  <View style={styles.qrWrap}>
+                    <QRCode
+                      value={qrValue}
+                      size={220}
+                      color={Colors.textPrimary}
+                      backgroundColor={Colors.white}
+                    />
+                  </View>
+                  <Text style={styles.hint}>
+                    İşletme bu kodu okutarak kuponunu doğrular.
+                  </Text>
+                </>
+              ) : useRestMode ? (
+                <Text style={styles.hint}>QR kodu hazırlanıyor…</Text>
+              ) : null}
             </View>
           ) : (
             <View style={styles.qrMuted}>
               <Text style={styles.qrMutedText}>
-                {displayStatus === 'exhausted'
-                  ? 'Tüm haklar kullanıldı.'
-                  : displayStatus === 'traded'
-                    ? 'Bu kupon takas edildi.'
-                    : 'Kuponun süresi doldu.'}
+                {displayStatus === 'pending'
+                  ? 'İşletme kuponu henüz aktifleştirmedi.'
+                  : displayStatus === 'exhausted'
+                    ? 'Tüm haklar kullanıldı.'
+                    : displayStatus === 'traded'
+                      ? 'Bu kupon takas edildi.'
+                      : 'Kuponun süresi doldu.'}
               </Text>
             </View>
           )}
@@ -229,7 +274,7 @@ const styles = StyleSheet.create({
   statValue: { ...Typography.headingMedium, color: Colors.textPrimary, fontSize: 18 },
   statValueSmall: { fontSize: 12, textAlign: 'center', paddingHorizontal: Spacing[1] },
   statLabel: { ...Typography.caption, color: Colors.textMuted, fontWeight: '600' },
-  qrSection: { alignItems: 'center', gap: Spacing[3] },
+  qrSection: { alignItems: 'center', gap: Spacing[3], minHeight: 280 },
   qrTitle: {
     ...Typography.labelMedium,
     color: Colors.textSecondary,
@@ -244,6 +289,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   hint: { ...Typography.bodySmall, color: Colors.textSecondary, textAlign: 'center' },
+  qrErrorBox: { alignItems: 'center', gap: Spacing[3], padding: Spacing[4] },
+  qrErrorText: { ...Typography.bodySmall, color: Colors.error, textAlign: 'center' },
+  retryBtn: {
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryLight,
+  },
+  retryText: { ...Typography.labelMedium, color: Colors.primary, fontWeight: '700' },
   qrMuted: {
     padding: Spacing[8],
     backgroundColor: Colors.surface,

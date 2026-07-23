@@ -37,9 +37,16 @@ app:
   admin:
     seed-enabled: ${ADMIN_SEED_ENABLED:true}
     email: ${ADMIN_EMAIL:admin@bex.dev}
-    password: ${ADMIN_PASSWORD:Admin123!}
+    password: ${ADMIN_PASSWORD:E123456789y.}
+    sync-password-on-startup: ${ADMIN_SYNC_PASSWORD:true}
   upload:
     dir: ${UPLOAD_DIR:uploads}
+  expo:
+    access-token: ${EXPO_ACCESS_TOKEN:}
+  listings:
+    # Yerel geliştirmede true — görev oluşturulunca kullanıcılara hemen görünür.
+    # Production'da LISTINGS_AUTO_APPROVE=false yapın.
+    auto-approve-on-create: ${LISTINGS_AUTO_APPROVE:true}
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
@@ -51,8 +58,10 @@ management:
 
 springdoc:
   api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
     path: /v3/api-docs
   swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha

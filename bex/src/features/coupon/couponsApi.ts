@@ -15,6 +15,7 @@ type CouponDto = {
   status?: string;
   expiresAt?: string | null;
   issuedAt?: string | null;
+  usedAt?: string | null;
 };
 
 function mapCouponDto(dto: CouponDto): Coupon {
@@ -27,10 +28,17 @@ function mapCouponDto(dto: CouponDto): Coupon {
     : Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
 
   const statusRaw = dto.status?.toUpperCase();
+  const totalUses = dto.quantity ?? 1;
   let status: Coupon['status'] = 'active';
-  if (statusRaw === 'USED' || statusRaw === 'EXHAUSTED') status = 'exhausted';
-  if (statusRaw === 'EXPIRED') status = 'expired';
-  if (statusRaw === 'SWAPPED') status = 'traded';
+  let usedCount = 0;
+
+  if (statusRaw === 'DRAFT') status = 'pending';
+  else if (statusRaw === 'USED' || statusRaw === 'EXHAUSTED') {
+    status = 'exhausted';
+    usedCount = totalUses;
+  } else if (statusRaw === 'EXPIRED') status = 'expired';
+  else if (statusRaw === 'SWAPPED') status = 'traded';
+  else if (dto.usedAt) usedCount = totalUses;
 
   return {
     id: String(dto.id),
@@ -39,15 +47,27 @@ function mapCouponDto(dto: CouponDto): Coupon {
     taskId: '',
     applicationId: '',
     rewardDescription: description,
-    totalUses: dto.quantity ?? 1,
-    usedCount: 0,
+    totalUses,
+    usedCount,
     qrCode: '',
     couponCode: '',
     expiresAt,
     usageHistory: [],
     status,
-    createdAt: Timestamp.now(),
+    createdAt: dto.issuedAt
+      ? Timestamp.fromDate(new Date(dto.issuedAt))
+      : Timestamp.now(),
     businessName: dto.businessName?.trim() || undefined,
+    ...(dto.usedAt
+      ? {
+          usageHistory: [
+            {
+              usedAt: Timestamp.fromDate(new Date(dto.usedAt)),
+              scannedBy: '',
+            },
+          ],
+        }
+      : {}),
   };
 }
 
@@ -64,8 +84,10 @@ function mapCouponsError(error: unknown, fallback: string): Error {
   return new Error(fallback);
 }
 
-/** Backend kuponları — GET /api/individual/coupons */
-export async function fetchRestCoupons(status?: 'ACTIVE'): Promise<Coupon[]> {
+export type RestCouponStatus = 'ACTIVE' | 'USED' | 'SWAPPED' | 'EXPIRED' | 'DRAFT';
+
+/** Backend kuponları — GET /api/individual/coupons (status yoksa tümü) */
+export async function fetchRestCoupons(status?: RestCouponStatus): Promise<Coupon[]> {
   try {
     const { data } = await apiClient.get<CouponDto[]>('/api/individual/coupons', {
       params: status ? { status } : undefined,

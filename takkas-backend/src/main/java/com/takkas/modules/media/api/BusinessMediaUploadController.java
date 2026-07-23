@@ -23,6 +23,6 @@ public class BusinessMediaUploadController {
     @PreAuthorize("hasRole('BUSINESS')")
     public UploadResponse upload(@CurrentUser UserPrincipal principal,
                                  @RequestParam("files") MultipartFile[] files) {
-        return new UploadResponse(mediaStorageService.storeUserFiles(principal.userId(), files));
+        return new UploadResponse(mediaStorageService.storeBusinessFiles(principal.userId(), files));
     }
 }

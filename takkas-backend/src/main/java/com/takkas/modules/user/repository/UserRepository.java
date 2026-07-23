@@ -5,12 +5,19 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    List<User> findTop40ByOrderByCreatedAtDesc();
+
+    List<User> findTop40ByEmailContainingIgnoreCaseOrderByCreatedAtDesc(String email);
+
+    java.util.List<User> findByUserType(com.takkas.modules.user.domain.enums.UserType userType);
 
     @Query("SELECT u.id FROM User u JOIN BusinessProfile b ON b.user.id = u.id WHERE b.id = :profileId")
     UUID findUserIdByBusinessProfileId(@Param("profileId") UUID profileId);

@@ -1,41 +1,5 @@
+# Test profile — see src/test/resources/application-test.yml for active test configuration.
 spring:
-  datasource:
-    url: jdbc:tc:postgresql:16:///takkas_test?TC_REUSABLE=true
-    username: test
-    password: test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-  flyway:
-    enabled: false
-  data:
-    redis:
-      host: localhost
-      port: 6370
-
-app:
-  jwt:
-    secret: test-secret-key-for-unit-tests-only-min-32-chars!!
-    access-token-expiry-ms: 3600000
-  base-url: http://localhost:8080
-
-stripe:
-  secret-key: sk_test_placeholder
-  webhook-secret: whsec_placeholder
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-
-logging:
-  level:
-    com.takkas: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
+  profiles:
+    group:
+      test: test

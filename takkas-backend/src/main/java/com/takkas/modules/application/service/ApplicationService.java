@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -88,7 +89,12 @@ public class ApplicationService {
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
         if (!app.isOwnedBy(individualId))
             throw new ForbiddenException("Bu başvuruya erişim yetkiniz yok.");
-        app.submitWork(req.description(), req.imageUrls());
+        app.submitWork(req.description(), normalizeImageUrls(req.imageUrls()));
+
+        UUID businessUserId = userRepository.findUserIdByBusinessProfileId(app.getBusinessId());
+        eventPublisher.publish(new ApplicationSubmissionSubmittedEvent(
+            app.getId(), businessUserId, app.getIndividual().getId()));
+
         return ApplicationMapper.toResponse(app);
     }
 
@@ -96,6 +102,12 @@ public class ApplicationService {
         Application app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
         app.approveSubmission(reviewNote);
+
+        UUID businessUserId = userRepository.findUserIdByBusinessProfileId(app.getBusinessId());
+        UUID individualUserId = userRepository.findUserIdByIndividualProfileId(app.getIndividual().getId());
+        eventPublisher.publish(new ApplicationSubmissionApprovedEvent(
+            app.getId(), businessUserId, individualUserId));
+
         return ApplicationMapper.toResponse(app);
     }
 
@@ -103,6 +115,11 @@ public class ApplicationService {
         Application app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
         app.rejectSubmission(reviewNote);
+
+        UUID individualUserId = userRepository.findUserIdByIndividualProfileId(app.getIndividual().getId());
+        eventPublisher.publish(new ApplicationSubmissionRejectedEvent(
+            app.getId(), individualUserId, reviewNote));
+
         return ApplicationMapper.toResponse(app);
     }
 
@@ -120,5 +137,19 @@ public class ApplicationService {
         if (!app.getBusinessId().equals(businessId))
             throw new ForbiddenException("Bu başvuruya erişim yetkiniz yok.");
         return app;
+    }
+
+    private List<String> normalizeImageUrls(List<String> urls) {
+        if (urls == null) return List.of();
+        return urls.stream()
+            .map(this::normalizeUploadPath)
+            .filter(path -> !path.isBlank())
+            .toList();
+    }
+
+    private String normalizeUploadPath(String url) {
+        if (url == null || url.isBlank()) return "";
+        int index = url.indexOf("/uploads/");
+        return index >= 0 ? url.substring(index) : url.trim();
     }
 }

@@ -2,8 +2,13 @@ import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { businessesRepository } from '@/features/data/businessesRepository';
 import { uploadLocalFiles } from '@/lib/storageUpload';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { Business } from '@/types';
 import { notifyAdmins } from '@/features/notifications/notificationsRepository';
+import {
+  fetchBusinessWithVerification,
+  submitBusinessVerificationDocument,
+} from '@/features/business/businessVerificationApi';
 
 export interface VerificationUpload {
   uri: string;
@@ -31,5 +36,14 @@ export async function submitBusinessVerification(
     return updated;
   }
 
-  throw new Error('KYC evrak yükleme REST backend\'de henüz desteklenmiyor.');
+  if (await hasRestAuthSession()) {
+    await submitBusinessVerificationDocument(fileUrl, file.name);
+    const updated = await fetchBusinessWithVerification(business.ownerUid);
+    if (!updated) {
+      throw new Error('Profil güncellenemedi. Sayfayı yenileyip tekrar dene.');
+    }
+    return updated;
+  }
+
+  throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
 }

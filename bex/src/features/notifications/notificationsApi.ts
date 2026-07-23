@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { Timestamp } from 'firebase/firestore';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
-import { BexNotification, NotificationType } from '@/types';
+import { BexNotification } from '@/types';
+import { mapBackendNotificationType } from './notificationTypes';
 
 type NotificationDto = {
   id?: string;
@@ -19,27 +20,7 @@ type NotificationsPageDto = {
   nextCursor?: string | null;
 };
 
-const TYPE_MAP: Record<string, NotificationType> = {
-  APPLICATION_RECEIVED: 'general',
-  APPLICATION_ACCEPTED: 'application_approved',
-  APPLICATION_REJECTED: 'application_rejected',
-  NEW_MESSAGE: 'message',
-  OFFER_RECEIVED: 'trade_offer_received',
-  OFFER_ACCEPTED: 'trade_offer_accepted',
-  OFFER_REJECTED: 'trade_offer_rejected',
-  COUPON_ISSUED: 'coupon_issued',
-  COUPON_EXPIRING_SOON: 'general',
-  COUPON_EXPIRED: 'general',
-  SWAP_OFFER_RECEIVED: 'trade_offer_received',
-  SWAP_OFFER_ACCEPTED: 'trade_offer_accepted',
-  SWAP_OFFER_REJECTED: 'trade_offer_rejected',
-  SWAP_COMPLETED: 'trade_offer_accepted',
-  SUBSCRIPTION_RENEWED: 'general',
-  SUBSCRIPTION_PAYMENT_FAILED: 'general',
-  PLAN_UPGRADED: 'general',
-};
-
-function toTimestamp(value?: string): Timestamp {
+function toTimestamp(value?: string | null): Timestamp {
   if (!value) return Timestamp.now();
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? Timestamp.now() : Timestamp.fromDate(date);
@@ -49,9 +30,12 @@ function mapNotification(dto: NotificationDto, userId: string): BexNotification 
   const typeKey = dto.type?.toUpperCase() ?? '';
   const data: Record<string, string> = {};
   if (dto.referenceId) {
-    if (dto.referenceType?.toLowerCase().includes('application')) {
+    const refType = dto.referenceType?.toUpperCase() ?? '';
+    if (refType.includes('APPLICATION')) {
       data.applicationId = String(dto.referenceId);
-    } else if (dto.referenceType?.toLowerCase().includes('listing')) {
+    } else if (refType.includes('BUSINESS')) {
+      data.businessId = String(dto.referenceId);
+    } else if (refType.includes('LISTING')) {
       data.taskId = String(dto.referenceId);
     } else {
       data.referenceId = String(dto.referenceId);
@@ -63,7 +47,7 @@ function mapNotification(dto: NotificationDto, userId: string): BexNotification 
     userId,
     title: dto.title?.trim() || 'Bildirim',
     body: dto.body?.trim() || '',
-    type: TYPE_MAP[typeKey] ?? 'general',
+    type: mapBackendNotificationType(typeKey),
     data,
     read: dto.isRead ?? false,
     createdAt: toTimestamp(dto.createdAt),

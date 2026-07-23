@@ -6,14 +6,19 @@ import { Colors, Typography, Spacing } from '@/theme';
 interface AppHeaderProps {
   title?: string;
   showMenu?: boolean;
+  onBack?: () => void;
 }
 
-export function AppHeader({ title, showMenu = true }: AppHeaderProps) {
+export function AppHeader({ title, showMenu = true, onBack }: AppHeaderProps) {
   const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
-      {showMenu ? (
+      {onBack ? (
+        <TouchableOpacity onPress={onBack} style={styles.menuBtn}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+      ) : showMenu ? (
         <TouchableOpacity
           onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
           style={styles.menuBtn}
@@ -65,6 +70,11 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: Colors.primary,
     borderRadius: 1,
+  },
+  backIcon: {
+    fontSize: 20,
+    color: Colors.primary,
+    fontWeight: '700',
   },
   title: {
     ...Typography.headingMedium,

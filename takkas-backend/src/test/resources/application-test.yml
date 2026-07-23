@@ -1,0 +1,37 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  task:
+    scheduling:
+      enabled: false
+
+app:
+  jwt:
+    secret: test-secret-key-for-unit-tests-only-min-32-chars!!
+    access-token-expiry-ms: 3600000
+  base-url: http://localhost:8080
+  admin:
+    seed-enabled: true
+    email: admin@bex.dev
+    password: Admin123!
+    sync-password-on-startup: false
+
+stripe:
+  secret-key: sk_test_placeholder
+  webhook-secret: whsec_placeholder
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.takkas: INFO
+    org.springframework.security: WARN

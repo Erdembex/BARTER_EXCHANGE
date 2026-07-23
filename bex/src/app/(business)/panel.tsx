@@ -9,20 +9,23 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
+import { authService } from '@/features/auth/authService';
 import {
   applicationsRepository,
   tasksRepository,
 } from '@/features/data';
-import { demoStore } from '@/lib/demoStore';
-import { shouldUseDemoData } from '@/lib/devMode';
+import {
+  getBusinessAnalytics,
+} from '@/features/business/businessAnalyticsService';
 import { StatCard } from '@/components/business';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
-import { authService } from '@/features/auth/authService';
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
+import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
 export default function BusinessDashboardScreen() {
   const { bexUser, signOut } = useAuthStore();
@@ -31,21 +34,25 @@ export default function BusinessDashboardScreen() {
     pendingApps: 0,
     activeTasks: 0,
     pendingApproval: 0,
+    completedTasks: 0,
   });
   const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = useCallback(async () => {
     if (!business) return;
-    const [apps, tasks] = await Promise.all([
+    const [apps, tasks, analytics] = await Promise.all([
       applicationsRepository.getByBusiness(business.id),
       tasksRepository.getByBusiness(business.id),
+      getBusinessAnalytics(business.id).catch(() => null),
     ]);
     setStats({
       pendingApps: apps.filter((a) =>
         ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
       ).length,
-      activeTasks: tasks.filter((t) => t.status === 'active').length,
-      pendingApproval: tasks.filter((t) => !t.approvedByAdmin).length,
+      activeTasks: analytics?.activeTasks ?? tasks.filter((t) => t.status === 'active').length,
+      pendingApproval:
+        analytics?.pendingApproval ?? tasks.filter((t) => !t.approvedByAdmin).length,
+      completedTasks: analytics?.completedTasks ?? 0,
     });
   }, [business]);
 
@@ -76,10 +83,6 @@ export default function BusinessDashboardScreen() {
     );
   }
 
-  const analytics = business && shouldUseDemoData()
-    ? demoStore.getAnalytics(business.id)
-    : null;
-
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -88,8 +91,18 @@ export default function BusinessDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
-        <View style={styles.header}>
-          <View>
+        <LinearGradient
+          colors={[Colors.primary, Colors.gradientMid, Colors.primaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <ProfileAvatar
+            name={business?.name ?? bexUser?.displayName}
+            avatarUrl={business?.logoUrl || bexUser?.avatarUrl}
+            size={56}
+          />
+          <View style={styles.heroText}>
             <Text style={styles.greeting}>Merhaba,</Text>
             <Text style={styles.name}>{business?.name ?? bexUser?.displayName}</Text>
             {business?.isVerified ? (
@@ -99,7 +112,7 @@ export default function BusinessDashboardScreen() {
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
             <Text style={styles.logoutText}>Çıkış</Text>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
         <View style={styles.statsRow}>
           <StatCard label="Bekleyen başvuru" value={stats.pendingApps} emoji="📥" />
@@ -107,11 +120,7 @@ export default function BusinessDashboardScreen() {
         </View>
         <View style={styles.statsRow}>
           <StatCard label="Admin onayı bekleyen" value={stats.pendingApproval} emoji="⏳" />
-          {analytics ? (
-            <StatCard label="Tamamlanan görev" value={analytics.completedTasks} emoji="✅" />
-          ) : (
-            <StatCard label="İşletme puanı" value={business?.reputationScore ?? 0} emoji="⭐" />
-          )}
+          <StatCard label="Tamamlanan görev" value={stats.completedTasks} emoji="✅" />
         </View>
 
         <Text style={styles.sectionTitle}>Hızlı erişim</Text>
@@ -151,6 +160,24 @@ export default function BusinessDashboardScreen() {
             <Text style={styles.quickIcon}>⚠</Text>
             <Text style={styles.quickLabel}>Kullanıcı Şikayet</Text>
             <Text style={styles.quickHint}>Tehlikeli aday bildir</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/complaints/index' as Href)}
+          >
+            <Text style={styles.quickIcon}>📋</Text>
+            <Text style={styles.quickLabel}>Şikayetlerim</Text>
+            <Text style={styles.quickHint}>Gönderdiğin şikayetler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/subscription' as Href)}
+          >
+            <Text style={styles.quickIcon}>💳</Text>
+            <Text style={styles.quickLabel}>Abonelik</Text>
+            <Text style={styles.quickHint}>Plan ve faturalar</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -200,30 +227,34 @@ export default function BusinessDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.surface },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
-  header: {
+  scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
+  hero: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing[6],
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[4],
+    borderRadius: Radius.xl,
+    marginBottom: Spacing[2],
+    ...Shadow.primary,
   },
-  greeting: { ...Typography.bodyMedium, color: Colors.textSecondary },
-  name: { ...Typography.headingLarge, color: Colors.textPrimary, marginTop: 2 },
+  heroText: { flex: 1, gap: 2 },
+  greeting: { ...Typography.bodySmall, color: 'rgba(255,255,255,0.85)' },
+  name: { ...Typography.headingMedium, color: Colors.textInverse, fontWeight: '700' },
   verified: {
     ...Typography.caption,
-    color: Colors.success,
+    color: '#BBF7D0',
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2,
   },
   logoutBtn: {
     paddingHorizontal: Spacing[3],
     paddingVertical: Spacing[2],
     borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
-  logoutText: { ...Typography.labelMedium, color: Colors.textSecondary },
+  logoutText: { ...Typography.labelMedium, color: Colors.textInverse },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing[3],

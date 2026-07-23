@@ -22,6 +22,8 @@ public class AuthController {
     private final LoginService loginService;
     private final TokenRefreshService tokenRefreshService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordService passwordService;
+    private final PhoneVerificationService phoneVerificationService;
 
     @PostMapping("/register/business")
     @ResponseStatus(HttpStatus.CREATED)
@@ -55,5 +57,38 @@ public class AuthController {
                 rt.setRevoked(true);
                 refreshTokenRepository.save(rt);
             });
+    }
+
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        passwordService.requestPasswordReset(req);
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        passwordService.resetPassword(req);
+    }
+
+    @PostMapping("/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@CurrentUser UserPrincipal principal,
+                               @Valid @RequestBody ChangePasswordRequest req) {
+        passwordService.changePassword(principal.userId(), req);
+    }
+
+    @PostMapping("/phone/send-code")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void sendPhoneCode(@CurrentUser UserPrincipal principal,
+                              @Valid @RequestBody SendPhoneCodeRequest req) {
+        phoneVerificationService.sendCode(principal.userId(), req);
+    }
+
+    @PostMapping("/phone/verify")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void verifyPhoneCode(@CurrentUser UserPrincipal principal,
+                                @Valid @RequestBody VerifyPhoneCodeRequest req) {
+        phoneVerificationService.verifyCode(principal.userId(), req);
     }
 }

@@ -1,5 +1,16 @@
 import { API_BASE_URL } from '@/lib/api/config';
 
+/** Tam URL'den `/uploads/...` yolunu çıkarır; backend erişim kontrolü için gerekli. */
+export function normalizeUploadPath(url: string): string {
+  if (!url?.trim()) return '';
+  const trimmed = url.trim();
+  const uploadsIndex = trimmed.indexOf('/uploads/');
+  if (uploadsIndex >= 0) {
+    return trimmed.slice(uploadsIndex);
+  }
+  return trimmed;
+}
+
 /** Backend localhost URL'lerini cihazdan erişilebilir API adresine çevirir. */
 export function resolveMediaUrl(url: string): string {
   if (!url?.trim()) return url;

@@ -68,7 +68,10 @@ public class NotificationController {
                                   @Valid @RequestBody FcmTokenRequest req) {
         fcmTokenRepository.findByUserIdAndToken(p.userId(), req.token())
             .ifPresentOrElse(
-                existing -> existing.setActive(true),
+                existing -> {
+                    existing.setActive(true);
+                    fcmTokenRepository.save(existing);
+                },
                 () -> fcmTokenRepository.save(FcmToken.builder()
                     .userId(p.userId()).token(req.token())
                     .platform(FcmPlatform.valueOf(req.platform()))

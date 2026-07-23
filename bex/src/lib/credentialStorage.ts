@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { deleteSecureItem, getSecureItem, setSecureItem } from '@/lib/secureStorage';
 
 const EMAIL_KEY = 'bex_saved_email';
 const PASSWORD_KEY = 'bex_saved_password';
@@ -12,11 +12,11 @@ export interface SavedCredentials {
 
 export async function loadSavedCredentials(): Promise<SavedCredentials | null> {
   try {
-    const remember = await SecureStore.getItemAsync(REMEMBER_KEY);
+    const remember = await getSecureItem(REMEMBER_KEY);
     if (remember !== 'true') return null;
 
-    const email = await SecureStore.getItemAsync(EMAIL_KEY);
-    const password = await SecureStore.getItemAsync(PASSWORD_KEY);
+    const email = await getSecureItem(EMAIL_KEY);
+    const password = await getSecureItem(PASSWORD_KEY);
     if (!email) return null;
 
     return {
@@ -30,13 +30,13 @@ export async function loadSavedCredentials(): Promise<SavedCredentials | null> {
 }
 
 export async function saveCredentials(email: string, password: string) {
-  await SecureStore.setItemAsync(REMEMBER_KEY, 'true');
-  await SecureStore.setItemAsync(EMAIL_KEY, email.trim());
-  await SecureStore.setItemAsync(PASSWORD_KEY, password);
+  await setSecureItem(REMEMBER_KEY, 'true');
+  await setSecureItem(EMAIL_KEY, email.trim());
+  await setSecureItem(PASSWORD_KEY, password);
 }
 
 export async function clearSavedCredentials() {
-  await SecureStore.deleteItemAsync(REMEMBER_KEY);
-  await SecureStore.deleteItemAsync(EMAIL_KEY);
-  await SecureStore.deleteItemAsync(PASSWORD_KEY);
+  await deleteSecureItem(REMEMBER_KEY);
+  await deleteSecureItem(EMAIL_KEY);
+  await deleteSecureItem(PASSWORD_KEY);
 }

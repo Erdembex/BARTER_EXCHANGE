@@ -166,6 +166,12 @@ export const adminRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getPendingVerifications();
     }
+    if (await usesRestBackend()) {
+      const { fetchPendingBusinessVerifications } = await import(
+        '../business/businessVerificationApi'
+      );
+      return fetchPendingBusinessVerifications();
+    }
     return [];
   },
 
@@ -184,7 +190,12 @@ export const adminRepository = {
       }
       return;
     }
-    throw new Error('KYC moderasyonu REST backend\'de henüz desteklenmiyor.');
+    if (await usesRestBackend()) {
+      const { approveBusinessVerificationAdmin } = await import(
+        '../business/businessVerificationApi'
+      );
+      await approveBusinessVerificationAdmin(businessId);
+    }
   },
 
   async rejectBusinessVerification(businessId: string): Promise<void> {
@@ -202,7 +213,12 @@ export const adminRepository = {
       }
       return;
     }
-    throw new Error('KYC moderasyonu REST backend\'de henüz desteklenmiyor.');
+    if (await usesRestBackend()) {
+      const { rejectBusinessVerificationAdmin } = await import(
+        '../business/businessVerificationApi'
+      );
+      await rejectBusinessVerificationAdmin(businessId);
+    }
   },
 
   async getPendingSubmissions(): Promise<EnrichedSubmission[]> {
@@ -225,35 +241,11 @@ export const adminRepository = {
     if (await usesRestBackend()) {
       const { approveAdminSubmission } = await import('../application/applicationsApi');
       await approveAdminSubmission(applicationId, reviewNote);
-      const app = await applicationsRepository.getById(applicationId);
-      if (app) {
-        await notifyBusinessOwner(
-          app.businessId,
-          'Teslim admin onayladı',
-          'Kullanıcı teslimi uygun bulundu. Başvurularından kupon verebilirsin.',
-          'general',
-          { applicationId }
-        );
-        await notifyUser({
-          userId: app.userId,
-          title: 'Teslimin onaylandı',
-          body: 'Admin içeriği onayladı. Görsellerin portföyünde görünür.',
-          type: 'general',
-          data: { applicationId },
-          showLocalForUserId: app.userId,
-        });
-        const task = await tasksRepository.getById(app.taskId);
-        await appendApprovedWorkToPortfolio(
-          app.userId,
-          { ...app, status: 'submission_approved', reviewNote: reviewNote ?? '' },
-          task?.title ?? 'Görev'
-        );
-      }
       return;
     }
 
     if (!shouldUseDemoData()) {
-      throw new Error('Teslim moderasyonu REST backend\'de henüz desteklenmiyor.');
+      return;
     }
 
     let app: Application | null = demoStore.getApplications().find((a) => a.id === applicationId) ?? null;
@@ -300,22 +292,11 @@ export const adminRepository = {
       const { rejectAdminSubmission } = await import('../application/applicationsApi');
       const note = reviewNote.trim() || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.';
       await rejectAdminSubmission(applicationId, note);
-      const app = await applicationsRepository.getById(applicationId);
-      if (app) {
-        await notifyUser({
-          userId: app.userId,
-          title: 'Teslimin reddedildi',
-          body: note,
-          type: 'general',
-          data: { applicationId },
-          showLocalForUserId: app.userId,
-        });
-      }
       return;
     }
 
     if (!shouldUseDemoData()) {
-      throw new Error('Teslim moderasyonu REST backend\'de henüz desteklenmiyor.');
+      return;
     }
 
     const note = reviewNote.trim() || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.';
@@ -362,10 +343,22 @@ export const adminRepository = {
       return list;
     }
 
+    if (await usesRestBackend()) {
+      const { searchAdminUsers } = await import('./adminUsersApi');
+      const list = await searchAdminUsers(search);
+      return list.slice(0, max);
+    }
+
     return [];
   },
 
   async setUserBanned(uid: string, banned: boolean): Promise<void> {
+    if (await usesRestBackend()) {
+      const { setAdminUserSuspended } = await import('./adminUsersApi');
+      await setAdminUserSuspended(uid, banned);
+      return;
+    }
+
     await loadDevProfiles();
     await setDevProfile(uid, { isBanned: banned });
   },

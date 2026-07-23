@@ -4,6 +4,7 @@ import {
   notificationService,
   notificationsRepository,
 } from '@/features/notifications';
+import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
 
 export function useNotifications() {
   const { firebaseUser } = useAuthStore();
@@ -20,11 +21,16 @@ export function useNotifications() {
     await notificationService.setBadgeCount(count);
   }, [userId]);
 
+  useNotificationNavigation(refreshUnread);
+
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      notificationService.resetSession();
+      return;
+    }
     notificationService.initialize(userId).then(refreshUnread);
 
-    const interval = setInterval(refreshUnread, 15000);
+    const interval = setInterval(refreshUnread, 30000);
     return () => clearInterval(interval);
   }, [userId, refreshUnread]);
 

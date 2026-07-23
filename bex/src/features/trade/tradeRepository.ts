@@ -12,6 +12,7 @@ import {
 import { executeTradeSwap } from './tradeCouponSwap';
 import {
   acceptSwapOffer,
+  cancelSwapListing,
   createSwapListing,
   fetchMySwapListings,
   fetchMySwapOffers,
@@ -262,6 +263,22 @@ export const tradeRepository = {
     } catch {
       return legacy;
     }
+  },
+
+  async cancelListing(ownerId: string, listingId: string): Promise<void> {
+    if (await useSwapRestBackend()) {
+      await cancelSwapListing(listingId);
+      return;
+    }
+
+    if (shouldUseDemoData()) {
+      demoStore.setTradeListings(
+        demoStore.getTradeListings().filter((item) => item.id !== listingId)
+      );
+      return;
+    }
+
+    throw new Error('İlan iptal edilemedi.');
   },
 
   /** Tek ilan — couponCode asla dönmez */
@@ -646,6 +663,52 @@ export const tradeRepository = {
 
   /** Tamamlanan / sonuçlanmış takas işlemleri */
   async getTradeHistory(userId: string): Promise<TradeHistoryEntry[]> {
+    if (await useSwapRestBackend()) {
+      try {
+        const { fetchMySwapTrades } = await import('./swapListingsApi');
+        const trades = await fetchMySwapTrades();
+        const completed: TradeHistoryEntry[] = trades.map((trade) => ({
+          id: `trade-${trade.id}`,
+          kind: 'listing' as const,
+          title: 'Takas tamamlandı',
+          subtitle: 'Kupon takası',
+          detail: 'Yeni kupon cüzdanında görünür.',
+          status: 'completed' as const,
+          createdAtLabel: trade.completedAt
+            ? new Date(trade.completedAt).toLocaleDateString('tr-TR', {
+                day: 'numeric',
+                month: 'short',
+              })
+            : 'Az önce',
+          referenceId: String(trade.swapListingId ?? trade.id),
+        }));
+
+        const [offers, listings] = await Promise.all([
+          this.getMyOffers(userId),
+          this.getMyListings(userId),
+        ]);
+
+        const pendingOffers: TradeHistoryEntry[] = offers
+          .filter((offer) => offer.status === 'rejected')
+          .map((offer) => ({
+            id: `offer-${offer.id}`,
+            kind: 'offer' as const,
+            title: offer.listingTitle,
+            subtitle: `Teklif · ${offer.counterRewardLabel}`,
+            detail: 'İlan sahibi teklifi reddetti.',
+            status: 'rejected' as const,
+            createdAtLabel: offer.createdAtLabel,
+            referenceId: offer.id,
+          }));
+
+        return [...completed, ...pendingOffers].sort((a, b) =>
+          a.createdAtLabel.localeCompare(b.createdAtLabel)
+        );
+      } catch {
+        // aşağıdaki genel yola düş
+      }
+    }
+
     const [offers, listings] = await Promise.all([
       this.getMyOffers(userId),
       this.getMyListings(userId),

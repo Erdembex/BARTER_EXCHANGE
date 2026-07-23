@@ -65,15 +65,25 @@ export function isCouponExpired(coupon: Coupon): boolean {
 
 export function getCouponDisplayStatus(
   coupon: Coupon
-): 'active' | 'exhausted' | 'expired' | 'traded' {
+): 'active' | 'pending' | 'exhausted' | 'expired' | 'traded' {
+  if (coupon.status === 'pending') return 'pending';
   if (coupon.status === 'traded') return 'traded';
   if (coupon.status === 'exhausted') return 'exhausted';
   if (coupon.status === 'expired' || isCouponExpired(coupon)) return 'expired';
   return 'active';
 }
 
+const EXPIRING_SOON_MS = 3 * 24 * 60 * 60 * 1000;
+
+export function isCouponExpiringSoon(coupon: Coupon): boolean {
+  if (getCouponDisplayStatus(coupon) !== 'active') return false;
+  const remaining = coupon.expiresAt.toMillis() - Date.now();
+  return remaining > 0 && remaining <= EXPIRING_SOON_MS;
+}
+
 export const COUPON_STATUS_LABELS = {
   active: 'Aktif',
+  pending: 'Aktivasyon bekliyor',
   exhausted: 'Tükendi',
   expired: 'Süresi doldu',
   traded: 'Takas edildi',

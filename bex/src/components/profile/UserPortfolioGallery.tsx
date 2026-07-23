@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
   Modal,
   Dimensions,
 } from 'react-native';
 import { PortfolioItem } from '@/types';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -66,7 +66,7 @@ export function UserPortfolioGallery({
               onPress={() => setPreview(item)}
               activeOpacity={0.9}
             >
-              <Image source={{ uri: item.imageUrl }} style={styles.thumb} />
+              <AuthenticatedImage uri={item.imageUrl} style={styles.thumb} />
               {!compact ? (
                 <Text style={styles.caption} numberOfLines={1}>
                   {item.taskTitle}

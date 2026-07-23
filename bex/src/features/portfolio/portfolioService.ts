@@ -71,6 +71,12 @@ export async function appendApprovedWorkToPortfolio(
   application: Application,
   taskTitle: string
 ): Promise<void> {
+  const { hasRestAuthSession } = await import('@/lib/auth/sessionClaims');
+  if (await hasRestAuthSession()) {
+    // Portföy backend public profil API'sinden gelir.
+    return;
+  }
+
   const incoming = await buildPortfolioItemsFromApplication(application, taskTitle);
   if (incoming.length === 0) return;
 

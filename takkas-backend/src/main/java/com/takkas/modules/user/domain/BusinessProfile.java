@@ -1,6 +1,7 @@
 package com.takkas.modules.user.domain;
 
 import com.takkas.modules.user.domain.enums.BusinessCategory;
+import com.takkas.modules.user.domain.enums.BusinessVerificationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -39,6 +40,13 @@ public class BusinessProfile {
 
     @Builder.Default
     private boolean verified = false;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private BusinessVerificationStatus verificationStatus = BusinessVerificationStatus.NONE;
+
+    private String verificationDocumentUrl;
+    private String verificationDocumentName;
 
     @CreatedDate
     private Instant createdAt;

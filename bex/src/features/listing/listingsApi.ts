@@ -73,6 +73,12 @@ const CATEGORY_TO_SKILL: Record<TaskCategory, string> = {
   other: 'OTHER',
 };
 
+export function mapCategoryToBackendSkill(category: TaskCategory): string {
+  return CATEGORY_TO_SKILL[category] ?? 'OTHER';
+}
+
+export { CATEGORY_TO_SKILL };
+
 const SKILL_TO_CATEGORY: Record<string, TaskCategory> = {
   GRAPHIC_DESIGN: 'design',
   WEB_DESIGN: 'development',
@@ -261,14 +267,19 @@ export async function discoverListings(options?: {
   cursor?: string;
   city?: string;
   district?: string;
+  skills?: string[];
 }): Promise<DiscoverListingsResult> {
   try {
     const { data } = await apiClient.get<ListingsPageDto>('/api/listings', {
       params: {
         pageSize: options?.pageSize ?? 20,
         cursor: options?.cursor,
-        city: options?.city,
-        district: options?.district,
+        city: options?.city || undefined,
+        district: options?.district || undefined,
+        skills: options?.skills?.length ? options.skills : undefined,
+      },
+      paramsSerializer: {
+        indexes: null,
       },
     });
     const content = Array.isArray(data?.content) ? data.content : [];

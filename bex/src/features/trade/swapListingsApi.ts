@@ -328,3 +328,29 @@ export async function fetchMySwapOffers(): Promise<TradeOffer[]> {
     throw mapSwapListingsError(error, 'Tekliflerin yüklenemedi.');
   }
 }
+
+type SwapTradeDto = {
+  id: string;
+  swapListingId?: string;
+  swapOfferId?: string;
+  completedAt?: string;
+};
+
+/** İlan iptal — DELETE /api/individual/swap-listings/{id} */
+export async function cancelSwapListing(listingId: string): Promise<void> {
+  try {
+    await apiClient.delete(`/api/individual/swap-listings/${listingId}`);
+  } catch (error) {
+    throw mapSwapListingsError(error, 'İlan iptal edilemedi.');
+  }
+}
+
+/** Tamamlanan takaslar — GET /api/individual/swap-trades */
+export async function fetchMySwapTrades(): Promise<SwapTradeDto[]> {
+  try {
+    const { data } = await apiClient.get<SwapTradeDto[]>('/api/individual/swap-trades');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    throw mapSwapListingsError(error, 'Takas geçmişi yüklenemedi.');
+  }
+}

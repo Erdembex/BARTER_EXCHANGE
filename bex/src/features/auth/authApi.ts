@@ -47,6 +47,12 @@ function mapAuthApiError(error: unknown): Error & { code?: string } {
     if (message.includes('askıya alınmış')) {
       return Object.assign(new Error(message), { code: 'auth/user-disabled' });
     }
+    if (message.includes('Geçersiz veya süresi dolmuş')) {
+      return Object.assign(new Error(message), { code: 'auth/invalid-reset-token' });
+    }
+    if (message.includes('Yeni şifre mevcut')) {
+      return Object.assign(new Error(message), { code: 'auth/same-password' });
+    }
     if (data?.fields?.password) {
       return Object.assign(new Error(data.fields.password), { code: 'auth/weak-password' });
     }
@@ -112,6 +118,39 @@ export async function logoutRequest(refreshToken: string): Promise<void> {
     await apiClient.post('/api/auth/logout', { refreshToken });
   } catch {
     // Yerel oturumu yine de kapat
+  }
+}
+
+export async function forgotPasswordRequest(email: string): Promise<void> {
+  try {
+    await apiClient.post('/api/auth/forgot-password', { email: email.trim() });
+  } catch (error) {
+    throw mapAuthApiError(error);
+  }
+}
+
+export async function resetPasswordRequest(token: string, newPassword: string): Promise<void> {
+  try {
+    await apiClient.post('/api/auth/reset-password', {
+      token: token.trim().toUpperCase(),
+      newPassword,
+    });
+  } catch (error) {
+    throw mapAuthApiError(error);
+  }
+}
+
+export async function changePasswordRequest(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  try {
+    await apiClient.post('/api/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+  } catch (error) {
+    throw mapAuthApiError(error);
   }
 }
 

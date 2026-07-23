@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -45,10 +45,11 @@ export default function ApplicationDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const hasLoadedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const app = await applicationsRepository.getById(id);
       setApplication(app);
@@ -66,6 +67,7 @@ export default function ApplicationDetailScreen() {
       );
     } finally {
       setLoading(false);
+      hasLoadedRef.current = true;
     }
   }, [id]);
 

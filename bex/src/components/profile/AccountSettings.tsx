@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { authService, getAuthErrorMessage } from '@/features/auth/authService';
+import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { getRestProfileId } from '@/lib/auth/sessionClaims';
 import { BexUser } from '@/types';
 import { Button, Input } from '@/components/ui';
@@ -42,6 +43,16 @@ export function AccountSettings({
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [myCompletedTasks, setMyCompletedTasks] = useState<CompletedTask[]>([]);
+  const [editingPassword, setEditingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [restMode, setRestMode] = useState(false);
+
+  useEffect(() => {
+    hasRestAuthSession().then(setRestMode);
+  }, []);
 
   const handlePickAvatar = async () => {
     if (!firebaseUser) return;
@@ -116,6 +127,35 @@ export function AccountSettings({
       showToast(message);
     } finally {
       setSavingUsername(false);
+    }
+  };
+
+  const handleSavePassword = async () => {
+    if (newPassword.length < 8) {
+      showToast('Yeni şifre en az 8 karakter olmalı.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast('Yeni şifreler eşleşmiyor.');
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      await authService.changePassword(currentPassword, newPassword);
+      setEditingPassword(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('Şifren güncellendi.');
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Şifre güncellenemedi.';
+      showToast(message);
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -246,6 +286,51 @@ export function AccountSettings({
               />
             </View>
           </View>
+        ) : editingPassword ? (
+          <View style={styles.editBlock}>
+            <Input
+              label="Mevcut şifre"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Input
+              label="Yeni şifre"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Input
+              label="Yeni şifre (tekrar)"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <View style={styles.editActions}>
+              <Button
+                title="Kaydet"
+                size="sm"
+                onPress={handleSavePassword}
+                loading={savingPassword}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Vazgeç"
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  setEditingPassword(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
         ) : (
           <>
             <Row label="Telefon" value={bexUser?.phone || 'Eklenmedi'} />
@@ -277,6 +362,14 @@ export function AccountSettings({
                 }}
               />
             ) : null}
+            {restMode ? (
+              <Button
+                title="Şifreyi Değiştir"
+                variant="outline"
+                size="sm"
+                onPress={() => setEditingPassword(true)}
+              />
+            ) : null}
           </>
         )}
       </View>
@@ -305,7 +398,7 @@ export function AccountSettings({
         />
       )}
 
-      {!bexUser?.phoneVerified && (
+      {!bexUser?.phoneVerified && !restMode && (
         <Button
           title="Telefonu Doğrula"
           variant="secondary"

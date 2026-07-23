@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ImageStyle, StyleProp } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -6,6 +6,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { buildAuthenticatedImageSource } from '@/lib/authenticatedImage';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -16,12 +17,27 @@ type ZoomableImageProps = {
 };
 
 export function ZoomableImage({ uri, style }: ZoomableImageProps) {
+  const [source, setSource] = useState<{ uri: string; headers?: Record<string, string> } | null>(
+    null
+  );
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    buildAuthenticatedImageSource(uri).then((next) => {
+      if (cancelled || !next || typeof next === 'number') return;
+      setSource(next as { uri: string; headers?: Record<string, string> });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [uri]);
 
   const resetTransform = () => {
     scale.value = 1;
@@ -96,10 +112,12 @@ export function ZoomableImage({ uri, style }: ZoomableImageProps) {
     ],
   }));
 
+  if (!source) return null;
+
   return (
     <GestureDetector gesture={gesture}>
       <Animated.Image
-        source={{ uri }}
+        source={source}
         style={[style, animatedStyle]}
         resizeMode="contain"
       />

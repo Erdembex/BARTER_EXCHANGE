@@ -4,6 +4,7 @@ export function isPortfolioImageUrl(url: string): boolean {
   if (!url?.trim()) return false;
   if (url.startsWith('file:') || url.startsWith('content:')) return true;
   if (url.startsWith('data:image/')) return true;
+  if (url.includes('/uploads/')) return true;
   return IMAGE_EXT.test(url);
 }
 

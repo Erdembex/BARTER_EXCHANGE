@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
   Modal,
   Linking,
@@ -12,6 +11,7 @@ import {
 import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { isPortfolioImageUrl } from '@/lib/portfolioUtils';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
+import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -55,8 +55,8 @@ export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps
               onPress={() => setPreview(item)}
               activeOpacity={0.85}
             >
-              <Image
-                source={{ uri: item.uri }}
+              <AuthenticatedImage
+                uri={item.uri}
                 style={[styles.thumb, { width: thumbSize, height: thumbSize }]}
               />
             </TouchableOpacity>

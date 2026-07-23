@@ -10,6 +10,10 @@ export const apiClient = axios.create({
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
+  // Spring Boot List<Enum> query binding: skills=A&skills=B (skills[]=A değil)
+  paramsSerializer: {
+    indexes: null,
+  },
 });
 
 type RetryConfig = InternalAxiosRequestConfig & { _retry?: boolean };

@@ -116,22 +116,28 @@ export default function ForgotPasswordScreen() {
                 <Text style={styles.successEmoji}>✉️</Text>
               </View>
 
-              <Text style={styles.successTitle}>E-posta Gönderildi!</Text>
+              <Text style={styles.successTitle}>Kod Gönderildi!</Text>
               <Text style={styles.successText}>
                 <Text style={styles.emailHighlight}>{email}</Text>
-                {' '}adresine şifre sıfırlama bağlantısı gönderdik.{'\n\n'}
-                Spam klasörünü de kontrol etmeyi unutma.
+                {' '}adresine 8 haneli sıfırlama kodu gönderdik.{'\n\n'}
+                Kodu uygulamada girerek yeni şifreni belirleyebilirsin.
+                {__DEV__ ? '\n\n(Geliştirme: kod backend terminal log\'unda da görünür.)' : ''}
               </Text>
 
               <View style={styles.successActions}>
                 <Button
+                  title="Kodu Gir — Yeni Şifre Belirle"
+                  onPress={() => router.push('/(auth)/reset-password')}
+                />
+                <Button
                   title="Giriş Ekranına Dön"
                   onPress={() => router.replace('/(auth)/login')}
+                  variant="outline"
                 />
                 <Button
                   title="Tekrar Gönder"
                   onPress={() => setStep('form')}
-                  variant="outline"
+                  variant="ghost"
                 />
               </View>
             </View>

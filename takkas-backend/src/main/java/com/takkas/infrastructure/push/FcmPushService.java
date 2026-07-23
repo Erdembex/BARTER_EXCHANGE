@@ -14,19 +14,24 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class FcmPushService implements PushNotificationService {
+public class FcmPushService {
 
     private final FcmTokenRepository fcmTokenRepository;
 
-    @Override
     @Async("pushNotificationExecutor")
     public void sendAsync(UUID userId, String title, String body, Map<String, String> data) {
-        if (FirebaseApp.getApps().isEmpty()) {
+        List<String> tokens = fcmTokenRepository.findActiveTokensByUserId(userId);
+        sendToTokens(userId, tokens, title, body, data);
+    }
+
+    @Async("pushNotificationExecutor")
+    public void sendToTokens(UUID userId, List<String> tokens, String title, String body,
+                             Map<String, String> data) {
+        if (com.google.firebase.FirebaseApp.getApps().isEmpty()) {
             log.debug("[FcmPushService] Firebase başlatılmadı, bildirim atlandı: userId={}", userId);
             return;
         }
-        List<String> tokens = fcmTokenRepository.findActiveTokensByUserId(userId);
-        if (tokens.isEmpty()) {
+        if (tokens == null || tokens.isEmpty()) {
             log.debug("[FcmPushService] Token bulunamadı: userId={}", userId);
             return;
         }

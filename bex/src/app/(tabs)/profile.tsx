@@ -27,15 +27,12 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!firebaseUser) return;
-      authService
-        .getUserDocument(firebaseUser.uid, {
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-        })
-        .then(async (user) => {
-          if (!user) return;
 
-          if (user.role === 'user') {
+      authService.refreshProfile().then(async (user) => {
+        if (!user) return;
+
+        if (user.role === 'user') {
+          try {
             const stats = await usersRepository.getMyPublicProfileStats();
             if (stats) {
               user = {
@@ -48,12 +45,15 @@ export default function ProfileScreen() {
             } else {
               setPortfolio(await usersRepository.getPortfolio(firebaseUser.uid));
             }
-          } else {
-            setPortfolio([]);
+          } catch {
+            setPortfolio(user.portfolioItems ?? []);
           }
+        } else {
+          setPortfolio([]);
+        }
 
-          setBexUser(user);
-        });
+        setBexUser(user);
+      });
     }, [firebaseUser, setBexUser])
   );
 

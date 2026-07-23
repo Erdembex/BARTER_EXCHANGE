@@ -40,7 +40,17 @@ export default function PhoneVerificationScreen() {
   const [devCode, setDevCode] = useState<string | null>(null);
 
   const otpRefs = useRef<(TextInput | null)[]>([]);
-  const phoneSupported = isPhoneAuthSupported();
+  const [phoneSupported, setPhoneSupported] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    isPhoneAuthSupported().then((supported) => {
+      if (active) setPhoneSupported(supported);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const goNext = async () => {
     if (firebaseUser) {

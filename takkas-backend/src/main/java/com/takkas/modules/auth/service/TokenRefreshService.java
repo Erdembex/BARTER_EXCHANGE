@@ -1,6 +1,7 @@
 package com.takkas.modules.auth.service;
 
 import com.takkas.common.exception.BusinessRuleException;
+import com.takkas.common.security.ActiveUserGuard;
 import com.takkas.common.security.JwtTokenProvider;
 import com.takkas.modules.auth.api.dto.AuthResponse;
 import com.takkas.modules.auth.domain.RefreshToken;
@@ -25,6 +26,7 @@ public class TokenRefreshService {
     private final BusinessProfileRepository businessProfileRepository;
     private final IndividualProfileRepository individualProfileRepository;
     private final JwtTokenProvider tokenProvider;
+    private final ActiveUserGuard activeUserGuard;
 
     public AuthResponse refresh(String rawToken) {
         RefreshToken rt = refreshTokenRepository.findByToken(rawToken)
@@ -35,6 +37,7 @@ public class TokenRefreshService {
             throw new BusinessRuleException("Token süresi dolmuş, lütfen tekrar giriş yapın.");
         }
 
+        activeUserGuard.ensureActive(rt.getUser());
         rt.setRevoked(true);
 
         String newToken = UUID.randomUUID().toString();

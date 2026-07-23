@@ -35,6 +35,8 @@ export function getAuthErrorMessage(code: string): string {
     'auth/user-disabled': 'Bu hesap askıya alınmış.',
     'auth/not-authenticated': 'Oturum bulunamadı.',
     'auth/not-supported-yet': 'Bu özellik henüz yeni backend\'de aktif değil.',
+    'auth/invalid-reset-token': 'Geçersiz veya süresi dolmuş sıfırlama kodu.',
+    'auth/same-password': 'Yeni şifre mevcut şifre ile aynı olamaz.',
     'invalid-name': 'Ad en az 2 karakter olmalı.',
     'invalid-username': 'Kullanıcı adı 3-30 karakter olmalı (a-z, 0-9, _).',
   };
@@ -67,6 +69,7 @@ function mapProfileToBexUser(
     displayName: string;
     username?: string;
     phone?: string;
+    phoneVerified?: boolean;
     avatarUrl?: string;
     verified?: boolean;
     completedTaskCount?: number;
@@ -82,7 +85,7 @@ function mapProfileToBexUser(
     username: profile.username,
     email,
     phone: profile.phone ?? '',
-    phoneVerified: false,
+    phoneVerified: profile.phoneVerified ?? false,
     avatarUrl: profile.avatarUrl ?? '',
     reputationScore: profile.reputationScore ?? 0,
     completedTaskCount: profile.completedTaskCount ?? 0,
@@ -120,6 +123,7 @@ async function fetchProfileForSession(
       return mapProfileToBexUser(session, userType, {
         displayName: profile.businessName,
         phone: profile.phone ?? '',
+        phoneVerified: profile.phoneVerified ?? false,
         avatarUrl: resolveMediaUrl(profile.logoUrl ?? ''),
         verified: profile.verified,
       });
@@ -139,6 +143,8 @@ async function fetchProfileForSession(
     return mapProfileToBexUser(session, userType, {
       displayName: profile.fullName,
       username: profile.username,
+      phone: profile.phone ?? '',
+      phoneVerified: profile.phoneVerified ?? false,
       avatarUrl: resolveMediaUrl(profile.avatarUrl ?? ''),
       completedTaskCount,
       reputationScore: completedTaskCount,
@@ -214,11 +220,19 @@ export const authService = {
     await clearTokens();
   },
 
-  async resetPassword(_email: string) {
-    throw Object.assign(
-      new Error('Şifre sıfırlama henüz yeni backend\'de aktif değil.'),
-      { code: 'auth/not-supported-yet' }
-    );
+  async resetPassword(email: string) {
+    const { forgotPasswordRequest } = await import('./authApi');
+    await forgotPasswordRequest(email);
+  },
+
+  async completePasswordReset(token: string, newPassword: string) {
+    const { resetPasswordRequest } = await import('./authApi');
+    await resetPasswordRequest(token, newPassword);
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const { changePasswordRequest } = await import('./authApi');
+    await changePasswordRequest(currentPassword, newPassword);
   },
 
   async updateDisplayName(uid: string, displayName: string): Promise<BexUser | null> {
@@ -351,5 +365,21 @@ export const authService = {
     };
 
     return fetchProfileForSession(session, claims?.userType);
+  },
+
+  /** Oturum açıkken profil bilgisini backend'den yeniler (avatar vb.). */
+  async refreshProfile(): Promise<BexUser | null> {
+    const token = await ensureValidAccessToken();
+    if (!token) return null;
+
+    const claims = decodeJwtPayload(token);
+    if (!claims?.sub) return null;
+
+    const session = sessionFromAccessToken(token);
+    const bexUser = await fetchProfileForSession(session, claims.userType);
+    if (bexUser) {
+      session.displayName = bexUser.displayName;
+    }
+    return bexUser;
   },
 };

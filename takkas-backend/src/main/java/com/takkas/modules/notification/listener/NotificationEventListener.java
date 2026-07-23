@@ -3,6 +3,8 @@ package com.takkas.modules.notification.listener;
 import com.takkas.common.event.*;
 import com.takkas.modules.notification.service.*;
 import com.takkas.modules.user.UserFacade;
+import com.takkas.modules.user.domain.enums.UserType;
+import com.takkas.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,7 @@ public class NotificationEventListener {
     private final NotificationService notificationService;
     private final NotificationFactory factory;
     private final UserFacade userFacade;
+    private final UserRepository userRepository;
 
     // ── Başvuru ──────────────────────────────────────────
 
@@ -51,6 +54,68 @@ public class NotificationEventListener {
             notificationService.create(
                 factory.applicationRejected(e.individualUserId(), e.applicationId(), "İşletme"));
         } catch (Exception ex) { log.error("[NTF] APPLICATION_REJECTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(ApplicationSubmissionSubmittedEvent e) {
+        try {
+            String name = userFacade.getIndividualSummary(e.individualProfileId()).fullName();
+            notificationService.create(
+                factory.submissionSubmitted(e.businessUserId(), e.applicationId(), name));
+        } catch (Exception ex) { log.error("[NTF] SUBMISSION_SUBMITTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(ApplicationSubmissionApprovedEvent e) {
+        try {
+            notificationService.create(
+                factory.submissionApprovedForBusiness(e.businessUserId(), e.applicationId()));
+            notificationService.create(
+                factory.submissionApprovedForIndividual(e.individualUserId(), e.applicationId()));
+        } catch (Exception ex) { log.error("[NTF] SUBMISSION_APPROVED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(ApplicationSubmissionRejectedEvent e) {
+        try {
+            String note = e.reviewNote() != null && !e.reviewNote().isBlank()
+                ? e.reviewNote()
+                : "İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.";
+            notificationService.create(
+                factory.submissionRejected(e.individualUserId(), e.applicationId(), note));
+        } catch (Exception ex) { log.error("[NTF] SUBMISSION_REJECTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(BusinessVerificationSubmittedEvent e) {
+        try {
+            for (var admin : userRepository.findByUserType(UserType.ADMIN)) {
+                notificationService.create(
+                    factory.kycVerificationPending(admin.getId(), e.profileId(), e.businessName()));
+            }
+        } catch (Exception ex) { log.error("[NTF] KYC_SUBMITTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(BusinessVerificationApprovedEvent e) {
+        try {
+            notificationService.create(
+                factory.kycVerificationApproved(e.businessUserId(), e.profileId(), e.businessName()));
+        } catch (Exception ex) { log.error("[NTF] KYC_APPROVED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(BusinessVerificationRejectedEvent e) {
+        try {
+            notificationService.create(
+                factory.kycVerificationRejected(e.businessUserId(), e.profileId(), e.businessName()));
+        } catch (Exception ex) { log.error("[NTF] KYC_REJECTED: {}", ex.getMessage()); }
     }
 
     // ── Teklif / Mesaj ────────────────────────────────────

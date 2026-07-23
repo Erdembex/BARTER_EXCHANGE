@@ -26,8 +26,11 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
     @Query("""
         SELECT DISTINCT l FROM Listing l
         JOIN l.business b
+        JOIN b.user u
         LEFT JOIN l.skills s
         WHERE l.status = 'ACTIVE'
+          AND b.businessName NOT LIKE 'Test Cafe%'
+          AND u.email NOT LIKE '%@test.dev'
           AND (:city IS NULL OR b.city = :city)
           AND (:district IS NULL OR b.district = :district)
           AND (:#{#skills == null || #skills.isEmpty()} = true OR s.skill IN :skills)

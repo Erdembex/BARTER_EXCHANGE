@@ -411,7 +411,8 @@ export const couponsRepository = {
     }
 
     if (await useApplicationsRestBackend()) {
-      throw new Error('Kupon kullanımı REST backend\'de henüz desteklenmiyor.');
+      // İşletme paneli kupon doğrulamayı verifyCouponByToken ile yapar.
+      return null;
     }
 
     return null;
@@ -500,6 +501,16 @@ export async function issueCouponForSubmission(
     if (task && !coupon.rewardDescription) {
       coupon.rewardDescription = task.rewardDescription;
     }
+
+    await notifyUser({
+      userId: application.userId,
+      title: 'Tebrikler! Kuponun hazır',
+      body: `Görev teslimin onaylandı. Cüzdanından kuponunu kullanabilirsin.`,
+      type: 'coupon_issued',
+      data: { applicationId, couponId: coupon.id },
+      showLocalForUserId: application.userId,
+    });
+
     return coupon;
   }
 

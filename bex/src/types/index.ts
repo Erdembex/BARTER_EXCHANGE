@@ -166,7 +166,7 @@ export type CreateApplication = Pick<
 >;
 
 // ─── Kupon ───────────────────────────────────────────────────
-export type CouponStatus = 'active' | 'exhausted' | 'expired' | 'traded';
+export type CouponStatus = 'active' | 'pending' | 'exhausted' | 'expired' | 'traded';
 
 export interface CouponUsage {
   usedAt: Timestamp;

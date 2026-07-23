@@ -24,6 +24,41 @@ public class NotificationFactory {
             "Başvuru Sonucu", businessName + " bu sefer başvurunu kabul etmedi.");
     }
 
+    public Notification submissionSubmitted(UUID businessUserId, UUID applicationId, String individualName) {
+        return build(businessUserId, NotificationType.SUBMISSION_SUBMITTED, applicationId, "APPLICATION",
+            "Yeni teslim", individualName + " görev teslimi yükledi. Admin incelemesi bekleniyor.");
+    }
+
+    public Notification submissionApprovedForBusiness(UUID businessUserId, UUID applicationId) {
+        return build(businessUserId, NotificationType.SUBMISSION_APPROVED, applicationId, "APPLICATION",
+            "Teslim admin onayladı", "Kullanıcı teslimi uygun bulundu. Başvurularından kupon verebilirsin.");
+    }
+
+    public Notification submissionApprovedForIndividual(UUID individualUserId, UUID applicationId) {
+        return build(individualUserId, NotificationType.SUBMISSION_APPROVED, applicationId, "APPLICATION",
+            "Teslimin onaylandı", "Admin içeriği onayladı. Görsellerin portföyünde görünür.");
+    }
+
+    public Notification submissionRejected(UUID individualUserId, UUID applicationId, String note) {
+        return build(individualUserId, NotificationType.SUBMISSION_REJECTED, applicationId, "APPLICATION",
+            "Teslimin reddedildi", note);
+    }
+
+    public Notification kycVerificationPending(UUID adminUserId, UUID profileId, String businessName) {
+        return build(adminUserId, NotificationType.KYC_VERIFICATION_PENDING, profileId, "BUSINESS_PROFILE",
+            "Yeni KYC evrakı", businessName + " doğrulama evrakı yükledi. İnceleme bekliyor.");
+    }
+
+    public Notification kycVerificationApproved(UUID businessUserId, UUID profileId, String businessName) {
+        return build(businessUserId, NotificationType.KYC_VERIFICATION_APPROVED, profileId, "BUSINESS_PROFILE",
+            "KYC onaylandı", businessName + " doğrulandı. Güven rozetin aktif.");
+    }
+
+    public Notification kycVerificationRejected(UUID businessUserId, UUID profileId, String businessName) {
+        return build(businessUserId, NotificationType.KYC_VERIFICATION_REJECTED, profileId, "BUSINESS_PROFILE",
+            "KYC reddedildi", businessName + " evrak incelemesi olumsuz. Yeni evrak yükleyebilirsin.");
+    }
+
     public Notification newMessage(UUID recipientUserId, UUID conversationId, String senderName) {
         return build(recipientUserId, NotificationType.NEW_MESSAGE, conversationId, "CONVERSATION",
             "Yeni Mesaj", senderName + " sana mesaj gönderdi.");

@@ -29,6 +29,15 @@ export async function getBusinessAnalytics(
     return demoStore.getAnalytics(businessId) as BusinessAnalytics;
   }
 
+  if (!shouldUseDemoData()) {
+    try {
+      const { fetchBusinessAnalyticsRest } = await import('./businessAnalyticsApi');
+      return await fetchBusinessAnalyticsRest();
+    } catch {
+      // istemci toplama yedeği
+    }
+  }
+
   const [tasks, apps, coupons] = await Promise.all([
     tasksRepository.getByBusiness(businessId),
     applicationsRepository.getByBusiness(businessId),

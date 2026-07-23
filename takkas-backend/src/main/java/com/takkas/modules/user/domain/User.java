@@ -37,6 +37,13 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(length = 20)
+    private String phone;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean phoneVerified = false;
+
     @CreatedDate  private Instant createdAt;
     @LastModifiedDate private Instant updatedAt;
     private Instant deletedAt;
