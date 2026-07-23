@@ -28,7 +28,11 @@ import {
 } from '../application/applicationsApi';
 import { isBackendId } from '@/lib/api/backendId';
 import { fetchIssuedCoupons, type BusinessIssuedCoupon } from '@/features/coupon/businessCouponsApi';
-import { fetchCouponByApplicationId } from '@/features/coupon/couponsApi';
+import {
+  fetchCouponByApplicationId,
+  fetchRestCouponById,
+  fetchRestCoupons,
+} from '@/features/coupon/couponsApi';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 
 export const applicationsRepository = {
@@ -290,6 +294,15 @@ export const couponsRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getCoupons().find((c) => c.id === id) ?? null;
     }
+
+    if (await hasRestAuthSession()) {
+      try {
+        return await fetchRestCouponById(id);
+      } catch {
+        return null;
+      }
+    }
+
     return null;
   },
 
@@ -323,6 +336,21 @@ export const couponsRepository = {
       if (status) list = list.filter((c) => c.status === status);
       return list;
     }
+
+    if (await hasRestAuthSession()) {
+      try {
+        const backendStatus =
+          status === 'active' ? ('ACTIVE' as const) : undefined;
+        let list = await fetchRestCoupons(backendStatus);
+        if (status && status !== 'active') {
+          list = list.filter((c) => c.status === status);
+        }
+        return list;
+      } catch {
+        return [];
+      }
+    }
+
     return [];
   },
 

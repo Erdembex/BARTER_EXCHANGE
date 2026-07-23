@@ -21,8 +21,17 @@ import {
 } from '../listing/listingsApi';
 import { isBackendId } from '@/lib/api/backendId';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
+import {
+  fetchOwnBusinessProfile,
+  fetchPublicBusinessProfile,
+} from '../business/businessProfileApi';
 
-export type EnrichedTask = Task & { businessName: string; businessVerified?: boolean };
+export type EnrichedTask = Task & {
+  businessName: string;
+  businessVerified?: boolean;
+  businessIsDangerous?: boolean;
+  businessComplaintListed?: boolean;
+};
 
 function asEnriched(tasks: EnrichedTask[]): EnrichedTask[] {
   return tasks.map((task) => ({
@@ -295,6 +304,15 @@ export const businessesRepository = {
     if (shouldUseDemoData()) {
       return demoStore.getBusinessById(id) ?? DEMO_BUSINESSES.find((b) => b.id === id) ?? null;
     }
+
+    if ((await hasRestAuthSession()) && isBackendId(id)) {
+      try {
+        return await fetchPublicBusinessProfile(id);
+      } catch {
+        return null;
+      }
+    }
+
     return null;
   },
 
@@ -307,9 +325,17 @@ export const businessesRepository = {
     return [];
   },
 
-  async getByOwner(_ownerUid: string): Promise<Business | null> {
+  async getByOwner(ownerUid: string): Promise<Business | null> {
+    if (await hasRestAuthSession()) {
+      try {
+        return await fetchOwnBusinessProfile(ownerUid);
+      } catch {
+        return null;
+      }
+    }
+
     if (shouldUseDemoData()) {
-      return demoStore.getBusinessByOwner(_ownerUid);
+      return demoStore.getBusinessByOwner(ownerUid);
     }
     return null;
   },

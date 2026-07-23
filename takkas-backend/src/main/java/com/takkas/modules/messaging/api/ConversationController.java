@@ -3,6 +3,7 @@ package com.takkas.modules.messaging.api;
 import com.takkas.common.exception.ForbiddenException;
 import jakarta.validation.Valid;
 import com.takkas.common.pagination.PageResponse;
+import com.takkas.common.pagination.CursorPagination;
 import com.takkas.common.security.*;
 import com.takkas.modules.messaging.api.dto.*;
 import com.takkas.modules.messaging.mapper.ConversationMapper;
@@ -60,7 +61,7 @@ public class ConversationController {
                                                        @RequestParam(defaultValue = "20") int pageSize) {
         if (!conversationRepository.isParticipant(id, p.userId()))
             throw new ForbiddenException("Erişim yetkiniz yok.");
-        Instant effectiveCursor = (cursor != null) ? cursor : Instant.MAX;
+        Instant effectiveCursor = CursorPagination.effectiveCursor(cursor);
         var messages = messageRepository.findByConversationWithCursor(id, effectiveCursor, PageRequest.of(0, pageSize));
         return PageResponse.of(messages.stream().map(MessageMapper::toResponse).toList(),
             messages.isEmpty() ? null : messages.getLast().getCreatedAt());

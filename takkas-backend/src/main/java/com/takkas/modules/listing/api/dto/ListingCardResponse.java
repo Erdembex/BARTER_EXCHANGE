@@ -7,9 +7,19 @@ import java.util.List;
 import java.util.UUID;
 
 public record ListingCardResponse(
-    UUID id, String businessName, String businessLogoUrl, String businessCategory,
-    String title, List<Skill> skills,
-    RewardType rewardType, Integer rewardQuantity, String rewardUnit,
-    String rewardDescription, ListingStatus status,
-    long applicantCount, Instant createdAt
-) {}
+    UUID id,
+    UUID businessProfileId,
+    String businessName,
+    String businessLogoUrl,
+    String businessCategory,
+    String title,
+    List<Skill> skills,
+    RewardType rewardType,
+    Integer rewardQuantity,
+    String rewardUnit,
+    String rewardDescription,
+    ListingStatus status,
+    long applicantCount,
+    Instant createdAt,
+    boolean businessComplaintListed,
+    boolean businessIsDangerous) {}

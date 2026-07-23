@@ -46,6 +46,10 @@ export default function DrawerLayout() {
         name="notifications/index"
         options={{ drawerLabel: 'Bildirimler', title: 'Bildirimler' }}
       />
+      <Drawer.Screen
+        name="complaints/index"
+        options={{ drawerLabel: 'Şikayet BEX', title: 'Şikayet BEX' }}
+      />
       <Drawer.Screen name="profile" options={{ drawerLabel: 'Profil', title: 'Profil' }} />
     </Drawer>
   );

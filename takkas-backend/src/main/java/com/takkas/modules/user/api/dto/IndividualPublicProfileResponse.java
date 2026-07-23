@@ -5,7 +5,14 @@ import java.util.UUID;
 
 public record IndividualPublicProfileResponse(
     UUID profileId,
+    String username,
     String fullName,
     String avatarUrl,
     int completedTaskCount,
+    double averageRating,
+    long feedbackCount,
+    long approvedComplaintCount,
+    double complaintRate,
+    boolean isDangerous,
+    List<CompletedTaskResponse> completedTasks,
     List<PortfolioItemResponse> portfolioItems) {}

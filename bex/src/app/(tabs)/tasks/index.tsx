@@ -137,6 +137,7 @@ export default function TasksScreen() {
               task={item}
               businessName={item.businessName}
               businessVerified={item.businessVerified}
+              businessIsDangerous={item.businessIsDangerous}
               compact
               onPress={() => router.push(`/task/${item.id}`)}
             />

@@ -27,12 +27,14 @@ export default function BusinessTabsLayout() {
           backgroundColor: Colors.background,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          paddingBottom: 8,
-          height: 64,
+          paddingBottom: 6,
+          paddingTop: 4,
+          height: 58,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginTop: -2,
         },
       }}
     >
@@ -40,7 +42,14 @@ export default function BusinessTabsLayout() {
         name="panel"
         options={{
           title: 'Panel',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="applications/index"
+        options={{
+          title: 'Başvuru',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📥" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -48,13 +57,6 @@ export default function BusinessTabsLayout() {
         options={{
           title: 'Görevler',
           tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="applications/index"
-        options={{
-          title: 'Başvurular',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📥" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -67,8 +69,19 @@ export default function BusinessTabsLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          title: 'Analitik',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" focused={focused} />,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile-search"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

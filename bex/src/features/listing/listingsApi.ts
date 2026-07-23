@@ -8,9 +8,12 @@ import { CreateTask, Task, TaskCategory, TaskDifficulty } from '@/types';
 
 type ListingCardDto = {
   id: string;
+  businessProfileId?: string;
   businessName?: string;
   businessLogoUrl?: string | null;
   businessCategory?: string;
+  businessComplaintListed?: boolean;
+  businessIsDangerous?: boolean;
   title?: string;
   skills?: string[];
   rewardType?: string;
@@ -134,9 +137,12 @@ function toTimestamp(value?: string | null): Timestamp {
 
 function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
   const status = mapListingStatus(dto.status);
+  const resolvedBusinessId = dto.businessProfileId
+    ? String(dto.businessProfileId)
+    : businessId;
   return {
     id: String(dto.id),
-    businessId,
+    businessId: resolvedBusinessId,
     title: dto.title?.trim() || 'Görev',
     description: '',
     category: mapSkillToCategory(dto.skills),
@@ -154,6 +160,8 @@ function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
     featured: false,
     businessName: dto.businessName?.trim() || 'İşletme',
     businessVerified: false,
+    businessIsDangerous: dto.businessIsDangerous ?? false,
+    businessComplaintListed: dto.businessComplaintListed ?? false,
   };
 }
 

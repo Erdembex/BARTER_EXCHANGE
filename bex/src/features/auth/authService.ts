@@ -36,6 +36,7 @@ export function getAuthErrorMessage(code: string): string {
     'auth/not-authenticated': 'Oturum bulunamadı.',
     'auth/not-supported-yet': 'Bu özellik henüz yeni backend\'de aktif değil.',
     'invalid-name': 'Ad en az 2 karakter olmalı.',
+    'invalid-username': 'Kullanıcı adı 3-30 karakter olmalı (a-z, 0-9, _).',
   };
   return map[code] ?? `Bilinmeyen hata (${code})`;
 }
@@ -64,6 +65,7 @@ function mapProfileToBexUser(
   userType: string | undefined,
   profile: {
     displayName: string;
+    username?: string;
     phone?: string;
     avatarUrl?: string;
     verified?: boolean;
@@ -77,6 +79,7 @@ function mapProfileToBexUser(
     uid: session.uid,
     role,
     displayName: profile.displayName,
+    username: profile.username,
     email,
     phone: profile.phone ?? '',
     phoneVerified: false,
@@ -135,6 +138,7 @@ async function fetchProfileForSession(
 
     return mapProfileToBexUser(session, userType, {
       displayName: profile.fullName,
+      username: profile.username,
       avatarUrl: resolveMediaUrl(profile.avatarUrl ?? ''),
       completedTaskCount,
       reputationScore: completedTaskCount,
@@ -245,6 +249,38 @@ export const authService = {
     return fetchProfileForSession(session, claims.userType);
   },
 
+  async updateUsername(uid: string, username: string): Promise<BexUser | null> {
+    const normalized = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    if (normalized.length < 3 || normalized.length > 30) {
+      throw Object.assign(
+        new Error('Kullanıcı adı 3-30 karakter olmalı (a-z, 0-9, _).'),
+        { code: 'invalid-username' }
+      );
+    }
+
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+
+    const claims = decodeJwtPayload(token);
+    if (claims?.sub !== uid) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+
+    if (claims.userType === 'BUSINESS') {
+      throw Object.assign(new Error('İşletme hesapları kullanıcı adı kullanmaz.'), {
+        code: 'not-supported-yet',
+      });
+    }
+
+    const current = await fetchIndividualProfile();
+    await updateIndividualProfile({ ...current, username: normalized });
+
+    const session = sessionFromAccessToken(token);
+    return fetchProfileForSession(session, claims.userType);
+  },
+
   async updateAvatar(
     uid: string,
     localUri: string,
@@ -264,6 +300,9 @@ export const authService = {
     const [avatarUrl] = await uploadLocalFiles(`avatars/${uid}`, [
       { uri: localUri, name: fileName, mimeType },
     ]);
+    if (!avatarUrl?.trim()) {
+      throw Object.assign(new Error('Fotoğraf yüklenemedi.'), { code: 'upload-failed' });
+    }
 
     if (claims.userType === 'BUSINESS') {
       const current = await fetchBusinessProfile();

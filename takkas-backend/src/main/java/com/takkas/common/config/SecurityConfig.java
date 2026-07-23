@@ -35,6 +35,15 @@ public class SecurityConfig {
                     "/v3/api-docs",
                     "/uploads/**"
                 ).permitAll()
+                .requestMatchers(
+                    "/api/individual/profiles/*/public",
+                    "/api/individual/profiles/by-username/*/public",
+                    "/api/users/*/public-profile",
+                    "/api/business/profiles/*/public",
+                    "/api/business/profiles/search",
+                    "/api/complaints/public",
+                    "/api/profiles/*/feedback"
+                ).authenticated()
                 .requestMatchers("/api/business/**").hasRole("BUSINESS")
                 .requestMatchers("/api/individual/**").hasRole("INDIVIDUAL")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

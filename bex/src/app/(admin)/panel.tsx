@@ -11,6 +11,7 @@ import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { adminRepository } from '@/features/admin';
+import { fetchPendingComplaintsAdmin } from '@/features/complaint/complaintsApi';
 import { authService } from '@/features/auth/authService';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Button } from '@/components/ui';
@@ -23,18 +24,21 @@ export default function AdminPanelScreen() {
   const [pendingTasks, setPendingTasks] = useState(0);
   const [pendingKyc, setPendingKyc] = useState(0);
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
+  const [pendingComplaints, setPendingComplaints] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
   const load = useCallback(async () => {
-    const [tasks, verifications, submissions] = await Promise.all([
+    const [tasks, verifications, submissions, complaints] = await Promise.all([
       adminRepository.getPendingTasks(),
       adminRepository.getPendingVerifications(),
       adminRepository.getPendingSubmissions(),
+      fetchPendingComplaintsAdmin().catch(() => []),
     ]);
     setPendingTasks(tasks.length);
     setPendingKyc(verifications.length);
     setPendingSubmissions(submissions.length);
+    setPendingComplaints(complaints.length);
   }, []);
 
   useFocusEffect(
@@ -106,6 +110,10 @@ export default function AdminPanelScreen() {
             <Text style={styles.statValue}>{pendingKyc}</Text>
             <Text style={styles.statLabel}>KYC incelemesi</Text>
           </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{pendingComplaints}</Text>
+            <Text style={styles.statLabel}>Şikayet incelemesi</Text>
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -124,6 +132,11 @@ export default function AdminPanelScreen() {
             onPress={() => router.push('/(admin)/verifications' as Href)}
           />
           <Button
+            title="Şikayet Moderasyonu"
+            variant="outline"
+            onPress={() => router.push('/(admin)/complaints' as Href)}
+          />
+          <Button
             title="Kullanıcı Yönetimi"
             variant="outline"
             onPress={() => router.push('/(admin)/users' as Href)}
@@ -131,7 +144,7 @@ export default function AdminPanelScreen() {
           <Button
             title="Bildirimler"
             variant="outline"
-            onPress={() => router.push('/notifications/index' as Href)}
+            onPress={() => router.push('/(admin)/notifications' as Href)}
           />
           <Button
             title="Hesap Ayarları"

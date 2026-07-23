@@ -5,8 +5,9 @@ import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import {
   fetchMyPublicProfile,
   fetchPublicProfile,
+  fetchPublicProfileByUsername,
 } from '@/features/portfolio/publicProfileApi';
-import { PortfolioItem } from '@/types';
+import { PortfolioItem, CompletedTask } from '@/types';
 
 export const usersRepository = {
   async getDisplayName(uid: string): Promise<string> {
@@ -44,18 +45,36 @@ export const usersRepository = {
   },
 
   async getPublicProfileStats(userId: string): Promise<{
+    profileId: string;
+    username: string;
     completedTaskCount: number;
+    completedTasks: CompletedTask[];
     portfolio: PortfolioItem[];
     displayName: string;
+    avatarUrl: string | null;
+    averageRating: number;
+    feedbackCount: number;
+    approvedComplaintCount: number;
+    complaintRate: number;
+    isDangerous: boolean;
   } | null> {
     if (await hasRestAuthSession()) {
       try {
         const profile = await fetchPublicProfile(userId);
         if (!profile) return null;
         return {
+          profileId: profile.profileId,
+          username: profile.username,
           completedTaskCount: profile.completedTaskCount,
+          completedTasks: profile.completedTasks,
           portfolio: profile.portfolio,
-          displayName: profile.fullName,
+          displayName: profile.username ? `@${profile.username}` : profile.fullName,
+          avatarUrl: profile.avatarUrl,
+          averageRating: profile.averageRating,
+          feedbackCount: profile.feedbackCount,
+          approvedComplaintCount: profile.approvedComplaintCount,
+          complaintRate: profile.complaintRate,
+          isDangerous: profile.isDangerous,
         };
       } catch {
         return null;
@@ -64,9 +83,48 @@ export const usersRepository = {
     return null;
   },
 
+  async getPublicProfileByUsername(username: string): Promise<{
+    username: string;
+    completedTaskCount: number;
+    completedTasks: CompletedTask[];
+    portfolio: PortfolioItem[];
+    displayName: string;
+    avatarUrl: string | null;
+    profileId: string;
+    averageRating: number;
+    feedbackCount: number;
+    approvedComplaintCount: number;
+    complaintRate: number;
+    isDangerous: boolean;
+  } | null> {
+    if (!(await hasRestAuthSession())) return null;
+    try {
+      const profile = await fetchPublicProfileByUsername(username);
+      if (!profile) return null;
+      return {
+        profileId: profile.profileId,
+        username: profile.username,
+        completedTaskCount: profile.completedTaskCount,
+        completedTasks: profile.completedTasks,
+        portfolio: profile.portfolio,
+        displayName: profile.username ? `@${profile.username}` : profile.fullName,
+        avatarUrl: profile.avatarUrl,
+        averageRating: profile.averageRating,
+        feedbackCount: profile.feedbackCount,
+        approvedComplaintCount: profile.approvedComplaintCount,
+        complaintRate: profile.complaintRate,
+        isDangerous: profile.isDangerous,
+      };
+    } catch {
+      return null;
+    }
+  },
+
   async getMyPublicProfileStats(): Promise<{
     profileId: string;
+    username: string;
     completedTaskCount: number;
+    completedTasks: CompletedTask[];
     portfolio: PortfolioItem[];
     displayName: string;
   } | null> {
@@ -76,9 +134,11 @@ export const usersRepository = {
       if (!profile) return null;
       return {
         profileId: profile.profileId,
+        username: profile.username,
         completedTaskCount: profile.completedTaskCount,
+        completedTasks: profile.completedTasks,
         portfolio: profile.portfolio,
-        displayName: profile.fullName,
+        displayName: profile.username ? `@${profile.username}` : profile.fullName,
       };
     } catch {
       return null;

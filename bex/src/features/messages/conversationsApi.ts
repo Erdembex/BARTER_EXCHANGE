@@ -41,14 +41,16 @@ function toTimestamp(value?: string): Timestamp {
 function mapMessage(
   dto: MessageDto,
   applicationId: string,
-  currentUserId?: string
+  currentUserId?: string,
+  currentUserType?: string
 ): ApplicationMessage {
   const senderId = String(dto.senderId ?? '');
+  const isMine = !!currentUserId && senderId === currentUserId;
   let senderRole: UserRole = 'user';
-  if (currentUserId && senderId === currentUserId) {
-    senderRole = 'user';
-  } else if (senderId && senderId !== currentUserId) {
-    senderRole = 'business';
+  if (isMine) {
+    senderRole = currentUserType === 'BUSINESS' ? 'business' : 'user';
+  } else {
+    senderRole = currentUserType === 'BUSINESS' ? 'user' : 'business';
   }
 
   return {
@@ -75,6 +77,22 @@ function mapMessagesError(error: unknown, fallback: string): Error {
 
 export async function usesConversationsRest(): Promise<boolean> {
   return hasRestAuthSession();
+}
+
+export async function fetchConversationParticipants(
+  applicationId: string
+): Promise<{ businessUserId: string; individualUserId: string } | null> {
+  try {
+    const { data } = await apiClient.get<ConversationDto>(
+      `/api/conversations/by-application/${applicationId}`
+    );
+    const businessUserId = String(data.businessUserId ?? '');
+    const individualUserId = String(data.individualUserId ?? '');
+    if (!businessUserId || !individualUserId) return null;
+    return { businessUserId, individualUserId };
+  } catch {
+    return null;
+  }
 }
 
 async function resolveConversationId(applicationId: string): Promise<string | null> {
@@ -104,6 +122,7 @@ export async function fetchMessagesByApplication(
 
   const claims = await getSessionClaims();
   const currentUserId = claims?.sub ?? undefined;
+  const currentUserType = claims?.userType;
 
   try {
     const { data } = await apiClient.get<MessagesPageDto | MessageDto[]>(
@@ -118,7 +137,7 @@ export async function fetchMessagesByApplication(
         : [];
 
     return rows
-      .map((row) => mapMessage(row, applicationId, currentUserId))
+      .map((row) => mapMessage(row, applicationId, currentUserId, currentUserType))
       .sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
   } catch (error) {
     throw mapMessagesError(error, 'Mesajlar yüklenemedi.');
@@ -140,7 +159,7 @@ export async function sendMessageByApplication(
       `/api/conversations/${conversationId}/messages`,
       { content: text.trim() }
     );
-    return mapMessage(data, applicationId, claims?.sub);
+    return mapMessage(data, applicationId, claims?.sub, claims?.userType);
   } catch (error) {
     throw mapMessagesError(error, 'Mesaj gönderilemedi.');
   }

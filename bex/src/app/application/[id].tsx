@@ -22,6 +22,8 @@ import { useToast } from '@/components/common/Toast';
 import { getApplicationTimeline } from '@/lib/applicationTimeline';
 import { canUseApplicationMessages } from '@/features/messages';
 import { isCurrentApplicationOwner } from '@/features/application/applicationsApi';
+import { TaskFeedbackModal } from '@/components/profile/TaskFeedbackModal';
+import { submitIndividualFeedback } from '@/features/feedback/feedbackApi';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
@@ -44,6 +46,7 @@ export default function ApplicationDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -220,6 +223,34 @@ export default function ApplicationDetailScreen() {
           </View>
         ) : null}
 
+        {['approved', 'submitted', 'submission_approved', 'rewarded'].includes(
+          application.status
+        ) &&
+        isOwner ? (
+          <Button
+            title="Bu İşletmeyi Şikayet Et"
+            variant="outline"
+            onPress={() =>
+              router.push({
+                pathname: '/complaint/submit',
+                params: {
+                  businessId: application.businessId,
+                  applicationId: application.id,
+                  applicationLabel: `${taskTitle}`,
+                },
+              } as never)
+            }
+          />
+        ) : null}
+
+        {['submission_approved', 'rewarded'].includes(application.status) && isOwner ? (
+          <Button
+            title="İşletmeye Geri Bildirim Ver"
+            variant="secondary"
+            onPress={() => setShowFeedback(true)}
+          />
+        ) : null}
+
         {firebaseUser &&
         bexUser &&
         canUseApplicationMessages(application.status) ? (
@@ -248,6 +279,16 @@ export default function ApplicationDetailScreen() {
           />
         )}
       </ScrollView>
+
+      <TaskFeedbackModal
+        visible={showFeedback}
+        title="İşletmeye geri bildirim"
+        onClose={() => setShowFeedback(false)}
+        onSubmit={async (stars, comment) => {
+          await submitIndividualFeedback(application.id, stars, comment);
+          showToast('Geri bildirimin kaydedildi.');
+        }}
+      />
     </SafeAreaView>
   );
 }

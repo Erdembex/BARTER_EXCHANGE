@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record UpdateIndividualProfileRequest(
+    @NotBlank String username,
     @NotBlank String fullName,
     @NotBlank String city,
     @NotBlank String district,

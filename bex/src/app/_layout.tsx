@@ -64,6 +64,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(admin)" />
                 <Stack.Screen name="task" />
                 <Stack.Screen name="business" />
+                <Stack.Screen name="complaint" />
                 <Stack.Screen name="application" />
                 <Stack.Screen name="notifications/index" />
                 <Stack.Screen name="setup-guide" />

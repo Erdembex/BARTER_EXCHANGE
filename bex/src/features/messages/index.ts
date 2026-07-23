@@ -7,6 +7,7 @@ import { usersRepository } from '@/features/data/usersRepository';
 import { notifyUser } from '@/features/notifications/notificationsRepository';
 import {
   fetchMessagesByApplication,
+  fetchConversationParticipants,
   sendMessageByApplication,
   usesConversationsRest,
 } from './conversationsApi';
@@ -34,11 +35,24 @@ async function notifyMessageRecipient(
   if (!app) return;
 
   let recipientId: string | null = null;
-  if (senderId === app.userId) {
-    const business = await businessesRepository.getById(app.businessId);
-    recipientId = business?.ownerUid ?? null;
-  } else {
-    recipientId = app.userId;
+
+  if (await usesConversationsRest()) {
+    const participants = await fetchConversationParticipants(applicationId);
+    if (participants) {
+      recipientId =
+        senderId === participants.individualUserId || senderId === app.userId
+          ? participants.businessUserId
+          : participants.individualUserId;
+    }
+  }
+
+  if (!recipientId) {
+    if (senderId === app.userId) {
+      const business = await businessesRepository.getById(app.businessId);
+      recipientId = business?.ownerUid ?? null;
+    } else {
+      recipientId = app.userId;
+    }
   }
 
   if (!recipientId || recipientId === senderId) return;

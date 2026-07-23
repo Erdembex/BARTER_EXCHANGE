@@ -1,0 +1,144 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Button, Input } from '@/components/ui';
+import { ComplaintApplicationPicker } from '@/components/complaint/ComplaintApplicationPicker';
+import {
+  COMPLAINT_REASON_LABELS,
+  ComplaintReason,
+  submitIndividualComplaint,
+  type ComplaintEligibleApplicationDto,
+} from '@/features/complaint/complaintsApi';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
+
+const REASON_OPTIONS = Object.keys(COMPLAINT_REASON_LABELS) as ComplaintReason[];
+
+interface IndividualComplaintSubmitFormProps {
+  initialApplicationId?: string;
+  initialApplicationLabel?: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  showCancel?: boolean;
+}
+
+export function IndividualComplaintSubmitForm({
+  initialApplicationId = '',
+  initialApplicationLabel = '',
+  onSuccess,
+  onCancel,
+  showCancel = false,
+}: IndividualComplaintSubmitFormProps) {
+  const [applicationId, setApplicationId] = useState(initialApplicationId);
+  const [applicationLabel, setApplicationLabel] = useState(initialApplicationLabel);
+  const [reason, setReason] = useState<ComplaintReason>('POOR_SERVICE');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSelect = (item: ComplaintEligibleApplicationDto) => {
+    setApplicationId(item.applicationId);
+    setApplicationLabel(`${item.listingTitle} · ${item.individualDisplayName}`);
+    setError(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!applicationId.trim()) {
+      setError('Önce şikayet etmek istediğin görev/başvuruyu seç.');
+      return;
+    }
+    if (description.trim().length < 10) {
+      setError('Açıklama en az 10 karakter olmalı.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitIndividualComplaint({
+        applicationId: applicationId.trim(),
+        reason,
+        description: description.trim(),
+      });
+      onSuccess?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Şikayet gönderilemedi.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View style={styles.wrap}>
+      <Text style={styles.lead}>
+        Yalnızca onayladığın başvurular için kullanıcı şikayeti oluşturabilirsin. Görevi seç,
+        ardından şikayetini yaz.
+      </Text>
+
+      <ComplaintApplicationPicker
+        mode="business"
+        selectedId={applicationId}
+        selectedLabel={applicationLabel}
+        onSelect={handleSelect}
+        onClear={() => {
+          setApplicationId('');
+          setApplicationLabel('');
+        }}
+      />
+
+      <Text style={styles.fieldLabel}>Şikayet nedeni</Text>
+      <View style={styles.reasonRow}>
+        {REASON_OPTIONS.map((key) => (
+          <TouchableOpacity
+            key={key}
+            style={[styles.reasonChip, reason === key && styles.reasonChipActive]}
+            onPress={() => setReason(key)}
+          >
+            <Text style={[styles.reasonChipText, reason === key && styles.reasonChipTextActive]}>
+              {COMPLAINT_REASON_LABELS[key]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Input
+        label="Açıklama"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Ne yaşandı? En az 10 karakter..."
+        multiline
+        numberOfLines={5}
+      />
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <View style={styles.actions}>
+        {showCancel && onCancel ? (
+          <Button title="Vazgeç" variant="outline" onPress={onCancel} style={{ flex: 1 }} />
+        ) : null}
+        <Button
+          title="Şikayeti Gönder"
+          onPress={handleSubmit}
+          loading={submitting}
+          style={showCancel ? { flex: 1 } : undefined}
+        />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { gap: Spacing[4] },
+  lead: { ...Typography.bodySmall, color: Colors.textMuted, lineHeight: 20 },
+  fieldLabel: { ...Typography.labelMedium, color: Colors.textPrimary },
+  reasonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2] },
+  reasonChip: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+  },
+  reasonChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
+  reasonChipText: { ...Typography.caption, color: Colors.textSecondary },
+  reasonChipTextActive: { color: Colors.primary, fontWeight: '700' },
+  error: { ...Typography.bodySmall, color: Colors.error },
+  actions: { flexDirection: 'row', gap: Spacing[2] },
+});

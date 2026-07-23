@@ -7,6 +7,7 @@ export interface BexUser {
   uid: string;
   role: UserRole;
   displayName: string;
+  username?: string;
   email: string;
   phone: string;
   phoneVerified: boolean;
@@ -26,6 +27,15 @@ export interface PortfolioItem {
   taskTitle: string;
   applicationId: string;
   approvedAt: Timestamp;
+}
+
+/** Tamamlanan görev özeti — portföy listesinde gösterilir */
+export interface CompletedTask {
+  applicationId: string;
+  taskTitle: string;
+  completedAt: Timestamp;
+  imageCount: number;
+  previewImageUrl?: string | null;
 }
 
 export type CreateBexUser = Omit<BexUser, 'joinedAt'> & {
@@ -62,6 +72,13 @@ export interface Business {
   verificationDocumentUrl?: string;
   reputationScore: number;
   totalTasksPublished: number;
+  complaintListed?: boolean;
+  isDangerous?: boolean;
+  completedTaskCount?: number;
+  approvedComplaintCount?: number;
+  complaintRate?: number;
+  averageRating?: number;
+  feedbackCount?: number;
   createdAt: Timestamp;
 }
 

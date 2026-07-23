@@ -14,12 +14,19 @@ import { businessesRepository, tasksRepository, EnrichedTask } from '@/features/
 import { Business } from '@/types';
 import { BUSINESS_CATEGORY_LABELS } from '@/constants/businessLabels';
 import { TaskCard } from '@/components/tasks';
+import { ProfileFeedbackList } from '@/components/profile/ProfileFeedbackList';
+import { DangerBadge } from '@/components/profile/DangerBadge';
+import { Button } from '@/components/ui';
+import { fetchProfileFeedback, FeedbackDto } from '@/features/feedback/feedbackApi';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackDto[]>([]);
+  const [feedbackAvg, setFeedbackAvg] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -31,6 +38,18 @@ export default function BusinessDetailScreen() {
     ]);
     setBusiness(biz);
     setTasks(taskList);
+    if (biz?.id) {
+      try {
+        const summary = await fetchProfileFeedback(biz.id, 8);
+        setFeedback(summary.recent);
+        setFeedbackAvg(summary.averageStars);
+        setFeedbackCount(summary.totalCount);
+      } catch {
+        setFeedback([]);
+        setFeedbackAvg(biz.averageRating ?? 0);
+        setFeedbackCount(biz.feedbackCount ?? 0);
+      }
+    }
     setLoading(false);
   }, [id]);
 
@@ -81,12 +100,45 @@ export default function BusinessDetailScreen() {
               <Text style={styles.verifiedText}>✓ Doğrulanmış</Text>
             </View>
           ) : null}
+          {business.complaintListed && !business.isDangerous ? (
+            <View style={styles.complaintBadge}>
+              <Text style={styles.complaintText}>⚠ Şikayet BEX</Text>
+            </View>
+          ) : null}
+          {business.isDangerous ? <DangerBadge /> : null}
         </View>
 
         <Text style={styles.address}>📍 {business.address}</Text>
+        {(business.completedTaskCount ?? 0) > 0 ? (
+          <Text style={styles.trustMeta}>
+            {business.completedTaskCount} tamamlanan iş · {business.approvedComplaintCount ?? 0}{' '}
+            onaylı şikayet
+            {(business.complaintRate ?? 0) > 0
+              ? ` · %${Math.round((business.complaintRate ?? 0) * 100)}`
+              : ''}
+          </Text>
+        ) : null}
         <Text style={styles.score}>
-          ⭐ {business.reputationScore} · {business.totalTasksPublished} görev yayınladı
+          ⭐ {(feedbackAvg || business.averageRating || 0).toFixed(1)} ·{' '}
+          {feedbackCount || business.feedbackCount || 0} değerlendirme
         </Text>
+
+        <Button
+          title="Bu İşletmeyi Şikayet Et"
+          variant="outline"
+          onPress={() =>
+            router.push({
+              pathname: '/complaint/submit',
+              params: { businessId: business.id },
+            })
+          }
+        />
+
+        <ProfileFeedbackList
+          averageStars={feedbackAvg || business.averageRating || 0}
+          totalCount={feedbackCount || business.feedbackCount || 0}
+          items={feedback}
+        />
 
         <Text style={styles.sectionTitle}>Aktif Görevler</Text>
         {tasks.length === 0 ? (
@@ -98,6 +150,7 @@ export default function BusinessDetailScreen() {
                 task={task}
                 businessName={business.name}
                 businessVerified={business.isVerified}
+                businessIsDangerous={business.isDangerous}
                 compact
                 onPress={() => router.push(`/task/${task.id}` as Href)}
               />
@@ -142,7 +195,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   verifiedText: { ...Typography.caption, color: Colors.success, fontWeight: '700' },
+  complaintBadge: {
+    backgroundColor: Colors.error + '18',
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  complaintText: { ...Typography.caption, color: Colors.error, fontWeight: '700' },
   address: { ...Typography.bodyMedium, color: Colors.textSecondary },
+  trustMeta: { ...Typography.caption, color: Colors.textMuted },
   score: { ...Typography.bodySmall, color: Colors.textTertiary },
   sectionTitle: { ...Typography.headingSmall, color: Colors.textPrimary, marginTop: Spacing[2] },
   empty: { ...Typography.bodyMedium, color: Colors.textTertiary },

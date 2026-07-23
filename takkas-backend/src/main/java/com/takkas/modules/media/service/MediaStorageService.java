@@ -19,9 +19,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MediaStorageService {
 
-    @Value("${app.base-url:http://localhost:8080}")
-    private String baseUrl;
-
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
@@ -47,7 +44,7 @@ public class MediaStorageService {
                     throw new BusinessRuleException("Geçersiz dosya yolu.");
                 }
                 file.transferTo(target);
-                urls.add(baseUrl + "/uploads/" + userId + "/" + filename);
+                urls.add("/uploads/" + userId + "/" + filename);
             }
         } catch (IOException e) {
             log.error("Dosya kaydedilemedi userId={} dir={}: {}", userId, userDir, e.getMessage());

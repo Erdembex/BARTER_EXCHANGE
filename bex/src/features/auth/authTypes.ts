@@ -14,6 +14,7 @@ export interface AuthResponseDto {
 
 export interface IndividualProfileDto {
   id: string;
+  username: string;
   fullName: string;
   city: string;
   district: string;

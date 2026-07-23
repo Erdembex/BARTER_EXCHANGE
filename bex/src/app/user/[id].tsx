@@ -1,25 +1,34 @@
 import React, { useCallback, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Text,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { usersRepository } from '@/features/data';
-import { PortfolioItem } from '@/types';
-import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { CompletedTask, PortfolioItem } from '@/types';
+import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
+import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function PublicUserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [profileId, setProfileId] = useState('');
+  const [averageRating, setAverageRating] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
+  const [isDangerous, setIsDangerous] = useState(false);
+  const [approvedComplaintCount, setApprovedComplaintCount] = useState(0);
+  const [complaintRate, setComplaintRate] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -28,11 +37,20 @@ export default function PublicUserProfileScreen() {
     const stats = await usersRepository.getPublicProfileStats(id);
     if (stats) {
       setDisplayName(stats.displayName);
+      setAvatarUrl(stats.avatarUrl);
       setCompletedCount(stats.completedTaskCount);
+      setCompletedTasks(stats.completedTasks);
       setPortfolio(stats.portfolio);
+      setProfileId(stats.profileId);
+      setAverageRating(stats.averageRating);
+      setFeedbackCount(stats.feedbackCount);
+      setIsDangerous(stats.isDangerous);
+      setApprovedComplaintCount(stats.approvedComplaintCount);
+      setComplaintRate(stats.complaintRate);
     } else {
       setDisplayName(await usersRepository.getDisplayName(id));
       setCompletedCount(0);
+      setCompletedTasks([]);
       setPortfolio(await usersRepository.getPortfolio(id));
     }
     setLoading(false);
@@ -59,16 +77,21 @@ export default function PublicUserProfileScreen() {
           <Text style={styles.backText}>← Geri</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>{displayName}</Text>
-        <Text style={styles.subtitle}>
-          {completedCount} tamamlanan görev · {portfolio.length} onaylı görsel
-        </Text>
+        <View style={styles.hero}>
+          <ProfileAvatar name={displayName} avatarUrl={avatarUrl} size={72} />
+          <Text style={styles.title}>{displayName}</Text>
+        </View>
 
-        <UserPortfolioGallery
-          items={portfolio}
-          title="Onaylı çalışmalar"
-          subtitle="Yalnızca admin moderasyonundan geçmiş teslim görselleri gösterilir."
-          emptyText="Bu kullanıcının henüz onaylı portföy görseli yok."
+        <PublicProfileSections
+          profileId={profileId || String(id)}
+          completedCount={completedCount}
+          completedTasks={completedTasks}
+          portfolio={portfolio}
+          averageRating={averageRating}
+          feedbackCount={feedbackCount}
+          isDangerous={isDangerous}
+          approvedComplaintCount={approvedComplaintCount}
+          complaintRate={complaintRate}
         />
       </ScrollView>
     </SafeAreaView>
@@ -81,6 +104,6 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
   back: { alignSelf: 'flex-start' },
   backText: { ...Typography.labelMedium, color: Colors.textSecondary },
+  hero: { alignItems: 'center', gap: Spacing[2] },
   title: { ...Typography.headingLarge, color: Colors.textPrimary },
-  subtitle: { ...Typography.bodySmall, color: Colors.textMuted },
 });

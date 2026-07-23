@@ -27,7 +27,10 @@ public class ListingMapper {
     public static ListingCardResponse toCardResponse(Listing l) {
         ListingReward r = l.getReward();
         return new ListingCardResponse(
-            l.getId(), l.getBusiness().getBusinessName(), l.getBusiness().getLogoUrl(),
+            l.getId(),
+            l.getBusiness().getId(),
+            l.getBusiness().getBusinessName(),
+            l.getBusiness().getLogoUrl(),
             l.getBusiness().getCategory() != null ? l.getBusiness().getCategory().name() : null,
             l.getTitle(),
             l.getSkills().stream().map(ListingSkill::getSkill).toList(),
@@ -35,7 +38,10 @@ public class ListingMapper {
             r != null ? r.getQuantity() : null,
             r != null ? r.getUnit() : null,
             r != null ? r.getDescription() : null,
-            l.getStatus(), 0, l.getCreatedAt()
-        );
+            l.getStatus(),
+            0,
+            l.getCreatedAt(),
+            false,
+            false);
     }
 }

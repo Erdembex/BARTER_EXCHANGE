@@ -13,18 +13,41 @@ interface AppDrawerContentProps extends DrawerContentComponentProps {
   unreadCount?: number;
 }
 
-const MENU_ITEMS: {
+type MenuItem = {
   route: string;
   label: string;
   icon: string;
-}[] = [
-  { route: 'home', label: 'Ana Sayfa', icon: '⌂' },
-  { route: 'tasks/index', label: 'Görevler', icon: '◎' },
-  { route: 'applications/index', label: 'Başvurular', icon: '☰' },
-  { route: 'trade', label: 'Takas', icon: '⇄' },
-  { route: 'wallet', label: 'Cüzdan', icon: '▣' },
-  { route: 'notifications/index', label: 'Bildirimler', icon: '◉' },
-  { route: 'profile', label: 'Profil', icon: '○' },
+};
+
+type MenuSection = {
+  title: string;
+  items: MenuItem[];
+};
+
+const MENU_SECTIONS: MenuSection[] = [
+  {
+    title: 'Keşfet',
+    items: [
+      { route: 'home', label: 'Ana Sayfa', icon: '⌂' },
+      { route: 'tasks/index', label: 'Görevler', icon: '◎' },
+      { route: 'complaints/index', label: 'Şikayet BEX', icon: '⚠' },
+    ],
+  },
+  {
+    title: 'Aktivite',
+    items: [
+      { route: 'applications/index', label: 'Başvurular', icon: '☰' },
+      { route: 'trade', label: 'Takas', icon: '⇄' },
+      { route: 'wallet', label: 'Cüzdan', icon: '▣' },
+    ],
+  },
+  {
+    title: 'Hesap',
+    items: [
+      { route: 'notifications/index', label: 'Bildirimler', icon: '◉' },
+      { route: 'profile', label: 'Profil', icon: '○' },
+    ],
+  },
 ];
 
 export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDrawerContentProps) {
@@ -63,30 +86,41 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
 
         <View style={styles.divider} />
 
-        {MENU_ITEMS.map((item) => {
-          const active = activeRoute === item.route;
-          const badge = item.route === 'notifications/index' && unreadCount > 0;
+        {MENU_SECTIONS.map((section) => (
+          <View key={section.title} style={styles.section}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.items.map((item) => {
+              const active = activeRoute === item.route;
+              const badge = item.route === 'notifications/index' && unreadCount > 0;
 
-          return (
-            <TouchableOpacity
-              key={item.route}
-              style={[styles.menuItem, active && styles.menuItemActive]}
-              activeOpacity={0.85}
-              onPress={() => {
-                navigation.navigate(item.route);
-                navigation.closeDrawer();
-              }}
-            >
-              <Text style={[styles.menuIcon, active && styles.menuIconActive]}>{item.icon}</Text>
-              <Text style={[styles.menuLabel, active && styles.menuLabelActive]}>{item.label}</Text>
-              {badge ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
-          );
-        })}
+              return (
+                <TouchableOpacity
+                  key={item.route}
+                  style={[styles.menuItem, active && styles.menuItemActive]}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    navigation.navigate(item.route);
+                    navigation.closeDrawer();
+                  }}
+                >
+                  <Text style={[styles.menuIcon, active && styles.menuIconActive]}>
+                    {item.icon}
+                  </Text>
+                  <Text style={[styles.menuLabel, active && styles.menuLabelActive]}>
+                    {item.label}
+                  </Text>
+                  {badge ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </DrawerContentScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing[3] }]}>
@@ -122,14 +156,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginBottom: Spacing[3],
   },
+  section: {
+    marginBottom: Spacing[3],
+  },
+  sectionTitle: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: Spacing[1],
+    paddingHorizontal: Spacing[3],
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[3],
-    paddingVertical: Spacing[3],
+    paddingVertical: Spacing[2],
     paddingHorizontal: Spacing[3],
     borderRadius: Radius.sm,
-    marginBottom: Spacing[1],
+    marginBottom: 2,
   },
   menuItemActive: {
     backgroundColor: Colors.primaryLight,

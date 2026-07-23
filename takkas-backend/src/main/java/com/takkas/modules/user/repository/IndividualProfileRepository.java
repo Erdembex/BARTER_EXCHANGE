@@ -13,6 +13,16 @@ import java.util.UUID;
 public interface IndividualProfileRepository extends JpaRepository<IndividualProfile, UUID> {
     Optional<IndividualProfile> findByUserId(UUID userId);
 
+    Optional<IndividualProfile> findByUsernameIgnoreCase(String username);
+
+    boolean existsByUsernameIgnoreCase(String username);
+
+    boolean existsByUsernameIgnoreCaseAndIdNot(String username, UUID id);
+
+    java.util.List<IndividualProfile> findTop20ByUsernameContainingIgnoreCaseOrderByUsernameAsc(String username);
+
+    java.util.List<IndividualProfile> findTop20ByOrderByUsernameAsc();
+
     @Query("SELECT p.id AS id, p.fullName AS fullName FROM IndividualProfile p WHERE p.id IN :ids")
     List<IdAndFullName> findFullNamesByIds(@Param("ids") Collection<UUID> ids);
 

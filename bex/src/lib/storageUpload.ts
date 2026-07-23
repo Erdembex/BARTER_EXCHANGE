@@ -1,5 +1,6 @@
 import { shouldUseDemoData } from '@/lib/devMode';
 import { usesMediaRestUpload, uploadMediaFiles } from '@/features/media/mediaApi';
+import { getRestUserType } from '@/lib/auth/sessionClaims';
 
 export interface LocalUploadFile {
   uri: string;
@@ -18,7 +19,9 @@ export async function uploadLocalFiles(
   if (files.length === 0) return [];
 
   if (!shouldUseDemoData() && (await usesMediaRestUpload())) {
-    return uploadMediaFiles(files);
+    const userType = await getRestUserType();
+    const audience = userType === 'BUSINESS' ? 'business' : 'individual';
+    return uploadMediaFiles(files, audience);
   }
 
   return files.map((f) => f.uri);

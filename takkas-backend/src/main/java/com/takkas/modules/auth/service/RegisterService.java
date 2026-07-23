@@ -6,6 +6,7 @@ import com.takkas.modules.auth.api.dto.*;
 import com.takkas.modules.auth.domain.RefreshToken;
 import com.takkas.modules.auth.repository.RefreshTokenRepository;
 import com.takkas.modules.subscription.service.SubscriptionService;
+import com.takkas.modules.user.service.UserService;
 import com.takkas.modules.user.domain.*;
 import com.takkas.modules.user.domain.enums.*;
 import com.takkas.modules.user.repository.*;
@@ -30,6 +31,7 @@ public class RegisterService {
     private final IndividualProfileRepository individualProfileRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final SubscriptionService subscriptionService;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
 
@@ -70,6 +72,7 @@ public class RegisterService {
 
         IndividualProfile profile = IndividualProfile.builder()
             .user(user).fullName(req.fullName())
+            .username(userService.resolveUniqueUsername(req.fullName()))
             .city(req.city()).district(req.district())
             .build();
 

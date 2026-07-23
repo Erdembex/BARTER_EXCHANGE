@@ -1,6 +1,7 @@
 package com.takkas.modules.notification.api;
 
 import com.takkas.common.pagination.PageResponse;
+import com.takkas.common.pagination.CursorPagination;
 import com.takkas.common.security.*;
 import com.takkas.infrastructure.push.*;
 import com.takkas.modules.notification.api.dto.*;
@@ -28,7 +29,7 @@ public class NotificationController {
             @CurrentUser UserPrincipal p,
             @RequestParam(required = false) Instant cursor,
             @RequestParam(defaultValue = "20") int pageSize) {
-        Instant effectiveCursor = (cursor != null) ? cursor : Instant.MAX;
+        Instant effectiveCursor = CursorPagination.effectiveCursor(cursor);
         var page = notificationService.getNotifications(p.userId(), effectiveCursor, pageSize);
         int unread = notificationService.getUnreadCount(p.userId());
         return ResponseEntity.ok()

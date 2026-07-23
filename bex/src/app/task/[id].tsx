@@ -23,6 +23,7 @@ import { formatDeadline, getDifficultyColor } from '@/lib/taskUtils';
 import { TaskCard } from '@/components/tasks';
 import { TaskDetailSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Button } from '@/components/ui';
+import { DangerBadge } from '@/components/profile/DangerBadge';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
 export default function TaskDetailScreen() {
@@ -150,7 +151,10 @@ export default function TaskDetailScreen() {
               <Text style={styles.businessLogoText}>{business.name.charAt(0)}</Text>
             </View>
             <View style={styles.businessInfo}>
-              <Text style={styles.businessName}>{business.name}</Text>
+              <View style={styles.businessNameRow}>
+                <Text style={styles.businessName}>{business.name}</Text>
+                {business.isDangerous ? <DangerBadge compact /> : null}
+              </View>
               {business.isVerified ? (
                 <Text style={styles.businessVerified}>✓ Doğrulanmış işletme</Text>
               ) : null}
@@ -193,6 +197,7 @@ export default function TaskDetailScreen() {
                   task={t}
                   businessName={t.businessName}
                   businessVerified={t.businessVerified}
+                  businessIsDangerous={t.businessIsDangerous}
                   compact
                   onPress={() => router.replace(`/task/${t.id}`)}
                 />
@@ -257,6 +262,7 @@ const styles = StyleSheet.create({
   },
   businessLogoText: { fontSize: 22, fontWeight: '800', color: Colors.textOnPrimary },
   businessInfo: { flex: 1, gap: 4 },
+  businessNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing[2], flexWrap: 'wrap' },
   businessName: { ...Typography.labelLarge, color: Colors.textPrimary },
   businessVerified: { ...Typography.caption, color: Colors.success, fontWeight: '600' },
   businessAddr: { ...Typography.caption, color: Colors.textTertiary },

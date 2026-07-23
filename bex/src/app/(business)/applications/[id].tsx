@@ -28,11 +28,15 @@ import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery'
 import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
 import { canUseApplicationMessages } from '@/features/messages';
+import { TaskFeedbackModal } from '@/components/profile/TaskFeedbackModal';
+import { submitBusinessFeedback } from '@/features/feedback/feedbackApi';
+import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser, bexUser } = useAuthStore();
+  const { showToast } = useToast();
   const [application, setApplication] = useState<Application | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [applicantName, setApplicantName] = useState('');
@@ -40,6 +44,7 @@ export default function ApplicationDetailScreen() {
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -314,7 +319,44 @@ export default function ApplicationDetailScreen() {
             </View>
           </>
         )}
+
+        {['submission_approved', 'rewarded', 'approved', 'submitted'].includes(
+          application.status
+        ) ? (
+          <>
+            {['submission_approved', 'rewarded'].includes(application.status) ? (
+              <Button
+                title="Kullanıcıya Geri Bildirim Ver"
+                variant="secondary"
+                onPress={() => setShowFeedback(true)}
+              />
+            ) : null}
+            <Button
+              title="Bu Kullanıcıyı Şikayet Et"
+              variant="outline"
+              onPress={() =>
+                router.push({
+                  pathname: '/complaint/submit-user',
+                  params: {
+                    applicationId: application.id,
+                    applicationLabel: `${task?.title ?? 'Görev'} · ${applicantName}`,
+                  },
+                })
+              }
+            />
+          </>
+        ) : null}
       </ScrollView>
+
+      <TaskFeedbackModal
+        visible={showFeedback}
+        title="Kullanıcıya geri bildirim"
+        onClose={() => setShowFeedback(false)}
+        onSubmit={async (stars, comment) => {
+          await submitBusinessFeedback(application.id, stars, comment);
+          showToast('Geri bildirimin kaydedildi.');
+        }}
+      />
     </SafeAreaView>
   );
 }

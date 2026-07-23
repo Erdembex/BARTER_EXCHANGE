@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Kullanıcı Profil", description = "İşletme ve bireysel profil yönetimi")
@@ -54,5 +55,33 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public IndividualPublicProfileResponse getPublicProfileByUserId(@PathVariable UUID userId) {
         return userService.getPublicIndividualProfileByUserId(userId);
+    }
+
+    /** Kullanıcı adı ile herkese açık profil — işletme aday araması */
+    @GetMapping("/individual/profiles/by-username/{username}/public")
+    @PreAuthorize("isAuthenticated()")
+    public IndividualPublicProfileResponse getPublicProfileByUsername(@PathVariable String username) {
+        return userService.getPublicIndividualProfileByUsername(username);
+    }
+
+    /** Herkese açık işletme profili — kupon ve görev kartları için */
+    @GetMapping("/business/profiles/{profileId}/public")
+    @PreAuthorize("isAuthenticated()")
+    public BusinessPublicProfileResponse getPublicBusinessProfile(@PathVariable UUID profileId) {
+        return userService.getPublicBusinessProfile(profileId);
+    }
+
+    /** Şikayet formu için işletme adı araması */
+    @GetMapping("/business/profiles/search")
+    @PreAuthorize("isAuthenticated()")
+    public List<BusinessSearchResult> searchBusinessProfiles(@RequestParam(required = false) String q) {
+        return userService.searchBusinessProfiles(q);
+    }
+
+    /** İşletme — kullanıcı adı ile aday arama (şikayet formu) */
+    @GetMapping("/business/individuals/search")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public List<IndividualSearchResult> searchIndividualProfiles(@RequestParam(required = false) String q) {
+        return userService.searchIndividualProfiles(q);
     }
 }

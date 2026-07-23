@@ -8,4 +8,9 @@ import java.util.UUID;
 
 public interface BusinessProfileRepository extends JpaRepository<BusinessProfile, UUID> {
     Optional<BusinessProfile> findByUserId(UUID userId);
+
+    java.util.List<BusinessProfile> findTop20ByBusinessNameContainingIgnoreCaseOrderByBusinessNameAsc(
+        String businessName);
+
+    java.util.List<BusinessProfile> findTop20ByOrderByBusinessNameAsc();
 }

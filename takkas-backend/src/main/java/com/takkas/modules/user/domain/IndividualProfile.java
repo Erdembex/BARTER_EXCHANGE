@@ -27,6 +27,9 @@ public class IndividualProfile {
     @Column(nullable = false)
     private String fullName;
 
+    @Column(nullable = false, unique = true, length = 30)
+    private String username;
+
     private String city;
     private String district;
     private String avatarUrl;

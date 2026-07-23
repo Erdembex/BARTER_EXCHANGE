@@ -55,7 +55,7 @@ public class CouponService {
     public CouponResponse getByApplicationForOwner(UUID profileId, UUID applicationId) {
         var application = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
-        if (!application.getIndividualId().equals(profileId)) {
+        if (!application.isOwnedBy(profileId)) {
             throw new ForbiddenException("Bu başvuruya erişim yetkiniz yok.");
         }
         var coupon = couponRepository.findByApplicationId(applicationId)

@@ -14,8 +14,13 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     List<Application> findAllByIndividualIdOrderByAppliedAtDesc(UUID individualId);
     List<Application> findAllByIndividualIdAndStatusInOrderByReviewedAtDesc(
         UUID individualId, Collection<ApplicationStatus> statuses);
+
+    List<Application> findAllByBusinessIdAndStatusInOrderByAppliedAtDesc(
+        UUID businessId, Collection<ApplicationStatus> statuses);
     List<Application> findAllByStatusOrderBySubmittedAtDesc(ApplicationStatus status);
     boolean existsByListingIdAndIndividualId(UUID listingId, UUID individualId);
     long countByListingIdAndStatus(UUID listingId, ApplicationStatus status);
     long countByListingId(UUID listingId);
+    long countByBusinessIdAndStatusIn(UUID businessId, Collection<ApplicationStatus> statuses);
+    long countByIndividualIdAndStatusIn(UUID individualId, Collection<ApplicationStatus> statuses);
 }

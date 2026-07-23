@@ -1,0 +1,2 @@
+export const COMPLETED_TASKS_PREVIEW_LIMIT = 15;
+export const PORTFOLIO_GALLERY_LIMIT = 12;

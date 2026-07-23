@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/features/auth/authService';
+import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { getRestProfileId } from '@/lib/auth/sessionClaims';
 import { BexUser } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
+import { CompletedTasksModal } from '@/components/profile/CompletedTasksList';
+import { usersRepository } from '@/features/data';
+import { CompletedTask } from '@/types';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
@@ -32,8 +35,13 @@ export function AccountSettings({
   const { showToast } = useToast();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(bexUser?.displayName ?? '');
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState(bexUser?.username ?? '');
   const [savingName, setSavingName] = useState(false);
+  const [savingUsername, setSavingUsername] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showTasksModal, setShowTasksModal] = useState(false);
+  const [myCompletedTasks, setMyCompletedTasks] = useState<CompletedTask[]>([]);
 
   const handlePickAvatar = async () => {
     if (!firebaseUser) return;
@@ -64,8 +72,12 @@ export function AccountSettings({
       );
       onUserUpdated(updated);
       showToast('Profil fotoğrafın güncellendi.');
-    } catch {
-      showToast('Profil fotoğrafı yüklenemedi.');
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Profil fotoğrafı yüklenemedi.';
+      showToast(message);
     } finally {
       setUploadingAvatar(false);
     }
@@ -86,6 +98,38 @@ export function AccountSettings({
     }
   };
 
+  const handleSaveUsername = async () => {
+    if (!firebaseUser) return;
+    setSavingUsername(true);
+    try {
+      const updated = await authService.updateUsername(firebaseUser.uid, usernameDraft);
+      onUserUpdated(updated);
+      setEditingUsername(false);
+      showToast('Kullanıcı adın güncellendi.');
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      const message = code
+        ? getAuthErrorMessage(code)
+        : error instanceof Error && error.message
+          ? error.message
+          : 'Kullanıcı adı güncellenemedi.';
+      showToast(message);
+    } finally {
+      setSavingUsername(false);
+    }
+  };
+
+  const publicProfileHref =
+    bexUser?.role === 'user' && bexUser.username
+      ? (`/user/u/${bexUser.username}` as Href)
+      : null;
+
+  const handleOpenCompletedTasks = async () => {
+    const stats = await usersRepository.getMyPublicProfileStats();
+    setMyCompletedTasks(stats?.completedTasks ?? []);
+    setShowTasksModal(true);
+  };
+
   return (
     <>
       <ProfileAvatar
@@ -99,6 +143,9 @@ export function AccountSettings({
       <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokun</Text>
 
       <Text style={styles.name}>{bexUser?.displayName ?? 'Kullanıcı'}</Text>
+      {bexUser?.role === 'user' && bexUser.username ? (
+        <Text style={styles.username}>@{bexUser.username}</Text>
+      ) : null}
       <Text style={styles.email}>{bexUser?.email ?? firebaseUser?.email ?? '—'}</Text>
 
       <View style={styles.badgeRow}>
@@ -118,10 +165,10 @@ export function AccountSettings({
 
       {bexUser?.role === 'user' ? (
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
+          <TouchableOpacity style={styles.statBox} onPress={handleOpenCompletedTasks}>
             <Text style={styles.statValue}>{bexUser.completedTaskCount ?? 0}</Text>
             <Text style={styles.statLabel}>Tamamlanan görev</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{bexUser.reputationScore ?? 0}</Text>
@@ -129,6 +176,13 @@ export function AccountSettings({
           </View>
         </View>
       ) : null}
+
+      <CompletedTasksModal
+        visible={showTasksModal}
+        onClose={() => setShowTasksModal(false)}
+        tasks={myCompletedTasks}
+        totalCount={bexUser?.completedTaskCount}
+      />
 
       <View style={styles.card}>
         {editingName ? (
@@ -159,9 +213,48 @@ export function AccountSettings({
               />
             </View>
           </View>
+        ) : editingUsername && bexUser?.role === 'user' ? (
+          <View style={styles.editBlock}>
+            <Input
+              label="Kullanıcı adı"
+              value={usernameDraft}
+              onChangeText={(text) => setUsernameDraft(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="ornek_kullanici"
+            />
+            <Text style={styles.usernameHint}>
+              İşletmeler seni bu adla arayabilir. 3-30 karakter, a-z, 0-9 ve _ kullanılabilir.
+            </Text>
+            <View style={styles.editActions}>
+              <Button
+                title="Kaydet"
+                size="sm"
+                onPress={handleSaveUsername}
+                loading={savingUsername}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Vazgeç"
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  setEditingUsername(false);
+                  setUsernameDraft(bexUser?.username ?? '');
+                }}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
         ) : (
           <>
             <Row label="Telefon" value={bexUser?.phone || 'Eklenmedi'} />
+            {bexUser?.role === 'user' ? (
+              <Row
+                label="Kullanıcı adı"
+                value={bexUser.username ? `@${bexUser.username}` : 'Belirlenmedi'}
+              />
+            ) : null}
             <Row label="Tamamlanan görev" value={String(bexUser?.completedTaskCount ?? 0)} />
             <Row label="İtibar puanı" value={String(bexUser?.reputationScore ?? 0)} />
             <Button
@@ -173,11 +266,28 @@ export function AccountSettings({
                 setEditingName(true);
               }}
             />
+            {bexUser?.role === 'user' ? (
+              <Button
+                title="Kullanıcı Adını Düzenle"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setUsernameDraft(bexUser?.username ?? '');
+                  setEditingUsername(true);
+                }}
+              />
+            ) : null}
           </>
         )}
       </View>
 
-      {bexUser?.role === 'user' && firebaseUser ? (
+      {publicProfileHref ? (
+        <Button
+          title="Herkese Açık Profilim"
+          variant="outline"
+          onPress={() => router.push(publicProfileHref)}
+        />
+      ) : bexUser?.role === 'user' && firebaseUser ? (
         <Button
           title="Herkese Açık Profilim"
           variant="outline"
@@ -222,6 +332,8 @@ const styles = StyleSheet.create({
     marginTop: -Spacing[2],
   },
   name: { ...Typography.headingMedium, color: Colors.textPrimary },
+  username: { ...Typography.labelMedium, color: Colors.primary },
+  usernameHint: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
   email: { ...Typography.bodyMedium, color: Colors.textSecondary },
   badgeRow: {
     flexDirection: 'row',

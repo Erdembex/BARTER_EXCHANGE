@@ -129,6 +129,7 @@ export async function updateIndividualProfile(
   profile: IndividualProfileDto
 ): Promise<IndividualProfileDto> {
   const { data } = await apiClient.patch<IndividualProfileDto>('/api/individual/profile', {
+    username: profile.username,
     fullName: profile.fullName,
     city: profile.city,
     district: profile.district,

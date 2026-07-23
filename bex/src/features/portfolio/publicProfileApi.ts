@@ -4,13 +4,26 @@ import { apiClient, getApiErrorMessage } from '@/lib/api';
 import { isBackendId } from '@/lib/api/backendId';
 import { getSessionClaims, hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { resolveMediaUrl } from '@/lib/mediaUrl';
-import { PortfolioItem } from '@/types';
+import { PortfolioItem, CompletedTask } from '@/types';
 
 export type PublicProfileDto = {
   profileId?: string;
+  username?: string;
   fullName?: string;
   avatarUrl?: string | null;
   completedTaskCount?: number;
+  averageRating?: number;
+  feedbackCount?: number;
+  approvedComplaintCount?: number;
+  complaintRate?: number;
+  isDangerous?: boolean;
+  completedTasks?: Array<{
+    applicationId?: string;
+    listingTitle?: string;
+    completedAt?: string;
+    imageCount?: number;
+    previewImageUrl?: string | null;
+  }>;
   portfolioItems?: Array<{
     applicationId?: string;
     listingTitle?: string;
@@ -21,9 +34,16 @@ export type PublicProfileDto = {
 
 export type PublicUserProfile = {
   profileId: string;
+  username: string;
   fullName: string;
   avatarUrl: string | null;
   completedTaskCount: number;
+  averageRating: number;
+  feedbackCount: number;
+  approvedComplaintCount: number;
+  complaintRate: number;
+  isDangerous: boolean;
+  completedTasks: CompletedTask[];
   portfolio: PortfolioItem[];
 };
 
@@ -31,6 +51,40 @@ function toTimestamp(value?: string): Timestamp {
   if (!value) return Timestamp.now();
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? Timestamp.now() : Timestamp.fromDate(date);
+}
+
+function mapCompletedTasks(
+  dto: PublicProfileDto,
+  portfolio: PortfolioItem[]
+): CompletedTask[] {
+  if (dto.completedTasks?.length) {
+    return dto.completedTasks.map((task) => ({
+      applicationId: String(task.applicationId ?? ''),
+      taskTitle: task.listingTitle?.trim() || 'Görev',
+      completedAt: toTimestamp(task.completedAt),
+      imageCount: task.imageCount ?? 0,
+      previewImageUrl: task.previewImageUrl?.trim()
+        ? resolveMediaUrl(task.previewImageUrl.trim())
+        : null,
+    }));
+  }
+
+  const grouped = new Map<string, CompletedTask>();
+  for (const item of portfolio) {
+    const existing = grouped.get(item.applicationId);
+    if (existing) {
+      existing.imageCount += 1;
+    } else {
+      grouped.set(item.applicationId, {
+        applicationId: item.applicationId,
+        taskTitle: item.taskTitle,
+        completedAt: item.approvedAt,
+        imageCount: 1,
+        previewImageUrl: item.imageUrl,
+      });
+    }
+  }
+  return Array.from(grouped.values());
 }
 
 function mapPublicProfile(dto: PublicProfileDto): PublicUserProfile {
@@ -42,12 +96,20 @@ function mapPublicProfile(dto: PublicProfileDto): PublicUserProfile {
     applicationId: String(item.applicationId ?? ''),
     approvedAt: toTimestamp(item.approvedAt),
   }));
+  const completedTasks = mapCompletedTasks(dto, portfolio);
 
   return {
     profileId,
+    username: dto.username?.trim() || '',
     fullName: dto.fullName?.trim() || 'Kullanıcı',
-    avatarUrl: dto.avatarUrl?.trim() || null,
-    completedTaskCount: dto.completedTaskCount ?? 0,
+    avatarUrl: dto.avatarUrl?.trim() ? resolveMediaUrl(dto.avatarUrl.trim()) : null,
+    completedTaskCount: dto.completedTaskCount ?? completedTasks.length,
+    averageRating: dto.averageRating ?? 0,
+    feedbackCount: dto.feedbackCount ?? 0,
+    approvedComplaintCount: dto.approvedComplaintCount ?? 0,
+    complaintRate: dto.complaintRate ?? 0,
+    isDangerous: dto.isDangerous ?? false,
+    completedTasks,
     portfolio,
   };
 }
@@ -68,6 +130,24 @@ export async function fetchPublicProfileByProfileId(
   try {
     const { data } = await apiClient.get<PublicProfileDto>(
       `/api/individual/profiles/${profileId}/public`
+    );
+    return mapPublicProfile(data);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+    throw mapError(error, 'Profil yüklenemedi.');
+  }
+}
+
+/** Kullanıcı adı ile herkese açık profil */
+export async function fetchPublicProfileByUsername(
+  username: string
+): Promise<PublicUserProfile | null> {
+  const normalized = username.trim().toLowerCase().replace(/^@/, '');
+  if (!normalized || normalized.length < 3) return null;
+
+  try {
+    const { data } = await apiClient.get<PublicProfileDto>(
+      `/api/individual/profiles/by-username/${encodeURIComponent(normalized)}/public`
     );
     return mapPublicProfile(data);
   } catch (error) {

@@ -76,6 +76,18 @@ export async function fetchRestCoupons(status?: 'ACTIVE'): Promise<Coupon[]> {
   }
 }
 
+/** Tek kupon detayı — GET /api/individual/coupons/{id} */
+export async function fetchRestCouponById(couponId: string): Promise<Coupon | null> {
+  if (!isBackendCouponId(couponId)) return null;
+  try {
+    const { data } = await apiClient.get<CouponDto>(`/api/individual/coupons/${couponId}`);
+    return mapCouponDto(data);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+    throw mapCouponsError(error, 'Kupon yüklenemedi.');
+  }
+}
+
 export { hasRestAuthSession };
 
 /** Takas için uygun backend kuponları */

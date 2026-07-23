@@ -4,11 +4,13 @@ import { Task, TaskDifficulty } from '../../types';
 import { DIFFICULTY_LABELS, CATEGORY_LABELS } from '../../constants/taskLabels';
 import { formatDeadline, getDifficultyColor } from '../../lib/taskUtils';
 import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
+import { DangerBadge } from '../profile/DangerBadge';
 
 export interface TaskCardProps {
   task: Task;
   businessName?: string;
   businessVerified?: boolean;
+  businessIsDangerous?: boolean;
   compact?: boolean;
   onPress?: () => void;
 }
@@ -17,6 +19,7 @@ export function TaskCard({
   task,
   businessName,
   businessVerified = false,
+  businessIsDangerous = false,
   compact = false,
   onPress,
 }: TaskCardProps) {
@@ -42,10 +45,13 @@ export function TaskCard({
           </Text>
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.businessName} numberOfLines={1}>
-            {businessName ?? 'İşletme'}
-            {businessVerified ? ' ✓' : ''}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.businessName} numberOfLines={1}>
+              {businessName ?? 'İşletme'}
+              {businessVerified ? ' ✓' : ''}
+            </Text>
+            {businessIsDangerous ? <DangerBadge compact /> : null}
+          </View>
           <Text style={styles.category}>
             {CATEGORY_LABELS[task.category]}
           </Text>
@@ -112,6 +118,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing[3],
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    flexShrink: 1,
   },
   logoPlaceholder: {
     width: 40,

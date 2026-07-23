@@ -114,6 +114,55 @@ export default function BusinessDashboardScreen() {
           )}
         </View>
 
+        <Text style={styles.sectionTitle}>Hızlı erişim</Text>
+        <View style={styles.quickGrid}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/profile-search' as Href)}
+          >
+            <Text style={styles.quickIcon}>🔍</Text>
+            <Text style={styles.quickLabel}>Profil Ara</Text>
+            <Text style={styles.quickHint}>Aday portföyü</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/analytics' as Href)}
+          >
+            <Text style={styles.quickIcon}>📈</Text>
+            <Text style={styles.quickLabel}>Analitik</Text>
+            <Text style={styles.quickHint}>Performans özeti</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/notifications' as Href)}
+          >
+            <Text style={styles.quickIcon}>🔔</Text>
+            <Text style={styles.quickLabel}>Bildirimler</Text>
+            <Text style={styles.quickHint}>Son güncellemeler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/complaint/submit-user' as Href)}
+          >
+            <Text style={styles.quickIcon}>⚠</Text>
+            <Text style={styles.quickLabel}>Kullanıcı Şikayet</Text>
+            <Text style={styles.quickHint}>Tehlikeli aday bildir</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/settings' as Href)}
+          >
+            <Text style={styles.quickIcon}>⚙️</Text>
+            <Text style={styles.quickLabel}>Ayarlar</Text>
+            <Text style={styles.quickHint}>Hesap yönetimi</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.actions}>
           <Button
             title="Yeni Görev Oluştur"
@@ -128,16 +177,6 @@ export default function BusinessDashboardScreen() {
             title="Kupon Doğrula"
             variant="outline"
             onPress={() => router.push('/(business)/coupons/index' as Href)}
-          />
-          <Button
-            title="Bildirimler"
-            variant="ghost"
-            onPress={() => router.push('/notifications/index' as Href)}
-          />
-          <Button
-            title="Hesap Ayarları"
-            variant="ghost"
-            onPress={() => router.push('/settings' as Href)}
           />
           {business && business.verificationStatus !== 'verified' && (
             <Button
@@ -190,7 +229,33 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
     marginBottom: Spacing[3],
   },
-  actions: { gap: Spacing[3], marginTop: Spacing[4], marginBottom: Spacing[6] },
+  sectionTitle: {
+    ...Typography.labelLarge,
+    color: Colors.textPrimary,
+    marginTop: Spacing[2],
+    marginBottom: Spacing[2],
+  },
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[3],
+    marginBottom: Spacing[4],
+  },
+  quickCard: {
+    width: '47%',
+    flexGrow: 1,
+    minWidth: '46%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing[3],
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
+  },
+  quickIcon: { fontSize: 22 },
+  quickLabel: { ...Typography.labelMedium, color: Colors.textPrimary },
+  quickHint: { ...Typography.caption, color: Colors.textMuted },
+  actions: { gap: Spacing[3], marginBottom: Spacing[6] },
   note: {
     backgroundColor: Colors.primaryLight,
     borderRadius: Radius.lg,

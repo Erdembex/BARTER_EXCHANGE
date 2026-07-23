@@ -16,6 +16,7 @@ import {
 } from '@/features/business/businessAnalyticsService';
 import { CATEGORY_LABELS } from '@/constants/taskLabels';
 import { StatCard } from '@/components/business';
+import { BackHeader } from '@/components/navigation/BackHeader';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessAnalyticsScreen() {
@@ -52,6 +53,7 @@ export default function BusinessAnalyticsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <BackHeader title="Analitik" />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={

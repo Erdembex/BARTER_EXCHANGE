@@ -21,6 +21,7 @@ interface UserPortfolioGalleryProps {
   subtitle?: string;
   emptyText?: string;
   compact?: boolean;
+  maxItems?: number;
 }
 
 export function UserPortfolioGallery({
@@ -29,8 +30,11 @@ export function UserPortfolioGallery({
   subtitle = 'Admin tarafından onaylanmış teslim görselleri — işletmeler başvuru öncesi görür.',
   emptyText,
   compact = false,
+  maxItems,
 }: UserPortfolioGalleryProps) {
   const [preview, setPreview] = useState<PortfolioItem | null>(null);
+  const visibleItems = maxItems && maxItems > 0 ? items.slice(0, maxItems) : items;
+  const hiddenCount = items.length - visibleItems.length;
 
   if (items.length === 0) {
     if (emptyText) {
@@ -47,9 +51,15 @@ export function UserPortfolioGallery({
     <>
       <View style={styles.wrap}>
         <Text style={styles.title}>{title}</Text>
-        {!compact && subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {!compact && subtitle ? (
+          <Text style={styles.subtitle}>
+            {hiddenCount > 0
+              ? `Son ${visibleItems.length} görsel · toplam ${items.length} onaylı görsel.`
+              : subtitle}
+          </Text>
+        ) : null}
         <View style={styles.grid}>
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <TouchableOpacity
               key={item.id}
               style={styles.thumbWrap}
