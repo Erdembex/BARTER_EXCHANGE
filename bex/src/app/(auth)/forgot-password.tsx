@@ -21,6 +21,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<Step>('form');
+  const [devResetToken, setDevResetToken] = useState<string | null>(null);
 
   const handleReset = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -32,7 +33,8 @@ export default function ForgotPasswordScreen() {
     setError('');
 
     try {
-      await authService.resetPassword(email.trim());
+      const result = await authService.resetPassword(email.trim());
+      setDevResetToken(result.devResetToken ?? null);
       setStep('success');
     } catch (err: any) {
       const code = err?.code ?? '';
@@ -120,14 +122,40 @@ export default function ForgotPasswordScreen() {
               <Text style={styles.successText}>
                 <Text style={styles.emailHighlight}>{email}</Text>
                 {' '}adresine 8 haneli sıfırlama kodu gönderdik.{'\n\n'}
-                Kodu uygulamada girerek yeni şifreni belirleyebilirsin.
-                {__DEV__ ? '\n\n(Geliştirme: kod backend terminal log\'unda da görünür.)' : ''}
+                Kodu uygulamada girerek yeni şifreni belirle. Kod 1 saat geçerlidir.
               </Text>
+
+              {devResetToken ? (
+                <View style={styles.devCodeBox}>
+                  <Text style={styles.devCodeLabel}>Yerel geliştirme kodu</Text>
+                  <Text style={styles.devCodeValue} selectable>
+                    {devResetToken}
+                  </Text>
+                  <Text style={styles.devCodeHint}>
+                    E-posta sunucusu kapalı — kodu buradan kopyala.
+                  </Text>
+                </View>
+              ) : __DEV__ ? (
+                <View style={styles.devCodeBox}>
+                  <Text style={styles.devCodeHint}>
+                    E-posta gelmediyse backend terminalinde ara:{'\n'}
+                    [PasswordReset] Kod oluşturuldu … token=XXXXXXXX
+                    {'\n\n'}
+                    Mailpit kullanıyorsan: http://localhost:8025
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.successActions}>
                 <Button
                   title="Kodu Gir — Yeni Şifre Belirle"
-                  onPress={() => router.push('/(auth)/reset-password')}
+                  onPress={() =>
+                    router.push(
+                      devResetToken
+                        ? `/(auth)/reset-password?token=${devResetToken}`
+                        : '/(auth)/reset-password'
+                    )
+                  }
                 />
                 <Button
                   title="Giriş Ekranına Dön"
@@ -242,5 +270,32 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: Spacing[3],
     marginTop: Spacing[4],
+  },
+  devCodeBox: {
+    width: '100%',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: Spacing[2],
+  },
+  devCodeLabel: {
+    ...Typography.labelMedium,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  devCodeValue: {
+    ...Typography.displayMedium,
+    color: Colors.textPrimary,
+    letterSpacing: 4,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  devCodeHint: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });

@@ -12,6 +12,19 @@ export function formatDeadline(deadline: Timestamp | undefined): string {
   return `${diff} gün kaldı`;
 }
 
+export function isTaskDeadlineExpired(deadline: Timestamp | undefined): boolean {
+  if (!deadline?.toMillis) return false;
+  return deadline.toMillis() < Date.now();
+}
+
+export function isTaskOpenForApplications(task: {
+  status: string;
+  deadline?: Timestamp;
+}): boolean {
+  if (task.status !== 'active') return false;
+  return !isTaskDeadlineExpired(task.deadline);
+}
+
 export function getDifficultyColor(difficulty: TaskDifficulty): string {
   switch (difficulty) {
     case 'easy':

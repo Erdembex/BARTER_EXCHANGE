@@ -32,6 +32,8 @@ public class ListingMapper {
             l.getBusiness().getBusinessName(),
             l.getBusiness().getLogoUrl(),
             l.getBusiness().getCategory() != null ? l.getBusiness().getCategory().name() : null,
+            l.getBusiness().getCity(),
+            l.getBusiness().getDistrict(),
             l.getTitle(),
             l.getSkills().stream().map(ListingSkill::getSkill).toList(),
             r != null ? r.getRewardType() : null,
@@ -41,6 +43,7 @@ public class ListingMapper {
             l.getStatus(),
             0,
             l.getCreatedAt(),
+            l.getExpiresAt(),
             false,
             false);
     }

@@ -121,9 +121,15 @@ export async function logoutRequest(refreshToken: string): Promise<void> {
   }
 }
 
-export async function forgotPasswordRequest(email: string): Promise<void> {
+export async function forgotPasswordRequest(
+  email: string
+): Promise<{ devResetToken?: string }> {
   try {
-    await apiClient.post('/api/auth/forgot-password', { email: email.trim() });
+    const response = await apiClient.post<{ devResetToken?: string }>(
+      '/api/auth/forgot-password',
+      { email: email.trim() }
+    );
+    return response.data ?? {};
   } catch (error) {
     throw mapAuthApiError(error);
   }

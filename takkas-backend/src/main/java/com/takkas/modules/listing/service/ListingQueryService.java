@@ -37,10 +37,13 @@ public class ListingQueryService {
 
     public PageResponse<ListingCardResponse> discover(ListingFilterRequest filter) {
         int size = filter.pageSize() != null ? filter.pageSize() : 20;
-        Instant cursor = filter.cursor() != null ? filter.cursor() : Instant.now().plusSeconds(60);
+        Instant now = Instant.now();
+        Instant cursor = filter.cursor() != null ? filter.cursor() : now.plusSeconds(60);
+        String city = blankToNull(filter.city());
+        String district = blankToNull(filter.district());
         var listings = listingRepository.findActiveListingsForDiscover(
-            filter.city(), filter.district(), filter.skills(),
-            cursor, PageRequest.of(0, size));
+            city, district, filter.skills(),
+            now, cursor, PageRequest.of(0, size));
         var cards = enrichCards(listings.stream().map(ListingMapper::toCardResponse).toList());
         var nextCursor = listings.isEmpty() ? null : listings.getLast().getCreatedAt();
         return PageResponse.of(cards, nextCursor);
@@ -76,6 +79,8 @@ public class ListingQueryService {
                 card.businessName(),
                 card.businessLogoUrl(),
                 card.businessCategory(),
+                card.businessCity(),
+                card.businessDistrict(),
                 card.title(),
                 card.skills(),
                 card.rewardType(),
@@ -85,8 +90,14 @@ public class ListingQueryService {
                 card.status(),
                 card.applicantCount(),
                 card.createdAt(),
+                card.expiresAt(),
                 listed,
                 trust != null && trust.isDangerous());
         }).toList();
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 }

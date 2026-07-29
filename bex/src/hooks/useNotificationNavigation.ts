@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import { useAuthStore } from '@/store/authStore';
-import { getNotificationTarget } from '@/features/notifications/notificationNavigation';
+import { getNotificationTarget, getNotificationsListHref } from '@/features/notifications/notificationNavigation';
 import { mapBackendNotificationType } from '@/features/notifications/notificationTypes';
 import { BexNotification } from '@/types';
 
@@ -57,7 +57,7 @@ export function useNotificationNavigation(onReceived?: () => void) {
       if (target) {
         router.push(target);
       } else {
-        router.push('/notifications/index');
+        router.push(getNotificationsListHref(bexUser?.role));
       }
     });
 

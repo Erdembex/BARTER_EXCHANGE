@@ -209,6 +209,10 @@ export const applicationsRepository = {
       return;
     }
 
+    if (await useApplicationsRestBackend()) {
+      throw new Error('Teslim gönderilemedi. Başvuru kimliği geçersiz — sayfayı yenileyip tekrar dene.');
+    }
+
     throw new Error('Teslim REST backend\'de henüz desteklenmiyor.');
   },
 
@@ -512,6 +516,10 @@ export async function issueCouponForSubmission(
     });
 
     return coupon;
+  }
+
+  if (await useApplicationsRestBackend()) {
+    throw new Error('Kupon oluşturulamadı. Başvuru kimliği geçersiz veya oturum süresi dolmuş olabilir.');
   }
 
   throw new Error('Kupon oluşturma REST backend\'de henüz desteklenmiyor.');

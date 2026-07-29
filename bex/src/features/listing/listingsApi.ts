@@ -5,6 +5,7 @@ import { isBackendId } from '@/lib/api/backendId';
 import { usesDemoStore } from '@/lib/restBackend';
 import { EnrichedTask } from '@/features/data/businessesRepository';
 import { CreateTask, Task, TaskCategory, TaskDifficulty } from '@/types';
+import { formatLocationLabel } from '@/constants/turkeyLocations';
 
 type ListingCardDto = {
   id: string;
@@ -12,6 +13,8 @@ type ListingCardDto = {
   businessName?: string;
   businessLogoUrl?: string | null;
   businessCategory?: string;
+  businessCity?: string | null;
+  businessDistrict?: string | null;
   businessComplaintListed?: boolean;
   businessIsDangerous?: boolean;
   title?: string;
@@ -23,6 +26,7 @@ type ListingCardDto = {
   status?: string;
   applicantCount?: number;
   createdAt?: string;
+  expiresAt?: string;
 };
 
 type ListingDetailDto = {
@@ -142,7 +146,11 @@ function toTimestamp(value?: string | null): Timestamp {
 }
 
 function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
-  const status = mapListingStatus(dto.status);
+  let status = mapListingStatus(dto.status);
+  const deadline = toTimestamp(dto.expiresAt ?? dto.createdAt);
+  if (status === 'active' && deadline.toMillis() < Date.now()) {
+    status = 'completed';
+  }
   const resolvedBusinessId = dto.businessProfileId
     ? String(dto.businessProfileId)
     : businessId;
@@ -160,19 +168,24 @@ function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
     currentApplicantCount: dto.applicantCount ?? 0,
     status,
     location: new GeoPoint(41.0082, 28.9784),
-    deadline: toTimestamp(dto.createdAt),
+    deadline,
     createdAt: toTimestamp(dto.createdAt),
-    approvedByAdmin: isListingPublished(dto.status),
+    approvedByAdmin: isListingPublished(dto.status) && status === 'active',
     featured: false,
     businessName: dto.businessName?.trim() || 'İşletme',
     businessVerified: false,
     businessIsDangerous: dto.businessIsDangerous ?? false,
     businessComplaintListed: dto.businessComplaintListed ?? false,
+    locationLabel: formatLocationLabel(dto.businessCity, dto.businessDistrict),
   };
 }
 
 function mapResponseToTask(dto: ListingResponseDto): EnrichedTask {
-  const status = mapListingStatus(dto.status);
+  let status = mapListingStatus(dto.status);
+  const deadline = toTimestamp(dto.expiresAt ?? dto.createdAt);
+  if (status === 'active' && deadline.toMillis() < Date.now()) {
+    status = 'completed';
+  }
   return {
     id: String(dto.id),
     businessId: dto.businessId ? String(dto.businessId) : '',
@@ -187,9 +200,9 @@ function mapResponseToTask(dto: ListingResponseDto): EnrichedTask {
     currentApplicantCount: 0,
     status,
     location: new GeoPoint(41.0082, 28.9784),
-    deadline: toTimestamp(dto.expiresAt ?? dto.createdAt),
+    deadline,
     createdAt: toTimestamp(dto.createdAt),
-    approvedByAdmin: isListingPublished(dto.status),
+    approvedByAdmin: isListingPublished(dto.status) && status === 'active',
     featured: false,
     businessName: dto.businessName?.trim() || 'İşletme',
     businessVerified: false,

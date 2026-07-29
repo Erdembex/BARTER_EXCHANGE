@@ -1,5 +1,6 @@
-import { NotificationListScreen } from '@/components/notifications/NotificationListScreen';
+import { Redirect } from 'expo-router';
 
-export default function NotificationsScreen() {
-  return <NotificationListScreen showBack />;
+/** Eski /notifications linklerini drawer ekranına yönlendir */
+export default function NotificationsRedirect() {
+  return <Redirect href="/(tabs)/notifications" />;
 }

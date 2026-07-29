@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   empty: { ...Typography.bodyMedium, color: Colors.textMuted },
   card: {
     padding: Spacing[4],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,

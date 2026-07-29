@@ -1,59 +1,59 @@
 export const Colors = {
-  // Kurumsal marka — güvenilir mavi & altın
-  primary: '#1A4D8C',
-  primaryLight: 'rgba(26, 77, 140, 0.08)',
-  primaryDark: '#153E70',
-  secondary: '#2563EB',
-  accent: '#C9A227',
-  accentLight: 'rgba(201, 162, 39, 0.12)',
-  accentDark: '#A8841E',
+  // Marka — siyah & sarı
+  primary: '#FACC15',
+  primaryLight: 'rgba(250, 204, 21, 0.12)',
+  primaryDark: '#EAB308',
+  secondary: '#0A0A0A',
+  accent: '#FFD700',
+  accentLight: 'rgba(255, 215, 0, 0.12)',
+  accentDark: '#CA8A04',
 
-  // Arka planlar
-  background: '#FFFFFF',
-  surface: '#F5F7FA',
-  surfaceSecondary: '#EEF1F6',
-  card: '#FFFFFF',
+  // Dark arka planlar
+  background: '#000000',
+  surface: '#0A0A0A',
+  surfaceSecondary: '#141414',
+  card: '#141414',
 
-  // Metin
-  text: '#0F172A',
-  textPrimary: '#0F172A',
-  textMuted: '#94A3B8',
-  textSecondary: '#64748B',
-  textTertiary: '#CBD5E1',
+  // Metin (dark)
+  text: '#FAFAFA',
+  textPrimary: '#FAFAFA',
+  textMuted: '#737373',
+  textSecondary: '#A3A3A3',
+  textTertiary: '#525252',
   textInverse: '#FFFFFF',
-  textOnPrimary: '#FFFFFF',
+  textOnPrimary: '#0A0A0A',
 
-  // Sınır — net çizgiler
-  border: '#E2E8F0',
-  borderLight: '#EEF1F6',
-  borderFocus: '#1A4D8C',
+  // Sınır
+  border: '#262626',
+  borderLight: '#1A1A1A',
+  borderFocus: '#FACC15',
 
   // Durum
-  success: '#059669',
-  successLight: 'rgba(5, 150, 105, 0.08)',
-  error: '#DC2626',
-  errorLight: 'rgba(220, 38, 38, 0.08)',
-  warning: '#D97706',
-  warningLight: 'rgba(217, 119, 6, 0.08)',
-  info: '#1A4D8C',
-  infoLight: 'rgba(26, 77, 140, 0.08)',
+  success: '#34D399',
+  successLight: 'rgba(52, 211, 153, 0.12)',
+  error: '#F87171',
+  errorLight: 'rgba(248, 113, 113, 0.12)',
+  warning: '#FBBF24',
+  warningLight: 'rgba(251, 191, 36, 0.12)',
+  info: '#FACC15',
+  infoLight: 'rgba(250, 204, 21, 0.1)',
 
   // Zorluk seviyeleri
-  difficultyEasy: '#059669',
-  difficultyMedium: '#D97706',
-  difficultyHard: '#DC2626',
+  difficultyEasy: '#34D399',
+  difficultyMedium: '#FBBF24',
+  difficultyHard: '#F87171',
 
   // Overlay
-  overlay: 'rgba(15, 23, 42, 0.45)',
-  overlayLight: 'rgba(26, 77, 140, 0.04)',
+  overlay: 'rgba(0, 0, 0, 0.72)',
+  overlayLight: 'rgba(250, 204, 21, 0.08)',
 
   transparent: 'transparent',
   white: '#FFFFFF',
 
-  // Vurgu gradyanları (hafif)
-  gradientBlue: '#1A4D8C',
-  gradientGold: '#C9A227',
-  gradientMid: '#3B6FA8',
+  // Hero gradyanları
+  gradientBlue: '#0A0A0A',
+  gradientGold: '#FACC15',
+  gradientMid: '#141414',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

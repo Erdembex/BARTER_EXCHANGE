@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -36,32 +37,45 @@ public class PasswordService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
 
+    @org.springframework.beans.factory.annotation.Value("${app.dev.expose-password-reset-token:false}")
+    private boolean exposeDevResetToken;
+
     /**
      * Güvenlik: hesap var/yok bilgisini sızdırmaz; her zaman başarılı kabul edilir.
+     * @return dev ortamında e-posta gitmediyse sıfırlama kodu
      */
     @Transactional
-    public void requestPasswordReset(ForgotPasswordRequest req) {
-        userRepository.findByEmail(req.email().trim()).ifPresent(user -> {
-            String token = generateResetToken();
-            Instant expiresAt = Instant.now().plus(TOKEN_TTL_HOURS, ChronoUnit.HOURS);
+    public Optional<String> requestPasswordReset(ForgotPasswordRequest req) {
+        Optional<User> userOpt = userRepository.findByEmail(req.email().trim());
+        if (userOpt.isEmpty()) {
+            return Optional.empty();
+        }
 
-            PasswordResetToken resetToken = resetTokenRepository.save(PasswordResetToken.builder()
-                .user(user)
-                .token(token)
-                .expiresAt(expiresAt)
-                .build());
+        User user = userOpt.get();
+        String token = generateResetToken();
+        Instant expiresAt = Instant.now().plus(TOKEN_TTL_HOURS, ChronoUnit.HOURS);
 
-            resetTokenRepository.invalidateOtherTokens(user.getId(), resetToken.getId(), Instant.now());
+        PasswordResetToken resetToken = resetTokenRepository.save(PasswordResetToken.builder()
+            .user(user)
+            .token(token)
+            .expiresAt(expiresAt)
+            .build());
 
-            try {
-                mailService.sendPasswordResetEmail(user.getEmail(), token);
-            } catch (Exception ex) {
-                log.warn("Şifre sıfırlama e-postası gönderilemedi ({}): {}", user.getEmail(), ex.getMessage());
-            }
+        resetTokenRepository.invalidateOtherTokens(user.getId(), resetToken.getId(), Instant.now());
 
-            log.info("[PasswordReset] Kod oluşturuldu: email={} token={} expires={}",
-                user.getEmail(), token, expiresAt);
-        });
+        boolean mailSent = mailService.sendPasswordResetEmail(user.getEmail(), token);
+        if (!mailSent) {
+            log.warn("[PasswordReset] E-posta gönderilemedi — kod loglandı: email={} token={}",
+                user.getEmail(), token);
+        }
+
+        log.info("[PasswordReset] Kod oluşturuldu: email={} token={} expires={}",
+            user.getEmail(), token, expiresAt);
+
+        if (exposeDevResetToken && !mailSent) {
+            return Optional.of(token);
+        }
+        return Optional.empty();
     }
 
     @Transactional

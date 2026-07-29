@@ -227,11 +227,22 @@ export default function ApplicationDetailScreen() {
         {firebaseUser &&
         bexUser &&
         canUseApplicationMessages(application.status) ? (
-          <ApplicationMessageThread
-            applicationId={application.id}
-            currentUserId={firebaseUser.uid}
-            currentUserRole={bexUser.role}
-          />
+          <>
+            <ApplicationMessageThread
+              applicationId={application.id}
+              currentUserId={firebaseUser.uid}
+              currentUserRole={bexUser.role}
+              peerLabel={applicantName}
+              taskTitle={task?.title}
+            />
+            <Button
+              title="Sohbeti tam ekran aç"
+              variant="outline"
+              onPress={() =>
+                router.push(`/(business)/messages/${application.id}` as Href)
+              }
+            />
+          </>
         ) : null}
 
         {application.submissionText ? (

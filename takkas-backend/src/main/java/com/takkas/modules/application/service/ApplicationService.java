@@ -34,7 +34,7 @@ public class ApplicationService {
 
     public ApplicationResponse apply(UUID individualId, UUID individualUserId, ApplyRequest req) {
         if (!listingFacade.isListingActive(req.listingId()))
-            throw new BusinessRuleException("Bu ilan artık başvuruya kapalı.");
+            throw new BusinessRuleException("Bu ilanın süresi doldu veya artık başvuruya kapalı.");
         if (applicationRepository.existsByListingIdAndIndividualId(req.listingId(), individualId))
             throw new BusinessRuleException("Bu ilana zaten başvurdunuz.");
 

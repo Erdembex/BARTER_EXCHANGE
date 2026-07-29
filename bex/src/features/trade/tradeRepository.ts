@@ -367,6 +367,13 @@ export const tradeRepository = {
       return sendSwapOffer(listingId, input.counterCouponId, input.message);
     }
 
+    if (await useSwapRestBackend()) {
+      throw Object.assign(
+        new Error('Takas için cüzdanındaki geçerli bir kupon seçmelisin.'),
+        { code: 'invalid-coupon' }
+      );
+    }
+
     const listing = await this.getListingById(listingId);
     if (!listing || listing.status !== 'active') {
       throw Object.assign(new Error('İlan bulunamadı veya artık aktif değil.'), {
@@ -426,7 +433,10 @@ export const tradeRepository = {
       return id;
     }
 
-    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
+    throw Object.assign(
+      new Error('Takas teklifi gönderilemedi. Geçerli bir kupon seç ve tekrar dene.'),
+      { code: 'offer-failed' }
+    );
   },
 
   /**
@@ -557,10 +567,8 @@ export const tradeRepository = {
       return;
     }
 
-    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
+    throw Object.assign(new Error('Teklif reddedilemedi.'), { code: 'offer-failed' });
   },
-
-  /** REST: bir teklifin ait olduğu (bana ait) ilanı bulur */
   async findListingForOffer(offerId: string, ownerId: string): Promise<TradeListing | null> {
     const myListings = await this.getMyListings(ownerId);
     for (const listing of myListings) {
@@ -658,10 +666,8 @@ export const tradeRepository = {
       return { ownerNewCouponId: '', offererNewCouponId: '' };
     }
 
-    throw new Error('Takas teklifleri REST backend\'de henüz desteklenmiyor.');
+    throw Object.assign(new Error('Teklif kabul edilemedi.'), { code: 'offer-failed' });
   },
-
-  /** Tamamlanan / sonuçlanmış takas işlemleri */
   async getTradeHistory(userId: string): Promise<TradeHistoryEntry[]> {
     if (await useSwapRestBackend()) {
       try {

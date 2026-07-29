@@ -7,7 +7,7 @@ import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
 import { DangerBadge } from '../profile/DangerBadge';
 
 export interface TaskCardProps {
-  task: Task;
+  task: Task & { locationLabel?: string };
   businessName?: string;
   businessVerified?: boolean;
   businessIsDangerous?: boolean;
@@ -54,6 +54,7 @@ export function TaskCard({
           </View>
           <Text style={styles.category}>
             {CATEGORY_LABELS[task.category]}
+            {task.locationLabel ? ` · ${task.locationLabel}` : ''}
           </Text>
         </View>
         <View style={[styles.diffBadge, { backgroundColor: diffColor + '22' }]}>

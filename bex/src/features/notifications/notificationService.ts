@@ -7,6 +7,7 @@ import { usesRestBackend } from '@/lib/restBackend';
 import { setDevProfile } from '@/lib/devProfileStore';
 
 let initializedForUser: string | null = null;
+let lastPushToken: string | null = null;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -68,6 +69,8 @@ export const notificationService = {
         await Notifications.getExpoPushTokenAsync({ projectId })
       ).data;
 
+      lastPushToken = token;
+
       if (__DEV__) {
         console.log('[push] Expo push token:', token);
       }
@@ -93,8 +96,34 @@ export const notificationService = {
     }
   },
 
+  async unregisterPushToken(): Promise<void> {
+    const token = lastPushToken;
+    if (!token) return;
+
+    try {
+      if (await usesRestBackend()) {
+        await apiClient.delete('/api/device/fcm-token', {
+          data: {
+            token,
+            platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
+          },
+        });
+        if (__DEV__) {
+          console.log('[push] Token backend\'den silindi.');
+        }
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[push] Token silinemedi:', err);
+      }
+    } finally {
+      lastPushToken = null;
+    }
+  },
+
   resetSession() {
     initializedForUser = null;
+    lastPushToken = null;
   },
 
   async presentLocal(title: string, body: string, data?: Record<string, string>) {

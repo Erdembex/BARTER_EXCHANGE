@@ -55,7 +55,7 @@ class FeatureGateServiceTest {
         when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-            featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, 1))
+            featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, 2))
             .isInstanceOf(PlanLimitExceededException.class);
     }
 
@@ -64,7 +64,7 @@ class FeatureGateServiceTest {
         when(subscriptionRepository.findByBusinessId(businessId)).thenReturn(Optional.empty());
 
         assertThatCode(() ->
-            featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, 0))
+            featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, 1))
             .doesNotThrowAnyException();
     }
 

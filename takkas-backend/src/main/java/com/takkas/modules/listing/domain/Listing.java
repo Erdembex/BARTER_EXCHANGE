@@ -72,6 +72,13 @@ public class Listing {
 
     public boolean isActive() { return status == ListingStatus.ACTIVE; }
 
+    /** Aktif ve son başvuru tarihi geçmemiş */
+    public boolean isOpenForApplications() {
+        if (status != ListingStatus.ACTIVE) return false;
+        if (expiresAt != null && !Instant.now().isBefore(expiresAt)) return false;
+        return true;
+    }
+
     public void addSkill(Skill skill) {
         if (skills.stream().noneMatch(s -> s.getSkill() == skill))
             skills.add(new ListingSkill(this, skill));

@@ -1,0 +1,128 @@
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ConversationPreview } from '@/features/messages/inboxService';
+import { formatRelativeTime } from '@/lib/dateUtils';
+import { Colors, Typography, Spacing, Radius } from '@/theme';
+
+interface ConversationRowProps {
+  item: ConversationPreview;
+  onPress: () => void;
+}
+
+export function ConversationRow({ item, onPress }: ConversationRowProps) {
+  const preview = item.lastMessage?.trim() || 'Henüz mesaj yok — sohbeti başlat';
+  const hasUnread = item.unreadCount > 0;
+
+  return (
+    <TouchableOpacity style={styles.row} activeOpacity={0.88} onPress={onPress}>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{item.peerName.slice(0, 1).toUpperCase()}</Text>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.topLine}>
+          <Text style={[styles.title, hasUnread && styles.titleUnread]} numberOfLines={1}>
+            {item.peerName}
+          </Text>
+          {item.lastMessageAt ? (
+            <Text style={styles.time}>{formatRelativeTime(item.lastMessageAt)}</Text>
+          ) : null}
+        </View>
+        <Text style={styles.taskTitle} numberOfLines={1}>
+          {item.taskTitle}
+        </Text>
+        <Text style={[styles.preview, hasUnread && styles.previewUnread]} numberOfLines={2}>
+          {preview}
+        </Text>
+      </View>
+
+      {hasUnread ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {item.unreadCount > 99 ? '99+' : item.unreadCount}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.chevron}>›</Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    ...Typography.labelLarge,
+    color: Colors.primary,
+    fontWeight: '800',
+  },
+  body: { flex: 1, gap: 2 },
+  topLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing[2],
+  },
+  title: {
+    ...Typography.labelLarge,
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  titleUnread: { fontWeight: '800' },
+  time: { ...Typography.caption, color: Colors.textMuted },
+  taskTitle: {
+    ...Typography.caption,
+    color: Colors.accent,
+    fontWeight: '700',
+  },
+  preview: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  previewUnread: {
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  badge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    ...Typography.caption,
+    color: Colors.textOnPrimary,
+    fontWeight: '800',
+    fontSize: 11,
+  },
+  chevron: {
+    ...Typography.headingMedium,
+    color: Colors.textMuted,
+    fontWeight: '300',
+  },
+});

@@ -133,7 +133,7 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
   scroll: {
     paddingHorizontal: Spacing[4],
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...Typography.caption,
-    color: Colors.white,
+    color: Colors.textOnPrimary,
     fontWeight: '700',
     fontSize: 11,
   },

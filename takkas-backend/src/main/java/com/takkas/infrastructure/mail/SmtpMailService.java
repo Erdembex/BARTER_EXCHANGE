@@ -31,7 +31,7 @@ public class SmtpMailService implements MailService {
     }
 
     @Override
-    public void sendPasswordResetEmail(String to, String token) {
+    public boolean sendPasswordResetEmail(String to, String token) {
         String body = """
             BEX hesabın için şifre sıfırlama kodun:
 
@@ -41,8 +41,9 @@ public class SmtpMailService implements MailService {
 
             Bu isteği sen yapmadıysan bu e-postayı yok say.
             """.formatted(token);
-        deliver(to, "BEX — Şifre sıfırlama kodu", body);
-        log.info("[MailService] Şifre sıfırlama kodu: to={} token={}", to, token);
+        boolean sent = deliver(to, "BEX — Şifre sıfırlama kodu", body);
+        log.info("[MailService] Şifre sıfırlama kodu: to={} token={} sent={}", to, token, sent);
+        return sent;
     }
 
     @Override
@@ -51,12 +52,12 @@ public class SmtpMailService implements MailService {
         log.info("[MailService] E-posta: to={} subject={}", to, subject);
     }
 
-    private void deliver(String to, String subject, String body) {
+    private boolean deliver(String to, String subject, String body) {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
             log.info("[MailService] SMTP yapılandırılmadı — içerik loglandı: to={} subject={} body={}",
                 to, subject, body);
-            return;
+            return false;
         }
 
         try {
@@ -68,8 +69,10 @@ public class SmtpMailService implements MailService {
             message.setSubject(subject);
             message.setText(body);
             mailSender.send(message);
+            return true;
         } catch (Exception ex) {
             log.warn("[MailService] E-posta gönderilemedi ({}): {} — {}", to, ex.getMessage(), body);
+            return false;
         }
     }
 }

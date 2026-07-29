@@ -9,12 +9,14 @@ import com.takkas.modules.user.domain.User;
 import com.takkas.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -28,8 +30,11 @@ public class PhoneVerificationService {
     private final UserRepository userRepository;
     private final PhoneVerificationCodeRepository codeRepository;
 
+    @Value("${app.dev.expose-phone-code:false}")
+    private boolean exposeDevCode;
+
     @Transactional
-    public void sendCode(UUID userId, SendPhoneCodeRequest req) {
+    public Optional<String> sendCode(UUID userId, SendPhoneCodeRequest req) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessRuleException("Kullanıcı bulunamadı."));
         String phone = normalizePhone(req.phone());
@@ -48,6 +53,8 @@ public class PhoneVerificationService {
 
         log.info("[PhoneVerify] Kod oluşturuldu: userId={} phone={} code={} expires={}",
             userId, phone, code, expiresAt);
+
+        return exposeDevCode ? Optional.of(code) : Optional.empty();
     }
 
     @Transactional

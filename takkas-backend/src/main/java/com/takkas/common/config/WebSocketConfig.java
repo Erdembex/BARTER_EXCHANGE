@@ -21,6 +21,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             .addInterceptors(jwtHandshakeInterceptor)
             .setAllowedOriginPatterns("*")
             .withSockJS();
+
+        // React Native — SockJS olmadan doğrudan WebSocket
+        registry.addEndpoint("/ws-native")
+            .addInterceptors(jwtHandshakeInterceptor)
+            .setAllowedOriginPatterns("*");
     }
 
     @Override

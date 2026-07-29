@@ -63,22 +63,27 @@ export default function BusinessTasksScreen() {
     ]);
   };
 
+  const activeCount = tasks.filter((t) => t.status === 'active').length;
+
   const handlePauseToggle = (task: Task) => {
     if (!business) return;
     const pausing = task.status === 'active';
     if (!task.approvedByAdmin && pausing) {
-      showToast('Onay bekleyen görev duraklatılamaz.');
+      showToast('Onay bekleyen görev kapatılamaz.');
       return;
     }
+    const restMode = !shouldUseDemoData();
     Alert.alert(
-      pausing ? 'Görevi Duraklat' : 'Görevi Yeniden Başlat',
+      pausing ? (restMode ? 'Görevi Kapat' : 'Görevi Duraklat') : 'Görevi Yeniden Başlat',
       pausing
-        ? 'Görev kullanıcılara geçici olarak görünmez olur.'
+        ? restMode
+          ? 'Görev kapatılır ve yeni görev yayınlama limitinden düşer. Bu işlem geri alınamaz.'
+          : 'Görev kullanıcılara geçici olarak görünmez olur.'
         : 'Görev tekrar kullanıcılara görünür olur.',
       [
         { text: 'Vazgeç', style: 'cancel' },
         {
-          text: pausing ? 'Duraklat' : 'Başlat',
+          text: pausing ? (restMode ? 'Kapat' : 'Duraklat') : 'Başlat',
           onPress: async () => {
             setActionId(task.id);
             try {
@@ -87,7 +92,13 @@ export default function BusinessTasksScreen() {
                 business.id,
                 pausing ? 'paused' : 'active'
               );
-              showToast(pausing ? 'Görev duraklatıldı.' : 'Görev yeniden aktif.');
+              showToast(
+                pausing
+                  ? restMode
+                    ? 'Görev kapatıldı. Yeni görev oluşturabilirsin.'
+                    : 'Görev duraklatıldı.'
+                  : 'Görev yeniden aktif.'
+              );
               await load();
             } catch (err: unknown) {
               showToast(err instanceof Error ? err.message : 'İşlem başarısız.');
@@ -111,7 +122,14 @@ export default function BusinessTasksScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>Görevlerim</Text>
+        <View>
+          <Text style={styles.title}>Görevlerim</Text>
+          {!shouldUseDemoData() ? (
+            <Text style={styles.limitHint}>
+              Aktif görev: {activeCount} (ücretsiz planda en fazla 2)
+            </Text>
+          ) : null}
+        </View>
         <Button
           title="+ Yeni"
           size="sm"
@@ -212,7 +230,11 @@ export default function BusinessTasksScreen() {
                   disabled={actionId === item.id}
                 >
                   <Text style={styles.actionText}>
-                    {item.status === 'paused' ? 'Yeniden Başlat' : 'Duraklat'}
+                    {item.status === 'paused'
+                      ? 'Yeniden Başlat'
+                      : shouldUseDemoData()
+                        ? 'Duraklat'
+                        : 'Kapat'}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -237,6 +259,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing[2],
   },
   title: { ...Typography.headingLarge, color: Colors.textPrimary },
+  limitHint: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
   newBtn: { paddingHorizontal: Spacing[4], minWidth: 90 },
   list: { padding: Spacing[5], paddingTop: Spacing[2], flexGrow: 1 },
   card: {

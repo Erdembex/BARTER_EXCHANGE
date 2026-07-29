@@ -48,11 +48,14 @@ public class ListingService {
             .description(req.reward().description())
             .build());
 
-        listing = listingRepository.save(listing);
-
         if (autoApproveOnCreate) {
             long activeCount = listingRepository.countByBusinessIdAndStatus(businessId, ListingStatus.ACTIVE);
             featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, (int) activeCount);
+        }
+
+        listing = listingRepository.save(listing);
+
+        if (autoApproveOnCreate) {
             listing.publish();
             listing = listingRepository.save(listing);
         }
@@ -62,6 +65,8 @@ public class ListingService {
 
     public ListingResponse publish(UUID businessId, UUID listingId) {
         Listing listing = findOwned(listingId, businessId);
+        if (listing.getStatus() != ListingStatus.DRAFT)
+            throw new BusinessRuleException("Sadece taslak ilanlar yayınlanabilir.");
         long activeCount = listingRepository.countByBusinessIdAndStatus(businessId, ListingStatus.ACTIVE);
         featureGateService.checkLimit(businessId, FeatureKey.MAX_ACTIVE_LISTINGS, (int) activeCount);
         listing.publish();

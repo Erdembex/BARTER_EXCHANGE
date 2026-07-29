@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
@@ -15,8 +14,12 @@ import { tasksRepository, EnrichedTask } from '@/features/data';
 import { shouldUseListingsRest } from '@/features/listing/listingsApi';
 import { TaskCategory, TaskDifficulty } from '@/types';
 import { SearchBar, CategoryFilter, TaskCard } from '@/components/tasks';
+import { LocationFilter } from '@/components/common/LocationPicker';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useAuthStore } from '@/store/authStore';
+import { saveLocationFilter } from '@/lib/locationFilterStorage';
+import { resolveLocationFilter } from '@/lib/resolveLocationFilter';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
@@ -28,13 +31,18 @@ const DIFF_LABELS: Record<string, string> = {
 };
 
 export default function TasksScreen() {
+  const { bexUser, isInitialized } = useAuthStore();
+  const didInitFilter = useRef(false);
   const [search, setSearch] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState<string | null>(null);
+  const [district, setDistrict] = useState<string | null>(null);
+  const [filterReady, setFilterReady] = useState(false);
   const [category, setCategory] = useState<TaskCategory | null>(null);
   const [difficulty, setDifficulty] = useState<TaskDifficulty | null>(null);
   const [restListings, setRestListings] = useState(false);
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -44,6 +52,32 @@ export default function TasksScreen() {
   useEffect(() => {
     shouldUseListingsRest().then(setRestListings);
   }, []);
+
+  useEffect(() => {
+    if (!isInitialized || didInitFilter.current) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const resolved = await resolveLocationFilter(bexUser);
+      if (cancelled) return;
+
+      setCity(resolved.city);
+      setDistrict(resolved.district);
+
+      didInitFilter.current = true;
+      setFilterReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInitialized, bexUser?.city, bexUser?.district]);
+
+  useEffect(() => {
+    if (!filterReady) return;
+    saveLocationFilter({ city, district });
+  }, [city, district, filterReady]);
 
   const filterTasks = useCallback(
     (list: EnrichedTask[]) =>
@@ -58,17 +92,24 @@ export default function TasksScreen() {
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
-    const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
-      10,
-      null,
-      { city, category }
-    );
-    setTasks(fetched);
-    setLastDoc(doc);
-    setNextCursor(cursor);
-    setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
-    setLoading(false);
-  }, [city, category]);
+    setLoadError(null);
+    try {
+      const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
+        10,
+        null,
+        { city: city ?? undefined, district: district ?? undefined, category }
+      );
+      setTasks(fetched);
+      setLastDoc(doc);
+      setNextCursor(cursor);
+      setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
+    } catch {
+      setTasks([]);
+      setLoadError('Görevler yüklenemedi. Sunucu kapalı olabilir — aşağı çekerek tekrar dene.');
+    } finally {
+      setLoading(false);
+    }
+  }, [city, district, category]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -78,7 +119,7 @@ export default function TasksScreen() {
     const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
       10,
       cursorArg,
-      { city, category }
+      { city: city ?? undefined, district: district ?? undefined, category }
     );
     setTasks((prev) => [...prev, ...fetched]);
     setLastDoc(doc);
@@ -94,8 +135,9 @@ export default function TasksScreen() {
   };
 
   useEffect(() => {
+    if (!filterReady) return;
     loadInitial();
-  }, [loadInitial]);
+  }, [loadInitial, filterReady]);
 
   const displayed = filterTasks(tasks);
 
@@ -108,14 +150,11 @@ export default function TasksScreen() {
 
       <View style={styles.filters}>
         <SearchBar value={search} onChangeText={setSearch} />
-        <TextInput
-          style={styles.cityInput}
-          placeholder="Şehir filtrele (ör. İstanbul)"
-          placeholderTextColor={Colors.textTertiary}
-          value={city}
-          onChangeText={setCity}
-          onSubmitEditing={loadInitial}
-          returnKeyType="search"
+        <LocationFilter
+          city={city}
+          district={district}
+          onCityChange={setCity}
+          onDistrictChange={setDistrict}
         />
         <CategoryFilter selected={category} onSelect={setCategory} />
         {!restListings ? (
@@ -154,7 +193,11 @@ export default function TasksScreen() {
             loadingMore ? <ActivityIndicator color={Colors.primary} style={{ padding: 16 }} /> : null
           }
           ListEmptyComponent={
-            <Text style={styles.empty}>Bu filtrelere uygun görev yok.</Text>
+            loadError ? (
+              <Text style={styles.error}>{loadError}</Text>
+            ) : (
+              <Text style={styles.empty}>Bu filtrelere uygun görev yok.</Text>
+            )
           }
           renderItem={({ item }) => (
             <TaskCard
@@ -177,16 +220,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[1], paddingBottom: Spacing[2] },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary },
   filters: { paddingHorizontal: Spacing[5], gap: Spacing[3], paddingBottom: Spacing[3] },
-  cityInput: {
-    ...Typography.bodyMedium,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-  },
   diffRow: { flexDirection: 'row', gap: Spacing[2] },
   diffChip: {
     ...Typography.caption,
@@ -204,4 +237,5 @@ const styles = StyleSheet.create({
   },
   list: { paddingHorizontal: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   empty: { ...Typography.bodyMedium, color: Colors.textTertiary, textAlign: 'center', marginTop: 40 },
+  error: { ...Typography.bodyMedium, color: Colors.error, textAlign: 'center', marginTop: 40, lineHeight: 22 },
 });

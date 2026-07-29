@@ -12,6 +12,8 @@ import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @Tag(name = "Auth", description = "Kayıt, giriş, token yenileme")
 @RestController
 @RequestMapping("/api/auth")
@@ -60,9 +62,12 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
-        passwordService.requestPasswordReset(req);
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        Optional<String> devToken = passwordService.requestPasswordReset(req);
+        if (devToken.isPresent()) {
+            return ResponseEntity.ok(new ForgotPasswordResponse(devToken.get()));
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/reset-password")
@@ -79,10 +84,13 @@ public class AuthController {
     }
 
     @PostMapping("/phone/send-code")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void sendPhoneCode(@CurrentUser UserPrincipal principal,
+    public ResponseEntity<SendPhoneCodeResponse> sendPhoneCode(@CurrentUser UserPrincipal principal,
                               @Valid @RequestBody SendPhoneCodeRequest req) {
-        phoneVerificationService.sendCode(principal.userId(), req);
+        Optional<String> devCode = phoneVerificationService.sendCode(principal.userId(), req);
+        if (devCode.isPresent()) {
+            return ResponseEntity.ok(new SendPhoneCodeResponse(devCode.get()));
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/phone/verify")

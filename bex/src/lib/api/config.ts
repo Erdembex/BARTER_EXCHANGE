@@ -12,3 +12,10 @@ function resolveDefaultApiBaseUrl(): string {
 /** Spring Boot REST API kök adresi */
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || resolveDefaultApiBaseUrl();
+
+/** STOMP WebSocket kök adresi (http→ws, https→wss) */
+export function getWebSocketBaseUrl(): string {
+  const base = API_BASE_URL.replace(/\/$/, '');
+  if (base.startsWith('https://')) return base.replace('https://', 'wss://');
+  return base.replace('http://', 'ws://');
+}

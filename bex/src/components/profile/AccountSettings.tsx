@@ -10,6 +10,7 @@ import { BexUser } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { CompletedTasksModal } from '@/components/profile/CompletedTasksList';
+import { LocationPicker } from '@/components/common/LocationPicker';
 import { usersRepository } from '@/features/data';
 import { CompletedTask } from '@/types';
 import { useToast } from '@/components/common/Toast';
@@ -49,10 +50,19 @@ export function AccountSettings({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [restMode, setRestMode] = useState(false);
+  const [locationCity, setLocationCity] = useState(bexUser?.city ?? 'İstanbul');
+  const [locationDistrict, setLocationDistrict] = useState(bexUser?.district ?? '');
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [savingLocation, setSavingLocation] = useState(false);
 
   useEffect(() => {
     hasRestAuthSession().then(setRestMode);
   }, []);
+
+  useEffect(() => {
+    if (bexUser?.city) setLocationCity(bexUser.city);
+    if (bexUser?.district) setLocationDistrict(bexUser.district);
+  }, [bexUser?.city, bexUser?.district]);
 
   const handlePickAvatar = async () => {
     if (!firebaseUser) return;
@@ -127,6 +137,26 @@ export function AccountSettings({
       showToast(message);
     } finally {
       setSavingUsername(false);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    setSavingLocation(true);
+    try {
+      const updated = await authService.updateIndividualLocation(locationCity, locationDistrict);
+      onUserUpdated(updated);
+      setEditingLocation(false);
+      showToast('Konumun güncellendi.');
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      const message = code
+        ? getAuthErrorMessage(code)
+        : error instanceof Error && error.message
+          ? error.message
+          : 'Konum kaydedilemedi.';
+      showToast(message);
+    } finally {
+      setSavingLocation(false);
     }
   };
 
@@ -374,6 +404,66 @@ export function AccountSettings({
         )}
       </View>
 
+      {bexUser?.role === 'user' ? (
+        <View style={styles.card}>
+          <Text style={styles.locationTitle}>Konum</Text>
+          <Text style={styles.locationHint}>
+            Görevler ekranında varsayılan filtre olarak kullanılır.
+          </Text>
+          {editingLocation ? (
+            <View style={styles.editBlock}>
+              <LocationPicker
+                city={locationCity}
+                district={locationDistrict}
+                onCityChange={setLocationCity}
+                onDistrictChange={setLocationDistrict}
+              />
+              <View style={styles.editActions}>
+                <Button
+                  title="Kaydet"
+                  size="sm"
+                  onPress={handleSaveLocation}
+                  loading={savingLocation}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Vazgeç"
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => {
+                    setEditingLocation(false);
+                    setLocationCity(bexUser?.city ?? 'İstanbul');
+                    setLocationDistrict(bexUser?.district ?? '');
+                  }}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <Row
+                label="İl / İlçe"
+                value={
+                  bexUser.city && bexUser.district
+                    ? `${bexUser.city}, ${bexUser.district}`
+                    : 'Belirlenmedi'
+                }
+              />
+              <Button
+                title="Konumu Düzenle"
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setLocationCity(bexUser.city ?? 'İstanbul');
+                  setLocationDistrict(bexUser.district ?? '');
+                  setEditingLocation(true);
+                }}
+              />
+            </>
+          )}
+        </View>
+      ) : null}
+
       {publicProfileHref ? (
         <Button
           title="Herkese Açık Profilim"
@@ -483,4 +573,6 @@ const styles = StyleSheet.create({
   rowValue: { ...Typography.labelMedium, color: Colors.textPrimary },
   editBlock: { gap: Spacing[3] },
   editActions: { flexDirection: 'row', gap: Spacing[2] },
+  locationTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
+  locationHint: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
 });

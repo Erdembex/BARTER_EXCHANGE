@@ -1,27 +1,36 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { router, Href } from 'expo-router';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useOpenNotifications } from '@/hooks/useOpenNotifications';
 import { Colors, Typography, Spacing } from '@/theme';
 
 interface AppHeaderProps {
   title?: string;
   showMenu?: boolean;
+  showNotifications?: boolean;
   onBack?: () => void;
 }
 
-export function AppHeader({ title, showMenu = true, onBack }: AppHeaderProps) {
-  const navigation = useNavigation();
+export function AppHeader({
+  title,
+  showMenu = true,
+  showNotifications = true,
+  onBack,
+}: AppHeaderProps) {
+  const { unreadCount } = useNotifications();
+  const openNotifications = useOpenNotifications();
 
   return (
     <View style={styles.container}>
       {onBack ? (
-        <TouchableOpacity onPress={onBack} style={styles.menuBtn}>
+        <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
       ) : showMenu ? (
         <TouchableOpacity
-          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-          style={styles.menuBtn}
+          onPress={() => router.push('/(tabs)/more' as Href)}
+          style={styles.iconBtn}
           accessibilityRole="button"
           accessibilityLabel="Menüyü aç"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -33,13 +42,33 @@ export function AppHeader({ title, showMenu = true, onBack }: AppHeaderProps) {
           </View>
         </TouchableOpacity>
       ) : (
-        <View style={styles.menuPlaceholder} />
+        <View style={styles.iconPlaceholder} />
       )}
       {title ? (
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
-      ) : null}
+      ) : (
+        <View style={styles.titleSpacer} />
+      )}
+      {showNotifications && !onBack ? (
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={openNotifications}
+          accessibilityRole="button"
+          accessibilityLabel="Bildirimler"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.bellIcon}>◉</Text>
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconPlaceholder} />
+      )}
     </View>
   );
 }
@@ -54,7 +83,7 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
     backgroundColor: Colors.background,
   },
-  menuBtn: {
+  iconBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',
@@ -62,9 +91,34 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
-  menuPlaceholder: { width: 40 },
+  iconPlaceholder: { width: 40 },
+  bellIcon: {
+    fontSize: 18,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    ...Typography.caption,
+    color: Colors.textOnPrimary,
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
+  },
+  titleSpacer: { flex: 1 },
   menuIcon: { gap: 4, width: 18 },
   bar: {
     height: 2,

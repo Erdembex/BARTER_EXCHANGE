@@ -12,14 +12,26 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import { applicationsRepository } from '@/features/data';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useOpenNotifications } from '@/hooks/useOpenNotifications';
+import { applicationsRepository, tasksRepository, EnrichedTask } from '@/features/data';
 import { authService } from '@/features/auth/authService';
+import { BexUser, Application } from '@/types';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { getGreeting } from '@/lib/taskUtils';
+import { resolveLocationFilter } from '@/lib/resolveLocationFilter';
+import {
+  formatFilterLocationLabel,
+  toApiCityFilter,
+} from '@/lib/locationFilterUtils';
+import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { getApplicationTarget } from '@/lib/applicationNavigation';
+import { useMessagingInbox } from '@/hooks/useMessagingInbox';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { HomeScreenSkeleton } from '@/components/common/HomeScreenSkeleton';
+import { TaskCard } from '@/components/tasks';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
 type QuickLink = {
@@ -33,6 +45,14 @@ type QuickLink = {
 
 const QUICK_LINKS: QuickLink[] = [
   {
+    route: '/(tabs)/messages' as Href,
+    label: 'Sohbet',
+    hint: 'İşletmelerle yazış',
+    glyph: 'S',
+    tint: Colors.info,
+    bg: Colors.infoLight,
+  },
+  {
     route: '/(tabs)/tasks' as Href,
     label: 'Görevler',
     hint: 'Yeni fırsatları keşfet',
@@ -45,8 +65,8 @@ const QUICK_LINKS: QuickLink[] = [
     label: 'Başvurular',
     hint: 'Aktif süreçlerin',
     glyph: 'B',
-    tint: Colors.secondary,
-    bg: 'rgba(37, 99, 235, 0.08)',
+    tint: Colors.primary,
+    bg: Colors.primaryLight,
   },
   {
     route: '/(tabs)/trade' as Href,
@@ -68,9 +88,37 @@ const QUICK_LINKS: QuickLink[] = [
 
 export default function HomeScreen() {
   const { bexUser, firebaseUser, setBexUser } = useAuthStore();
+  const { unreadCount } = useNotifications();
+  const { totalUnread: messageUnread, isUnlocked: messagingUnlocked } = useMessagingInbox('user');
+  const openNotifications = useOpenNotifications();
   const [activeApplicationCount, setActiveApplicationCount] = useState(0);
+  const [activeApplications, setActiveApplications] = useState<
+    Array<Application & { taskTitle: string }>
+  >([]);
+  const [nearbyTasks, setNearbyTasks] = useState<EnrichedTask[]>([]);
+  const [nearbySectionTitle, setNearbySectionTitle] = useState('Öne çıkan görevler');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const loadNearbyTasks = useCallback(async (user: BexUser | null) => {
+    const resolved = await resolveLocationFilter(user);
+
+    if (toApiCityFilter(resolved.city)) {
+      setNearbySectionTitle(
+        `Bölgedeki görevler · ${formatFilterLocationLabel(resolved.city, resolved.district)}`
+      );
+      const { tasks } = await tasksRepository.getActive(4, null, {
+        city: resolved.city,
+        district: resolved.district,
+      });
+      setNearbyTasks(tasks);
+      return;
+    }
+
+    setNearbySectionTitle('Öne çıkan görevler');
+    const featured = await tasksRepository.getFeatured(4);
+    setNearbyTasks(featured);
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -81,25 +129,39 @@ export default function HomeScreen() {
         try {
           const apps = await applicationsRepository.getActiveByUser(firebaseUser.uid);
           setActiveApplicationCount(apps.length);
+          const preview = await Promise.all(
+            apps.slice(0, 3).map(async (app) => {
+              const task = await tasksRepository.getById(app.taskId);
+              return { ...app, taskTitle: task?.title ?? 'Görev' };
+            })
+          );
+          setActiveApplications(preview);
         } catch {
           setActiveApplicationCount(0);
+          setActiveApplications([]);
         }
       } else {
         setActiveApplicationCount(0);
+        setActiveApplications([]);
       }
+
+      await loadNearbyTasks(bexUser);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [firebaseUser]);
+  }, [firebaseUser, bexUser, loadNearbyTasks]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
       authService.refreshProfile().then((fresh) => {
-        if (fresh) setBexUser(fresh);
+        if (fresh) {
+          setBexUser(fresh);
+          loadNearbyTasks(fresh);
+        }
       });
-    }, [loadData, setBexUser])
+    }, [loadData, loadNearbyTasks, setBexUser])
   );
 
   const onRefresh = () => {
@@ -124,7 +186,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scroll}
       >
         <LinearGradient
-          colors={[Colors.primary, Colors.gradientMid, Colors.primaryDark]}
+          colors={[Colors.secondary, Colors.gradientMid, '#000000']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -144,21 +206,79 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
 
-        {activeApplicationCount > 0 ? (
+        {messageUnread > 0 ? (
           <TouchableOpacity
-            style={styles.summaryCard}
+            style={styles.messageCard}
             activeOpacity={0.88}
-            onPress={() => router.push('/(tabs)/applications' as Href)}
+            onPress={() => router.push('/(tabs)/messages' as Href)}
           >
-            <View style={styles.summaryTop}>
-              <Text style={styles.summaryLabel}>Aktif başvuru</Text>
-              <View style={styles.summaryBadge}>
-                <Text style={styles.summaryBadgeText}>Canlı</Text>
-              </View>
-            </View>
-            <Text style={styles.summaryValue}>{activeApplicationCount}</Text>
-            <Text style={styles.summaryHint}>Detaylar için dokun</Text>
+            <Text style={styles.messageTitle}>
+              {messageUnread} okunmamış mesaj
+            </Text>
+            <Text style={styles.messageHint}>Sohbet sekmesine git →</Text>
           </TouchableOpacity>
+        ) : messagingUnlocked ? (
+          <TouchableOpacity
+            style={styles.messageCardMuted}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(tabs)/messages' as Href)}
+          >
+            <Text style={styles.messageTitleMuted}>Sohbetlerin hazır</Text>
+            <Text style={styles.messageHintMuted}>İşletmelerle yazış →</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {unreadCount > 0 ? (
+          <TouchableOpacity
+            style={styles.noticeCard}
+            activeOpacity={0.88}
+            onPress={openNotifications}
+          >
+            <Text style={styles.noticeTitle}>
+              {unreadCount} okunmamış bildirim
+            </Text>
+            <Text style={styles.noticeHint}>Görmek için dokun →</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {activeApplicationCount > 0 ? (
+          <View style={styles.summaryCard}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => router.push('/(tabs)/applications' as Href)}
+            >
+              <View style={styles.summaryTop}>
+                <Text style={styles.summaryLabel}>Aktif başvuru</Text>
+                <View style={styles.summaryBadge}>
+                  <Text style={styles.summaryBadgeText}>Canlı</Text>
+                </View>
+              </View>
+              <Text style={styles.summaryValue}>{activeApplicationCount}</Text>
+              <Text style={styles.summaryHint}>Tüm başvurular →</Text>
+            </TouchableOpacity>
+            {activeApplications.length > 0 ? (
+              <View style={styles.appPreviewList}>
+                {activeApplications.map((app) => (
+                  <TouchableOpacity
+                    key={app.id}
+                    style={styles.appPreviewRow}
+                    activeOpacity={0.88}
+                    onPress={() => router.push(getApplicationTarget(app))}
+                  >
+                    <View style={styles.appPreviewMeta}>
+                      <Text style={styles.appPreviewTitle} numberOfLines={1}>
+                        {app.taskTitle}
+                      </Text>
+                      <Text style={styles.appPreviewStatus}>
+                        {APPLICATION_STATUS_LABELS[app.status]}
+                      </Text>
+                    </View>
+                    <Text style={styles.appPreviewArrow}>›</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </View>
         ) : (
           <View style={styles.welcomeCard}>
             <Text style={styles.welcomeTitle}>Hoş geldin</Text>
@@ -174,6 +294,33 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {nearbyTasks.length > 0 ? (
+          <View style={styles.nearbySection}>
+            <View style={styles.nearbyHeader}>
+              <Text style={styles.sectionTitle}>{nearbySectionTitle}</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/tasks' as Href)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.seeAll}>Tümünü gör</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.nearbyList}>
+              {nearbyTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  businessName={task.businessName}
+                  businessVerified={task.businessVerified}
+                  businessIsDangerous={task.businessIsDangerous}
+                  compact
+                  onPress={() => router.push(`/task/${task.id}`)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <Text style={styles.sectionTitle}>Hızlı erişim</Text>
         <View style={styles.links}>
@@ -201,7 +348,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.surface },
+  safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     padding: Spacing[5],
     paddingTop: Spacing[2],
@@ -232,9 +379,62 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.88)',
     lineHeight: 20,
   },
+  noticeCard: {
+    padding: Spacing[4],
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: Spacing[1],
+  },
+  noticeTitle: {
+    ...Typography.labelLarge,
+    color: Colors.primaryDark,
+    fontWeight: '700',
+  },
+  noticeHint: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  messageCard: {
+    padding: Spacing[4],
+    backgroundColor: Colors.accentLight,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    gap: Spacing[1],
+  },
+  messageTitle: {
+    ...Typography.labelLarge,
+    color: Colors.accentDark,
+    fontWeight: '700',
+  },
+  messageHint: {
+    ...Typography.caption,
+    color: Colors.accentDark,
+    fontWeight: '600',
+  },
+  messageCardMuted: {
+    padding: Spacing[4],
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing[1],
+  },
+  messageTitleMuted: {
+    ...Typography.labelMedium,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  messageHintMuted: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
   summaryCard: {
     padding: Spacing[4],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -258,11 +458,27 @@ const styles = StyleSheet.create({
     color: Colors.success,
     fontWeight: '700',
   },
-  summaryValue: { ...Typography.headingLarge, color: Colors.primaryDark },
+  summaryValue: { ...Typography.headingLarge, color: Colors.primary },
   summaryHint: { ...Typography.caption, color: Colors.primary, marginTop: Spacing[1] },
+  appPreviewList: {
+    marginTop: Spacing[3],
+    gap: Spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: Spacing[3],
+  },
+  appPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  appPreviewMeta: { flex: 1, gap: 2 },
+  appPreviewTitle: { ...Typography.labelMedium, color: Colors.textPrimary },
+  appPreviewStatus: { ...Typography.caption, color: Colors.textSecondary },
+  appPreviewArrow: { fontSize: 22, color: Colors.textMuted, fontWeight: '300' },
   welcomeCard: {
     padding: Spacing[4],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -279,7 +495,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
     borderRadius: Radius.md,
   },
-  welcomeBtnText: { ...Typography.labelLarge, color: Colors.textInverse, fontWeight: '700' },
+  welcomeBtnText: { ...Typography.labelLarge, color: Colors.textOnPrimary, fontWeight: '700' },
+  nearbySection: { gap: Spacing[3] },
+  nearbyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing[2],
+  },
+  seeAll: { ...Typography.labelMedium, color: Colors.primary, fontWeight: '700' },
+  nearbyList: { gap: Spacing[3] },
   sectionTitle: {
     ...Typography.labelLarge,
     color: Colors.textPrimary,
@@ -292,7 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing[3],
     padding: Spacing[4],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,

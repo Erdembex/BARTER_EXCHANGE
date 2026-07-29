@@ -49,11 +49,29 @@ apiClient.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown, fallback = 'İstek başarısız.'): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string; error?: string } | string>;
+    const axiosError = error as AxiosError<{
+      message?: string;
+      error?: string;
+      fields?: Record<string, string>;
+      code?: string;
+    } | string>;
     const data = axiosError.response?.data;
     if (typeof data === 'string' && data.trim()) return data;
-    if (data && typeof data === 'object' && data.message) return data.message;
-    if (data && typeof data === 'object' && data.error) return data.error;
+    if (data && typeof data === 'object') {
+      if (data.fields && typeof data.fields === 'object') {
+        const parts = Object.values(data.fields).filter(Boolean);
+        if (parts.length) return parts.join(' ');
+      }
+      if (data.code === 'INTERNAL_ERROR') {
+        return 'Sunucu hatası. Backend yeniden başlatılıp tekrar denensin.';
+      }
+      if (data.message) return data.message;
+      if (data.error) return data.error;
+    }
+    if (axiosError.code === 'ECONNABORTED') return 'Sunucu yanıt vermedi. Backend çalışıyor mu?';
+    if (!axiosError.response) {
+      return 'Sunucuya bağlanılamadı. Aynı WiFi ve backend (8080) açık mı kontrol et.';
+    }
     if (axiosError.message) return axiosError.message;
   }
   if (error instanceof Error && error.message) return error.message;

@@ -16,6 +16,7 @@ import { AUTH_HOME_ROUTE } from '@/lib/authRouting';
 import { UserRole } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input, BexLogo } from '@/components/ui';
+import { LocationPicker } from '@/components/common/LocationPicker';
 
 const ROLES: { id: UserRole; label: string; desc: string; emoji: string }[] = [
   {
@@ -39,6 +40,8 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('user');
+  const [city, setCity] = useState('İstanbul');
+  const [district, setDistrict] = useState('Kadıköy');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -57,6 +60,12 @@ export default function RegisterScreen() {
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Şifreler eşleşmiyor.';
     }
+    if (!city.trim()) {
+      newErrors.location = 'Şehir seçmelisin.';
+    }
+    if (!district.trim()) {
+      newErrors.location = 'İlçe seçmelisin.';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -74,6 +83,8 @@ export default function RegisterScreen() {
         password,
         displayName: displayName.trim(),
         role,
+        city,
+        district,
       });
 
       const profile = await authService.getUserDocument(user.uid, {
@@ -161,6 +172,19 @@ export default function RegisterScreen() {
               ))}
             </View>
           </View>
+
+          <LocationPicker
+            city={city}
+            district={district}
+            onCityChange={setCity}
+            onDistrictChange={setDistrict}
+            error={errors.location}
+          />
+          {role === 'business' ? (
+            <Text style={styles.locationNote}>
+              İl ve ilçeyi listeden seç veya konumunu kullan. İşletme ilanların bu konumda listelenir.
+            </Text>
+          ) : null}
 
           {/* Form */}
           <View style={styles.form}>
@@ -281,6 +305,11 @@ const styles = StyleSheet.create({
   },
   roleSection: {
     gap: Spacing[3],
+  },
+  locationNote: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: -Spacing[2],
   },
   sectionLabel: {
     ...Typography.labelMedium,

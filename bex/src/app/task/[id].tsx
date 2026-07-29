@@ -19,7 +19,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Application, Business } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
-import { formatDeadline, getDifficultyColor } from '@/lib/taskUtils';
+import { formatDeadline, getDifficultyColor, isTaskOpenForApplications } from '@/lib/taskUtils';
 import { TaskCard } from '@/components/tasks';
 import { TaskDetailSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Button } from '@/components/ui';
@@ -77,11 +77,19 @@ export default function TaskDetailScreen() {
       return;
     }
 
+    if (!isTaskOpenForApplications(task)) {
+      return;
+    }
+
     router.push(`/task/apply/${task.id}`);
   };
 
+  const taskOpen = task ? isTaskOpenForApplications(task) : false;
+
   const primaryLabel = (() => {
-    if (!existingApp) return 'Başvur';
+    if (!existingApp) {
+      return taskOpen ? 'Başvur' : 'Süresi doldu';
+    }
     if (existingApp.status === 'rewarded') return 'Kuponumu Gör';
     if (existingApp.status === 'approved') return 'Görevi Teslim Et';
     return `Başvurum: ${APPLICATION_STATUS_LABELS[existingApp.status]}`;
@@ -133,6 +141,12 @@ export default function TaskDetailScreen() {
           <Text style={styles.meta}>{formatDeadline(task.deadline)}</Text>
         </View>
 
+        {task.locationLabel ? (
+          <View style={styles.locationRow}>
+            <Text style={styles.locationText}>📍 {task.locationLabel}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.rewardBox}>
           <Text style={styles.rewardLabel}>Kazanılacak Ödül</Text>
           <Text style={styles.rewardValue}>🎁 {task.rewardDescription}</Text>
@@ -180,13 +194,24 @@ export default function TaskDetailScreen() {
           </View>
         </View>
 
+        {!existingApp && !taskOpen ? (
+          <Text style={styles.expiredHint}>
+            Bu görevin başvuru süresi doldu. Benzer görevlere göz atabilirsin.
+          </Text>
+        ) : null}
+
         {existingApp && existingApp.status !== 'approved' && existingApp.status !== 'rewarded' ? (
           <Text style={styles.appHint}>
             Bu göreve zaten başvurdun — durumunu takip edebilirsin.
           </Text>
         ) : null}
 
-        <Button title={primaryLabel} onPress={handlePrimaryAction} />
+        <Button
+          title={primaryLabel}
+          onPress={handlePrimaryAction}
+          disabled={!existingApp && !taskOpen}
+          variant={!existingApp && !taskOpen ? 'outline' : 'primary'}
+        />
 
         {similar.length > 0 && (
           <View style={styles.similarSection}>
@@ -231,6 +256,16 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: Spacing[2], paddingVertical: 3, borderRadius: Radius.sm },
   badgeText: { ...Typography.caption, fontWeight: '700' },
   meta: { ...Typography.caption, color: Colors.textTertiary },
+  locationRow: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+  },
+  locationText: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '600' },
   rewardBox: {
     backgroundColor: Colors.primaryLight,
     padding: Spacing[5],
@@ -288,6 +323,12 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     marginBottom: -Spacing[2],
+  },
+  expiredHint: {
+    ...Typography.bodySmall,
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: Spacing[2],
   },
   similarSection: { gap: Spacing[3], marginTop: Spacing[2] },
 });

@@ -31,6 +31,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         WHERE l.status = 'ACTIVE'
           AND b.businessName NOT LIKE 'Test Cafe%'
           AND u.email NOT LIKE '%@test.dev'
+          AND (l.expiresAt IS NULL OR l.expiresAt > :now)
           AND (:city IS NULL OR b.city = :city)
           AND (:district IS NULL OR b.district = :district)
           AND (:#{#skills == null || #skills.isEmpty()} = true OR s.skill IN :skills)
@@ -41,6 +42,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         @Param("city") String city,
         @Param("district") String district,
         @Param("skills") List<Skill> skills,
+        @Param("now") Instant now,
         @Param("cursor") Instant cursor,
         Pageable pageable);
 

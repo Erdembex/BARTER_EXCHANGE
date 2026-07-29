@@ -26,6 +26,12 @@ import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 
+const QR_SIZE = 240;
+const QR_QUIET_ZONE = 12;
+/** QR okuyucular için yüksek kontrast — tema rengi (#FAFAFA) kullanılmaz */
+const QR_FOREGROUND = '#000000';
+const QR_BACKGROUND = '#FFFFFF';
+
 interface CouponQrModalProps {
   coupon: Coupon | null;
   businessName?: string;
@@ -168,9 +174,11 @@ export function CouponQrModal({
                   <View style={styles.qrWrap}>
                     <QRCode
                       value={qrValue}
-                      size={220}
-                      color={Colors.textPrimary}
-                      backgroundColor={Colors.white}
+                      size={QR_SIZE}
+                      color={QR_FOREGROUND}
+                      backgroundColor={QR_BACKGROUND}
+                      quietZone={QR_QUIET_ZONE}
+                      ecl="M"
                     />
                   </View>
                   <Text style={styles.hint}>
@@ -282,11 +290,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   qrWrap: {
-    padding: Spacing[4],
-    backgroundColor: Colors.white,
+    padding: Spacing[3],
+    backgroundColor: QR_BACKGROUND,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: QR_SIZE + QR_QUIET_ZONE * 2 + Spacing[3] * 2,
+    minHeight: QR_SIZE + QR_QUIET_ZONE * 2 + Spacing[3] * 2,
   },
   hint: { ...Typography.bodySmall, color: Colors.textSecondary, textAlign: 'center' },
   qrErrorBox: { alignItems: 'center', gap: Spacing[3], padding: Spacing[4] },

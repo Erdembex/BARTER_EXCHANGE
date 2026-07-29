@@ -181,11 +181,18 @@ function mapApplicationsError(error: unknown, fallback: string): Error & { code?
 export { hasRestAuthSession, isBackendId };
 
 /** POST /api/individual/applications */
+function buildCoverLetter(input: CreateApplication): string {
+  const letter = input.coverLetter.trim();
+  const portfolioUrl = input.portfolioUrl?.trim();
+  if (!portfolioUrl) return letter;
+  return `${letter}\n\nPortföy bağlantısı: ${portfolioUrl}`;
+}
+
 export async function applyToListing(input: CreateApplication): Promise<string> {
   try {
     const { data } = await apiClient.post<ApplicationDto>('/api/individual/applications', {
       listingId: input.taskId,
-      coverLetter: input.coverLetter,
+      coverLetter: buildCoverLetter(input),
     });
     return String(data.applicationId);
   } catch (error) {

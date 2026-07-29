@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Colors, theme } from '@/theme';
 import { initAppCheck } from '@/lib/appCheck';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
+import { BackendStatusBanner } from '@/components/common/BackendStatusBanner';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { ToastProvider } from '@/components/common/Toast';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -54,8 +55,9 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <ToastProvider>
-              <StatusBar style="dark" backgroundColor={Colors.background} />
+              <StatusBar style="light" backgroundColor={Colors.background} />
               <OfflineBanner />
+              <BackendStatusBanner />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
@@ -68,6 +70,7 @@ export default function RootLayout() {
                 <Stack.Screen name="application" />
                 <Stack.Screen name="notifications/index" />
                 <Stack.Screen name="setup-guide" />
+                <Stack.Screen name="expo-test-guide" />
                 <Stack.Screen name="settings" />
                 <Stack.Screen name="user/[id]" />
               </Stack>

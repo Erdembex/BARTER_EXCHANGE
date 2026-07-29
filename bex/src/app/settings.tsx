@@ -13,12 +13,15 @@ import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
 import { isAuthEmulatorActive } from '@/lib/firebase';
+import { API_BASE_URL } from '@/lib/api/config';
+import { useBackendHealth } from '@/hooks/useBackendHealth';
 import { AccountSettings } from '@/components/profile/AccountSettings';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
 
 export default function SettingsScreen() {
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
+  const { reachable } = useBackendHealth();
 
   useFocusEffect(
     useCallback(() => {
@@ -56,6 +59,12 @@ export default function SettingsScreen() {
         />
 
         <Button
+          title="Expo Test Rehberi"
+          variant="primary"
+          onPress={() => router.push('/expo-test-guide' as Href)}
+        />
+
+        <Button
           title="Yayın Checklist"
           variant="outline"
           onPress={() => router.push('/setup-guide' as Href)}
@@ -66,9 +75,17 @@ export default function SettingsScreen() {
         <View style={styles.meta}>
           <Text style={styles.metaText}>BEX v{appVersion}</Text>
           {__DEV__ && (
-            <Text style={styles.metaText}>
-              {isAuthEmulatorActive() ? 'Emulator · demo veri' : 'Canlı Firebase'}
-            </Text>
+            <>
+              <Text style={styles.metaText}>
+                {isAuthEmulatorActive() ? 'Emulator · demo veri' : 'REST · canlı API'}
+              </Text>
+              <Text style={styles.metaText}>API: {API_BASE_URL}</Text>
+              {!isAuthEmulatorActive() && reachable !== null ? (
+                <Text style={styles.metaText}>
+                  Sunucu: {reachable ? 'erişilebilir' : 'ulaşılamıyor'}
+                </Text>
+              ) : null}
+            </>
           )}
         </View>
       </ScrollView>

@@ -64,7 +64,12 @@ export default function OnboardingScreen() {
       router.replace('/(auth)/login');
       return;
     }
-    flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+    const nextIndex = activeIndex + 1;
+    flatListRef.current?.scrollToOffset({
+      offset: width * nextIndex,
+      animated: true,
+    });
+    setActiveIndex(nextIndex);
   };
 
   const skip = () => {
@@ -90,6 +95,18 @@ export default function OnboardingScreen() {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           bounces={false}
+          style={styles.slideList}
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+          onScrollToIndexFailed={({ index }) => {
+            flatListRef.current?.scrollToOffset({
+              offset: width * index,
+              animated: true,
+            });
+          }}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
           renderItem={({ item }) => (
@@ -159,6 +176,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   container: {
+    flex: 1,
+  },
+  slideList: {
     flex: 1,
   },
   skip: {

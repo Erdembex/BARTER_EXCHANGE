@@ -12,6 +12,8 @@ export interface BexUser {
   phone: string;
   phoneVerified: boolean;
   avatarUrl: string;
+  city?: string;
+  district?: string;
   reputationScore: number;
   completedTaskCount: number;
   portfolioItems: PortfolioItem[];
@@ -223,6 +225,7 @@ export interface ApplicationMessage {
   senderRole: UserRole;
   text: string;
   createdAt: Timestamp;
+  isRead?: boolean;
 }
 
 // ─── Auth form ───────────────────────────────────────────────
@@ -232,6 +235,8 @@ export interface AuthFormData {
   displayName?: string;
   role?: UserRole;
   phone?: string;
+  city?: string;
+  district?: string;
 }
 
 // ─── Firestore koleksiyon isimleri ───────────────────────────

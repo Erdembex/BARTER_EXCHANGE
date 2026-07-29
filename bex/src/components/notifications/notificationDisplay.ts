@@ -9,7 +9,7 @@ const VISUALS: Record<NotificationType, NotificationVisual> = {
   application_approved: { icon: '✓', tint: '#166534' },
   application_rejected: { icon: '✕', tint: '#991B1B' },
   coupon_issued: { icon: '🎟', tint: '#7C3AED' },
-  message: { icon: '💬', tint: '#2563EB' },
+  message: { icon: '💬', tint: '#FACC15' },
   trade_offer_received: { icon: '↔', tint: '#B45309' },
   trade_offer_accepted: { icon: '✓', tint: '#166534' },
   trade_offer_rejected: { icon: '↩', tint: '#6B7280' },

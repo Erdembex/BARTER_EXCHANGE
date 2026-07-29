@@ -22,6 +22,7 @@ import {
 import {
   getBusinessAnalytics,
 } from '@/features/business/businessAnalyticsService';
+import { useMessagingInbox } from '@/hooks/useMessagingInbox';
 import { StatCard } from '@/components/business';
 import { Button } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
@@ -30,8 +31,10 @@ import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
 export default function BusinessDashboardScreen() {
   const { bexUser, signOut } = useAuthStore();
   const { business, loading, reload } = useBusiness();
+  const { totalUnread: messageUnread, isUnlocked: messagingUnlocked } = useMessagingInbox('business');
   const [stats, setStats] = useState({
-    pendingApps: 0,
+    newApplications: 0,
+    inProgressApps: 0,
     activeTasks: 0,
     pendingApproval: 0,
     completedTasks: 0,
@@ -46,8 +49,9 @@ export default function BusinessDashboardScreen() {
       getBusinessAnalytics(business.id).catch(() => null),
     ]);
     setStats({
-      pendingApps: apps.filter((a) =>
-        ['pending', 'approved', 'submitted', 'submission_approved'].includes(a.status)
+      newApplications: apps.filter((a) => a.status === 'pending').length,
+      inProgressApps: apps.filter((a) =>
+        ['approved', 'submitted', 'submission_approved'].includes(a.status)
       ).length,
       activeTasks: analytics?.activeTasks ?? tasks.filter((t) => t.status === 'active').length,
       pendingApproval:
@@ -92,7 +96,7 @@ export default function BusinessDashboardScreen() {
         }
       >
         <LinearGradient
-          colors={[Colors.primary, Colors.gradientMid, Colors.primaryDark]}
+          colors={[Colors.secondary, Colors.gradientMid, '#000000']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -114,17 +118,70 @@ export default function BusinessDashboardScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
+        {messageUnread > 0 ? (
+          <TouchableOpacity
+            style={styles.messageCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/messages' as Href)}
+          >
+            <Text style={styles.messageTitle}>{messageUnread} okunmamış mesaj</Text>
+            <Text style={styles.messageHint}>Sohbet sekmesine git →</Text>
+          </TouchableOpacity>
+        ) : messagingUnlocked ? (
+          <TouchableOpacity
+            style={styles.messageCardMuted}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/messages' as Href)}
+          >
+            <Text style={styles.messageTitleMuted}>Adaylarla sohbet et</Text>
+            <Text style={styles.messageHintMuted}>Onaylı başvurulardan yaz →</Text>
+          </TouchableOpacity>
+        ) : null}
+
         <View style={styles.statsRow}>
-          <StatCard label="Bekleyen başvuru" value={stats.pendingApps} emoji="📥" />
-          <StatCard label="Aktif görev" value={stats.activeTasks} emoji="🎯" />
+          <StatCard
+            label="Yeni başvuru"
+            value={stats.newApplications}
+            emoji="📥"
+            onPress={() => router.push('/(business)/applications' as Href)}
+          />
+          <StatCard
+            label="Devam eden"
+            value={stats.inProgressApps}
+            emoji="💬"
+            onPress={() => router.push('/(business)/applications' as Href)}
+          />
         </View>
         <View style={styles.statsRow}>
-          <StatCard label="Admin onayı bekleyen" value={stats.pendingApproval} emoji="⏳" />
+          <StatCard
+            label="Aktif görev"
+            value={stats.activeTasks}
+            emoji="🎯"
+            onPress={() => router.push('/(business)/tasks' as Href)}
+          />
+          <StatCard
+            label="Admin onayı bekleyen"
+            value={stats.pendingApproval}
+            emoji="⏳"
+            onPress={() => router.push('/(business)/tasks' as Href)}
+          />
+        </View>
+        <View style={styles.statsRow}>
           <StatCard label="Tamamlanan görev" value={stats.completedTasks} emoji="✅" />
+          <View style={styles.statSpacer} />
         </View>
 
         <Text style={styles.sectionTitle}>Hızlı erişim</Text>
         <View style={styles.quickGrid}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            activeOpacity={0.88}
+            onPress={() => router.push('/(business)/messages' as Href)}
+          >
+            <Text style={styles.quickIcon}>💬</Text>
+            <Text style={styles.quickLabel}>Sohbet</Text>
+            <Text style={styles.quickHint}>Aday mesajları</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
             activeOpacity={0.88}
@@ -244,7 +301,7 @@ const styles = StyleSheet.create({
   name: { ...Typography.headingMedium, color: Colors.textInverse, fontWeight: '700' },
   verified: {
     ...Typography.caption,
-    color: '#BBF7D0',
+    color: Colors.primary,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -255,11 +312,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
   },
   logoutText: { ...Typography.labelMedium, color: Colors.textInverse },
+  messageCard: {
+    padding: Spacing[4],
+    backgroundColor: Colors.accentLight,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    gap: Spacing[1],
+  },
+  messageTitle: {
+    ...Typography.labelLarge,
+    color: Colors.accentDark,
+    fontWeight: '700',
+  },
+  messageHint: {
+    ...Typography.caption,
+    color: Colors.accentDark,
+    fontWeight: '600',
+  },
+  messageCardMuted: {
+    padding: Spacing[4],
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing[1],
+  },
+  messageTitleMuted: {
+    ...Typography.labelMedium,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  messageHintMuted: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing[3],
     marginBottom: Spacing[3],
   },
+  statSpacer: { flex: 1 },
   sectionTitle: {
     ...Typography.labelLarge,
     color: Colors.textPrimary,

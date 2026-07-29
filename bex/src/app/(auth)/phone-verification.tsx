@@ -221,7 +221,14 @@ export default function PhoneVerificationScreen() {
                     Şimdilik atlayabilirsin.
                   </Text>
                 </View>
-              ) : null}
+              ) : (
+                <View style={styles.hintBox}>
+                  <Text style={styles.hintText}>
+                    Backend doğrulama aktif. SMS henüz bağlı değil; geliştirmede kod ekranda
+                    gösterilir.
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.form}>
                 {error ? (
@@ -273,6 +280,10 @@ export default function PhoneVerificationScreen() {
                     Authentication).
                     {devCode ? `\n\nTest kodu: ${devCode}` : ''}
                   </Text>
+                </View>
+              ) : devCode ? (
+                <View style={styles.hintBox}>
+                  <Text style={styles.hintText}>Geliştirme kodu: {devCode}</Text>
                 </View>
               ) : null}
 

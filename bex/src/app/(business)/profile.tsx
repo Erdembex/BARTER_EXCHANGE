@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/features/auth/authService';
+import { fetchBusinessProfile } from '@/features/auth/authApi';
 import { useBusiness } from '@/features/business/useBusiness';
+import { LocationPicker } from '@/components/common/LocationPicker';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { AccountSettings } from '@/components/profile/AccountSettings';
 import { AppHeader } from '@/components/navigation/AppHeader';
@@ -26,7 +28,20 @@ import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessProfileScreen() {
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
-  const { business, loading } = useBusiness();
+  const { business, loading, reload } = useBusiness();
+  const [city, setCity] = useState('İstanbul');
+  const [district, setDistrict] = useState('');
+  const [savingLocation, setSavingLocation] = useState(false);
+  const [locationMessage, setLocationMessage] = useState('');
+
+  useEffect(() => {
+    fetchBusinessProfile()
+      .then((profile) => {
+        if (profile.city) setCity(profile.city);
+        if (profile.district) setDistrict(profile.district);
+      })
+      .catch(() => {});
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,6 +51,20 @@ export default function BusinessProfileScreen() {
       });
     }, [firebaseUser, setBexUser])
   );
+
+  const handleSaveLocation = async () => {
+    setSavingLocation(true);
+    setLocationMessage('');
+    try {
+      await authService.updateBusinessLocation(city, district);
+      setLocationMessage('Konum güncellendi. Yeni ilanların bu konumda listelenir.');
+      reload();
+    } catch {
+      setLocationMessage('Konum kaydedilemedi. Şehir ve ilçe seç.');
+    } finally {
+      setSavingLocation(false);
+    }
+  };
 
   const handleLogout = async () => {
     await authService.logout();
@@ -85,6 +114,28 @@ export default function BusinessProfileScreen() {
                 >
                   <Text style={styles.link}>Herkese açık işletme sayfası →</Text>
                 </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <View style={styles.locationCard}>
+              <Text style={styles.businessCardTitle}>İşletme konumu</Text>
+              <Text style={styles.locationHint}>
+                İlanların keşfet ekranında bu il ve ilçede görünür. Listeden seç veya konumunu kullan.
+              </Text>
+              <LocationPicker
+                city={city}
+                district={district}
+                onCityChange={setCity}
+                onDistrictChange={setDistrict}
+              />
+              <Button
+                title="Konumu Kaydet"
+                onPress={handleSaveLocation}
+                loading={savingLocation}
+                variant="secondary"
+              />
+              {locationMessage ? (
+                <Text style={styles.locationMessage}>{locationMessage}</Text>
               ) : null}
             </View>
 
@@ -195,6 +246,24 @@ const styles = StyleSheet.create({
   quickLinks: {
     width: '100%',
     gap: Spacing[3],
+  },
+  locationCard: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing[4],
+    gap: Spacing[3],
+  },
+  locationHint: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  locationMessage: {
+    ...Typography.caption,
+    color: Colors.primary,
   },
   meta: { alignItems: 'center', gap: Spacing[1], marginTop: Spacing[2] },
   metaText: { ...Typography.caption, color: Colors.textTertiary },

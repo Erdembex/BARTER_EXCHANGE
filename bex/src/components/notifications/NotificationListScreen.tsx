@@ -122,7 +122,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
 
   return (
     <SafeAreaView style={styles.safe}>
-      {!showBack ? <AppHeader title="Bildirimler" /> : null}
+      {!showBack ? <AppHeader title="Bildirimler" showNotifications={false} /> : null}
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}

@@ -14,6 +14,13 @@ type ConversationDto = {
   createdAt?: string;
 };
 
+export type InboxConversation = {
+  conversationId: string;
+  applicationId: string;
+  unreadCount: number;
+  createdAt: Timestamp;
+};
+
 type MessageDto = {
   id: string;
   conversationId?: string;
@@ -60,6 +67,7 @@ function mapMessage(
     senderRole,
     text: dto.content?.trim() ?? '',
     createdAt: toTimestamp(dto.createdAt),
+    isRead: dto.isRead ?? false,
   };
 }
 
@@ -79,6 +87,31 @@ export async function usesConversationsRest(): Promise<boolean> {
   return hasRestAuthSession();
 }
 
+/** Gelen kutusu — GET /api/conversations */
+export async function fetchInbox(): Promise<InboxConversation[]> {
+  try {
+    const { data } = await apiClient.get<ConversationDto[]>('/api/conversations');
+    return (Array.isArray(data) ? data : [])
+      .filter((row) => row.applicationId && row.id)
+      .map((row) => ({
+        conversationId: String(row.id),
+        applicationId: String(row.applicationId),
+        unreadCount: row.unreadCount ?? 0,
+        createdAt: toTimestamp(row.createdAt),
+      }));
+  } catch (error) {
+    throw mapMessagesError(error, 'Sohbetler yüklenemedi.');
+  }
+}
+
+export async function markConversationRead(conversationId: string): Promise<void> {
+  try {
+    await apiClient.patch(`/api/conversations/${conversationId}/read`);
+  } catch {
+    // Okundu işareti kritik değil
+  }
+}
+
 export async function fetchConversationParticipants(
   applicationId: string
 ): Promise<{ businessUserId: string; individualUserId: string } | null> {
@@ -95,7 +128,7 @@ export async function fetchConversationParticipants(
   }
 }
 
-async function resolveConversationId(applicationId: string): Promise<string | null> {
+export async function resolveConversationId(applicationId: string): Promise<string | null> {
   const cached = conversationCache.get(applicationId);
   if (cached) return cached;
 

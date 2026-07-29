@@ -83,8 +83,24 @@ export default function CreateTaskScreen() {
     else handleSubmit();
   };
 
+  const validateAll = (): boolean => {
+    if (form.title.trim().length < 5) {
+      setError('Başlık en az 5 karakter olmalı.');
+      return false;
+    }
+    if (form.description.trim().length < 20) {
+      setError('Açıklama en az 20 karakter olmalı.');
+      return false;
+    }
+    if (!form.rewardDescription.trim()) {
+      setError('Ödül açıklaması gerekli.');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
-    if (!business) return;
+    if (!business || !validateAll()) return;
     setLoading(true);
     setError('');
 
@@ -128,8 +144,17 @@ export default function CreateTaskScreen() {
           },
         ]
       );
-    } catch {
-      setError('Görev oluşturulamadı. Tekrar dene.');
+    } catch (err: unknown) {
+      let message =
+        err instanceof Error ? err.message : 'Görev oluşturulamadı. Tekrar dene.';
+      if (/plan limit|aktif görev/i.test(message)) {
+        message +=
+          ' İşletme paneli → Görevlerim → eski bir görevde Kapat.';
+      }
+      if (__DEV__) {
+        console.error('[create-task] submit failed:', err);
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -156,6 +181,15 @@ export default function CreateTaskScreen() {
 
           {step === 0 && (
             <View style={styles.section}>
+              {business?.address ? (
+                <View style={styles.locationBanner}>
+                  <Text style={styles.locationBannerTitle}>📍 İlan konumu</Text>
+                  <Text style={styles.locationBannerText}>{business.address}</Text>
+                  <Text style={styles.locationBannerHint}>
+                    İlan bu konumda listelenir. Profil → İşletme konumu ile değiştirebilirsin.
+                  </Text>
+                </View>
+              ) : null}
               <Input
                 label="Görev başlığı"
                 value={form.title}
@@ -314,6 +348,29 @@ const styles = StyleSheet.create({
   screenTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
   section: { gap: Spacing[1] },
+  locationBanner: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.md,
+    padding: Spacing[4],
+    marginBottom: Spacing[4],
+    gap: Spacing[1],
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+  },
+  locationBannerTitle: {
+    ...Typography.labelMedium,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  locationBannerText: {
+    ...Typography.bodyMedium,
+    color: Colors.textPrimary,
+  },
+  locationBannerHint: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
   fieldLabel: {
     ...Typography.labelMedium,
     color: Colors.textPrimary,

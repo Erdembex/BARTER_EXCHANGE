@@ -9,6 +9,7 @@ import com.takkas.modules.subscription.exception.*;
 import com.takkas.modules.subscription.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,10 @@ public class FeatureGateService {
     private static final String PLAN_CACHE_KEY = "plan:features:%s";
     private static final Duration CACHE_TTL = Duration.ofHours(6);
 
+    /** Dev profilde test kolaylığı için (ör. application-dev.yml → 10) */
+    @Value("${app.subscription.max-active-listings-override:}")
+    private String maxActiveListingsOverride;
+
     public void checkLimit(UUID businessId, FeatureKey featureKey, int currentCount) {
         String value = getFeatureValue(businessId, featureKey);
         if ("unlimited".equalsIgnoreCase(value)) return;
@@ -37,7 +42,9 @@ public class FeatureGateService {
             int limit = Integer.parseInt(value);
             if (currentCount >= limit)
                 throw new PlanLimitExceededException(featureKey, limit,
-                    "Plan limitinize ulaştınız. Daha fazlası için planınızı yükseltin.");
+                    "Ücretsiz planda en fazla %d aktif görev yayınlayabilirsiniz. "
+                        .formatted(limit)
+                        + "Görevlerim sekmesinden eski bir görevi kapatın veya planınızı yükseltin.");
         } catch (NumberFormatException e) {
             log.error("[FeatureGateService] Geçersiz limit: key={} value={}", featureKey, value);
             throw new IllegalStateException(
@@ -74,17 +81,26 @@ public class FeatureGateService {
             // Abonelik atanmamış işletmeler için varsayılan ücretsiz katman limitleri.
             // Tüm özellikler kısıtlı; plan satın alınmadan erişim sağlanamaz.
             log.debug("[FeatureGateService] Abonelik bulunamadı, ücretsiz katman limitleri uygulanıyor: businessId={} key={}", businessId, featureKey);
-            return getFreeTierValue(featureKey);
+            return applyDevOverride(featureKey, getFreeTierValue(featureKey));
         }
         var sub = subOpt.get();
         // İptal edilmiş veya süresi geçmiş abonelikler için ücretsiz katman
         if (sub.getStatus() == SubscriptionStatus.CANCELLED) {
-            return getFreeTierValue(featureKey);
+            return applyDevOverride(featureKey, getFreeTierValue(featureKey));
         }
         String planName = sub.getPlan().getName();
         Map<String, String> cached = getCachedFeatures(planName);
-        if (cached != null) return cached.getOrDefault(featureKey.name(), "false");
-        return loadAndCacheFeatures(planName).getOrDefault(featureKey.name(), "false");
+        if (cached != null) {
+            return applyDevOverride(featureKey, cached.getOrDefault(featureKey.name(), "false"));
+        }
+        return applyDevOverride(featureKey,
+            loadAndCacheFeatures(planName).getOrDefault(featureKey.name(), "false"));
+    }
+
+    private String applyDevOverride(FeatureKey featureKey, String value) {
+        if (featureKey != FeatureKey.MAX_ACTIVE_LISTINGS) return value;
+        if (maxActiveListingsOverride == null || maxActiveListingsOverride.isBlank()) return value;
+        return maxActiveListingsOverride;
     }
 
     /**
@@ -93,7 +109,7 @@ public class FeatureGateService {
      */
     private String getFreeTierValue(FeatureKey featureKey) {
         return switch (featureKey) {
-            case MAX_ACTIVE_LISTINGS         -> "1";
+            case MAX_ACTIVE_LISTINGS         -> "2";
             case MAX_UNDER_REVIEW_PER_LISTING -> "3";
             case CAN_FEATURE_LISTING         -> "false";
             case CAN_SEE_APPLICANT_CONTACTS  -> "false";

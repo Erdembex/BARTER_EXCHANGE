@@ -173,7 +173,8 @@ export async function sendPhoneVerificationCode(phoneInput: string): Promise<str
     if (!(await hasRestAuthSession())) {
       throw Object.assign(new Error('not-authenticated'), { code: 'not-authenticated' });
     }
-    await sendRestPhoneCode(phoneNumber);
+    const devCode = await sendRestPhoneCode(phoneNumber);
+    pendingDevCode = devCode;
     return phoneNumber;
   }
 

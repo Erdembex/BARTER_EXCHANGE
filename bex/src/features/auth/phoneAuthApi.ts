@@ -26,11 +26,15 @@ function mapPhoneError(error: unknown, fallback: string): Error & { code?: strin
   return Object.assign(new Error(fallback), { code: 'auth/unknown' });
 }
 
-/** POST /api/auth/phone/send-code */
-export async function sendRestPhoneCode(phone: string): Promise<void> {
+/** POST /api/auth/phone/send-code — geliştirmede devCode dönebilir */
+export async function sendRestPhoneCode(phone: string): Promise<string | null> {
   try {
-    await apiClient.post('/api/auth/phone/send-code', { phone });
+    const { data } = await apiClient.post<{ devCode?: string }>(
+      '/api/auth/phone/send-code',
+      { phone }
+    );
     pendingRestPhone = phone;
+    return data?.devCode?.trim() || null;
   } catch (error) {
     throw mapPhoneError(error, 'Doğrulama kodu gönderilemedi.');
   }

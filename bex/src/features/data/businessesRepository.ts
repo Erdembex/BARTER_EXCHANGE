@@ -20,6 +20,7 @@ import {
   updateListing,
 } from '../listing/listingsApi';
 import { isBackendId } from '@/lib/api/backendId';
+import { toApiCityFilter, toApiDistrictFilter } from '@/lib/locationFilterUtils';
 import { hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import {
   fetchOwnBusinessProfile,
@@ -31,6 +32,7 @@ export type EnrichedTask = Task & {
   businessVerified?: boolean;
   businessIsDangerous?: boolean;
   businessComplaintListed?: boolean;
+  locationLabel?: string;
 };
 
 function asEnriched(tasks: EnrichedTask[]): EnrichedTask[] {
@@ -82,7 +84,7 @@ export const tasksRepository = {
   async getActive(
     pageSize = 10,
     cursor?: QueryDocumentSnapshot<DocumentData> | string | null,
-    filters?: { city?: string; category?: TaskCategory | null }
+    filters?: { city?: string; district?: string; category?: TaskCategory | null }
   ): Promise<{
     tasks: EnrichedTask[];
     lastDoc: QueryDocumentSnapshot<DocumentData> | null;
@@ -100,7 +102,8 @@ export const tasksRepository = {
         const page = await discoverListings({
           pageSize,
           cursor: restCursor,
-          city: filters?.city?.trim() || undefined,
+          city: toApiCityFilter(filters?.city),
+          district: toApiDistrictFilter(filters?.city, filters?.district),
           skills,
         });
         return {

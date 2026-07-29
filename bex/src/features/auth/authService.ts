@@ -18,6 +18,7 @@ import { refreshAccessToken } from '../../lib/auth/authTokenRefresh';
 import { uploadLocalFiles } from '../../lib/storageUpload';
 import { resolveMediaUrl } from '../../lib/mediaUrl';
 import { fetchMyPublicProfile } from '../portfolio/publicProfileApi';
+import { notificationService } from '../notifications/notificationService';
 
 export type { AuthSession } from './authTypes';
 
@@ -39,6 +40,7 @@ export function getAuthErrorMessage(code: string): string {
     'auth/same-password': 'Yeni şifre mevcut şifre ile aynı olamaz.',
     'invalid-name': 'Ad en az 2 karakter olmalı.',
     'invalid-username': 'Kullanıcı adı 3-30 karakter olmalı (a-z, 0-9, _).',
+    'invalid-location': 'Şehir ve ilçe seçmelisin.',
   };
   return map[code] ?? `Bilinmeyen hata (${code})`;
 }
@@ -74,6 +76,8 @@ function mapProfileToBexUser(
     verified?: boolean;
     completedTaskCount?: number;
     reputationScore?: number;
+    city?: string;
+    district?: string;
   }
 ): BexUser {
   const email = session.email ?? '';
@@ -87,6 +91,8 @@ function mapProfileToBexUser(
     phone: profile.phone ?? '',
     phoneVerified: profile.phoneVerified ?? false,
     avatarUrl: profile.avatarUrl ?? '',
+    city: profile.city,
+    district: profile.district,
     reputationScore: profile.reputationScore ?? 0,
     completedTaskCount: profile.completedTaskCount ?? 0,
     portfolioItems: [],
@@ -126,6 +132,8 @@ async function fetchProfileForSession(
         phoneVerified: profile.phoneVerified ?? false,
         avatarUrl: resolveMediaUrl(profile.logoUrl ?? ''),
         verified: profile.verified,
+        city: profile.city,
+        district: profile.district,
       });
     }
 
@@ -146,6 +154,8 @@ async function fetchProfileForSession(
       phone: profile.phone ?? '',
       phoneVerified: profile.phoneVerified ?? false,
       avatarUrl: resolveMediaUrl(profile.avatarUrl ?? ''),
+      city: profile.city,
+      district: profile.district,
       completedTaskCount,
       reputationScore: completedTaskCount,
     });
@@ -180,8 +190,10 @@ export const authService = {
   },
 
   async register(data: AuthFormData): Promise<{ user: AuthSession }> {
-    const { email, password, displayName, role = 'user' } = data;
+    const { email, password, displayName, role = 'user', city, district } = data;
     const name = (displayName ?? '').trim();
+    const resolvedCity = city?.trim() || 'İstanbul';
+    const resolvedDistrict = district?.trim() || 'Kadıköy';
 
     const authResponse =
       role === 'business'
@@ -190,15 +202,15 @@ export const authService = {
             password,
             businessName: name,
             category: 'OTHER',
-            city: 'İstanbul',
-            district: 'Merkez',
+            city: resolvedCity,
+            district: resolvedDistrict,
           })
         : await registerIndividualRequest({
             email,
             password,
             fullName: name,
-            city: 'İstanbul',
-            district: 'Merkez',
+            city: resolvedCity,
+            district: resolvedDistrict,
             skills: ['OTHER'],
           });
 
@@ -213,16 +225,18 @@ export const authService = {
   },
 
   async logout() {
+    await notificationService.unregisterPushToken();
     const refreshToken = (await loadTokens())?.refreshToken;
     if (refreshToken) {
       await logoutRequest(refreshToken);
     }
     await clearTokens();
+    notificationService.resetSession();
   },
 
-  async resetPassword(email: string) {
+  async resetPassword(email: string): Promise<{ devResetToken?: string }> {
     const { forgotPasswordRequest } = await import('./authApi');
-    await forgotPasswordRequest(email);
+    return forgotPasswordRequest(email);
   },
 
   async completePasswordReset(token: string, newPassword: string) {
@@ -233,6 +247,50 @@ export const authService = {
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     const { changePasswordRequest } = await import('./authApi');
     await changePasswordRequest(currentPassword, newPassword);
+  },
+
+  async updateBusinessLocation(city: string, district: string): Promise<void> {
+    const trimmedCity = city.trim();
+    const trimmedDistrict = district.trim();
+    if (!trimmedCity || !trimmedDistrict) {
+      throw Object.assign(new Error('Şehir ve ilçe seçmelisin.'), { code: 'invalid-location' });
+    }
+    const current = await fetchBusinessProfile();
+    await updateBusinessProfile({
+      ...current,
+      city: trimmedCity,
+      district: trimmedDistrict,
+    });
+  },
+
+  async updateIndividualLocation(city: string, district: string): Promise<BexUser | null> {
+    const trimmedCity = city.trim();
+    const trimmedDistrict = district.trim();
+    if (!trimmedCity || !trimmedDistrict) {
+      throw Object.assign(new Error('Şehir ve ilçe seçmelisin.'), { code: 'invalid-location' });
+    }
+
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+
+    const claims = decodeJwtPayload(token);
+    if (claims?.userType === 'BUSINESS') {
+      throw Object.assign(new Error('İşletme konumu işletme profilinden güncellenir.'), {
+        code: 'not-supported-yet',
+      });
+    }
+
+    const current = await fetchIndividualProfile();
+    await updateIndividualProfile({
+      ...current,
+      city: trimmedCity,
+      district: trimmedDistrict,
+    });
+
+    const session = sessionFromAccessToken(token);
+    return fetchProfileForSession(session, claims?.userType);
   },
 
   async updateDisplayName(uid: string, displayName: string): Promise<BexUser | null> {

@@ -1,4 +1,5 @@
 import type { Unsubscribe } from 'firebase/firestore';
+import { AppState, AppStateStatus } from 'react-native';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { applicationsRepository } from '@/features/data/applicationsRepository';
@@ -8,6 +9,7 @@ import { notifyUser } from '@/features/notifications/notificationsRepository';
 import {
   fetchMessagesByApplication,
   fetchConversationParticipants,
+  resolveConversationId,
   sendMessageByApplication,
   usesConversationsRest,
 } from './conversationsApi';
@@ -18,6 +20,9 @@ const MESSAGE_STATUSES: ApplicationStatus[] = [
   'submitted',
   'submission_approved',
 ];
+
+const POLL_MS_ACTIVE = 2500;
+const POLL_MS_BACKGROUND = 10000;
 
 export function canUseApplicationMessages(status: ApplicationStatus): boolean {
   if (shouldUseDemoData()) {
@@ -88,7 +93,11 @@ export const messagesRepository = {
     onUpdate: (messages: ApplicationMessage[]) => void
   ): Unsubscribe {
     let active = true;
-    const poll = async () => {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let cleanupStomp: (() => void) | undefined;
+    let appState: AppStateStatus = AppState.currentState;
+
+    const refresh = async () => {
       if (!active) return;
       try {
         if (await usesConversationsRest()) {
@@ -104,11 +113,48 @@ export const messagesRepository = {
       }
     };
 
-    poll();
-    const interval = setInterval(poll, 4000);
+    const schedulePolling = () => {
+      if (pollInterval) clearInterval(pollInterval);
+      const ms = appState === 'active' ? POLL_MS_ACTIVE : POLL_MS_BACKGROUND;
+      pollInterval = setInterval(() => {
+        void refresh();
+      }, ms);
+    };
+
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      appState = next;
+      if (pollInterval) schedulePolling();
+      if (next === 'active') void refresh();
+    });
+
+    void (async () => {
+      await refresh();
+      if (!active) return;
+
+      if (await usesConversationsRest()) {
+        try {
+          const conversationId = await resolveConversationId(applicationId);
+          if (conversationId && active) {
+            const { subscribeConversationTopic } = await import(
+              '@/lib/messaging/messageStompClient'
+            );
+            cleanupStomp = await subscribeConversationTopic(conversationId, () => {
+              void refresh();
+            });
+          }
+        } catch {
+          // STOMP başarısız — yalnızca polling
+        }
+      }
+
+      if (active) schedulePolling();
+    })();
+
     return () => {
       active = false;
-      clearInterval(interval);
+      appStateSub.remove();
+      if (pollInterval) clearInterval(pollInterval);
+      cleanupStomp?.();
     };
   },
 

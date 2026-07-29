@@ -11,25 +11,63 @@ export function buildCouponQrPayload(coupon: Coupon): CouponQrPayload {
   return {
     couponId: coupon.id,
     businessId: coupon.businessId,
-    hash: coupon.qrCode,
+    hash: coupon.qrCode || coupon.id,
     issuedAt: coupon.createdAt.toMillis(),
   };
 }
 
+function encodeUtf8Base64(text: string): string {
+  if (typeof globalThis.btoa === 'function') {
+    return globalThis.btoa(unescape(encodeURIComponent(text)));
+  }
+  const bytes = new TextEncoder().encode(text);
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let output = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i] ?? 0;
+    const b = bytes[i + 1] ?? 0;
+    const c = bytes[i + 2] ?? 0;
+    const triple = (a << 16) | (b << 8) | c;
+    output += alphabet[(triple >> 18) & 63];
+    output += alphabet[(triple >> 12) & 63];
+    output += i + 1 < bytes.length ? alphabet[(triple >> 6) & 63] : '=';
+    output += i + 2 < bytes.length ? alphabet[triple & 63] : '=';
+  }
+  return output;
+}
+
+function decodeUtf8Base64(encoded: string): string {
+  if (typeof globalThis.atob === 'function') {
+    return decodeURIComponent(escape(globalThis.atob(encoded)));
+  }
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const normalized = encoded.replace(/[^A-Za-z0-9+/=]/g, '');
+  const bytes: number[] = [];
+  for (let i = 0; i < normalized.length; i += 4) {
+    const a = alphabet.indexOf(normalized[i] ?? 'A');
+    const b = alphabet.indexOf(normalized[i + 1] ?? 'A');
+    const c = alphabet.indexOf(normalized[i + 2] ?? '=');
+    const d = alphabet.indexOf(normalized[i + 3] ?? '=');
+    const triple = (a << 18) | (b << 12) | ((c >= 0 ? c : 0) << 6) | (d >= 0 ? d : 0);
+    bytes.push((triple >> 16) & 255);
+    if (normalized[i + 2] !== '=') bytes.push((triple >> 8) & 255);
+    if (normalized[i + 3] !== '=') bytes.push(triple & 255);
+  }
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+
 export function encodeCouponQr(coupon: Coupon): string {
   const json = JSON.stringify(buildCouponQrPayload(coupon));
-  if (typeof globalThis.btoa === 'function') {
-    return globalThis.btoa(unescape(encodeURIComponent(json)));
-  }
-  return json;
+  return encodeUtf8Base64(json);
 }
 
 export function decodeCouponQr(raw: string): CouponQrPayload | null {
   try {
     let json = raw.trim();
     if (!json.startsWith('{')) {
-      if (typeof globalThis.atob !== 'function') return null;
-      json = decodeURIComponent(escape(globalThis.atob(json)));
+      json = decodeUtf8Base64(json);
     }
     const parsed = JSON.parse(json) as CouponQrPayload;
     if (parsed.couponId && parsed.businessId && parsed.hash) {

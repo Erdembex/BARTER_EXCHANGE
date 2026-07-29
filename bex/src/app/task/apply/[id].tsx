@@ -20,6 +20,7 @@ import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery'
 import { PortfolioItem } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { isTaskOpenForApplications } from '@/lib/taskUtils';
 
 export default function ApplyScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,6 +56,11 @@ export default function ApplyScreen() {
       return;
     }
     if (!firebaseUser || !task) return;
+
+    if (!isTaskOpenForApplications(task)) {
+      setError('Bu görevin başvuru süresi doldu.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -143,7 +149,12 @@ export default function ApplyScreen() {
             autoCapitalize="none"
           />
 
-          <Button title="Başvuruyu Gönder" onPress={handleSubmit} loading={loading} />
+          <Button
+            title="Başvuruyu Gönder"
+            onPress={handleSubmit}
+            loading={loading}
+            disabled={!task || !isTaskOpenForApplications(task)}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
