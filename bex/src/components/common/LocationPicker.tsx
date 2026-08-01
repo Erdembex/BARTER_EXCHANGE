@@ -19,6 +19,7 @@ import {
 import { resolveLocationFromDevice } from '@/hooks/useDeviceLocation';
 import { LocationSelectorModal } from '@/components/common/LocationSelectorModal';
 import { Colors, Typography, Radius, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type LocationFieldsProps = {
   city: string | null;
@@ -78,6 +79,7 @@ function LocationFields({
   const [districtModal, setDistrictModal] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsHint, setGpsHint] = useState('');
+  const { t } = useTranslation();
 
   const districts = city && !isLocationAll(city) ? getDistrictsForCity(city) : [];
   const showAllOption = allowClear;
@@ -96,13 +98,13 @@ function LocationFields({
       onDistrictChange(showAllOption ? LOCATION_ALL : result.district);
       setGpsHint(
         showAllOption
-          ? `İl algılandı: ${result.city}. İlçe “Hepsi” — tüm ilçelerdeki ilanlar listelenir.`
+          ? t('locationPicker.gpsDetectedAll', { city: result.city })
           : result.district
-            ? `Konumun algılandı: ${formatLocationLabel(result.city, result.district)}`
-            : `İl algılandı: ${result.city}. İlçeyi kontrol et veya seç.`
+            ? t('locationPicker.gpsDetectedFull', { location: formatLocationLabel(result.city, result.district) })
+            : t('locationPicker.gpsDetectedCityOnly', { city: result.city })
       );
     } catch (err: unknown) {
-      setGpsHint(err instanceof Error ? err.message : 'Konum alınamadı.');
+      setGpsHint(err instanceof Error ? err.message : t('locationPicker.gpsFailed'));
     } finally {
       setGpsLoading(false);
     }
@@ -128,40 +130,40 @@ function LocationFields({
           {gpsLoading ? (
             <ActivityIndicator color={Colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={styles.gpsBtnText}>📍 Konumumu kullan</Text>
+            <Text style={styles.gpsBtnText}>{t('locationPicker.useMyLocation')}</Text>
           )}
         </TouchableOpacity>
       ) : null}
 
       <SelectField
-        label={required ? 'İl *' : 'İl'}
+        label={required ? t('locationPicker.cityLabelRequired') : t('locationPicker.cityLabel')}
         value={city}
-        placeholder="İl seç"
+        placeholder={t('locationPicker.cityPlaceholder')}
         onPress={() => setCityModal(true)}
       />
 
       <SelectField
-        label={required ? 'İlçe *' : 'İlçe'}
+        label={required ? t('locationPicker.districtLabelRequired') : t('locationPicker.districtLabel')}
         value={districtValue}
         placeholder={
           !city
-            ? 'Önce il seç'
+            ? t('locationPicker.districtFirstSelectCity')
             : isLocationAll(city)
               ? LOCATION_ALL
               : showAllOption
-                ? 'İlçe veya Hepsi'
-                : 'İlçe seç'
+                ? t('locationPicker.districtOrAll')
+                : t('locationPicker.districtPlaceholder')
         }
         onPress={() => setDistrictModal(true)}
         disabled={districtDisabled}
       />
 
       {summary && !allowClear ? (
-        <Text style={styles.summary}>Seçilen: {summary}</Text>
+        <Text style={styles.summary}>{t('locationPicker.selected', { summary })}</Text>
       ) : null}
 
       {allowClear && summary ? (
-        <Text style={styles.filterSummary}>Filtre: {summary}</Text>
+        <Text style={styles.filterSummary}>{t('locationPicker.filter', { summary })}</Text>
       ) : null}
 
       {gpsHint ? <Text style={styles.gpsHint}>{gpsHint}</Text> : null}
@@ -169,10 +171,10 @@ function LocationFields({
 
       <LocationSelectorModal
         visible={cityModal}
-        title="İl seç"
+        title={t('locationPicker.selectCityTitle')}
         items={cityItems}
         selected={city}
-        searchPlaceholder="İl ara (81 il)…"
+        searchPlaceholder={t('locationPicker.selectCitySearchPlaceholder')}
         onClose={() => setCityModal(false)}
         onSelect={(item) => {
           onCityChange(item);
@@ -189,10 +191,10 @@ function LocationFields({
 
       <LocationSelectorModal
         visible={districtModal}
-        title={city && !isLocationAll(city) ? `${city} — ilçe seç` : 'İlçe seç'}
+        title={city && !isLocationAll(city) ? t('locationPicker.selectDistrictTitle', { city }) : t('locationPicker.selectDistrictTitleGeneric')}
         items={districtItems}
         selected={districtValue}
-        searchPlaceholder="İlçe ara…"
+        searchPlaceholder={t('locationPicker.selectDistrictSearchPlaceholder')}
         onClose={() => setDistrictModal(false)}
         onSelect={(item) => {
           onDistrictChange(item);
@@ -217,9 +219,10 @@ export function LocationFilter({
   onCityChange,
   onDistrictChange,
 }: LocationFilterProps) {
+  const { t } = useTranslation();
   return (
     <View>
-      <Text style={styles.sectionLabel}>Konum filtresi</Text>
+      <Text style={styles.sectionLabel}>{t('locationPicker.locationFilterLabel')}</Text>
       <LocationFields
         city={city}
         district={district}

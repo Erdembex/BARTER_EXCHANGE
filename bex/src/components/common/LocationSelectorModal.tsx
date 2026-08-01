@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type LocationSelectorModalProps = {
   visible: boolean;
@@ -30,8 +31,10 @@ export function LocationSelectorModal({
   selected,
   onSelect,
   onClose,
-  searchPlaceholder = 'Ara…',
+  searchPlaceholder,
 }: LocationSelectorModalProps) {
+  const { t } = useTranslation();
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('locationSelectorModal.searchPlaceholder');
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -55,13 +58,13 @@ export function LocationSelectorModal({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={handleClose} hitSlop={12}>
-              <Text style={styles.close}>Kapat</Text>
+              <Text style={styles.close}>{t('locationSelectorModal.close')}</Text>
             </TouchableOpacity>
           </View>
 
           <TextInput
             style={styles.search}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             placeholderTextColor={Colors.textTertiary}
             value={query}
             onChangeText={setQuery}
@@ -70,7 +73,7 @@ export function LocationSelectorModal({
             clearButtonMode="while-editing"
           />
 
-          <Text style={styles.count}>{filtered.length} sonuç</Text>
+          <Text style={styles.count}>{t('locationSelectorModal.resultCount', { count: filtered.length })}</Text>
 
           <FlatList
             data={filtered}
@@ -78,7 +81,7 @@ export function LocationSelectorModal({
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.list}
             ListEmptyComponent={
-              <Text style={styles.empty}>Sonuç bulunamadı.</Text>
+              <Text style={styles.empty}>{t('locationSelectorModal.empty')}</Text>
             }
             renderItem={({ item }) => {
               const active = selected === item;

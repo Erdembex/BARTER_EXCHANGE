@@ -12,17 +12,27 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { applicationsRepository, businessesRepository, tasksRepository, usersRepository } from '@/features/data';
 import { canUseApplicationMessages } from '@/features/messages';
+import { useMessagingInbox, MessagingAudience } from '@/hooks/useMessagingInbox';
 import { ChatThreadView } from '@/components/messaging/ChatThreadView';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface MessageThreadScreenProps {
   applicationId: string;
+  messagingAudience?: MessagingAudience;
 }
 
-export function MessageThreadScreen({ applicationId }: MessageThreadScreenProps) {
+export function MessageThreadScreen({
+  applicationId,
+  messagingAudience = 'user',
+}: MessageThreadScreenProps) {
+  const { t } = useTranslation();
   const { firebaseUser, bexUser } = useAuthStore();
-  const [peerLabel, setPeerLabel] = useState('Sohbet');
-  const [taskTitle, setTaskTitle] = useState('Görev');
+  const { conversations } = useMessagingInbox(messagingAudience);
+  const priorUnread =
+    conversations.find((c) => c.applicationId === applicationId)?.unreadCount ?? 0;
+  const [peerLabel, setPeerLabel] = useState(t('messageThreadScreen.defaultChat'));
+  const [taskTitle, setTaskTitle] = useState(t('messageThreadScreen.defaultTask'));
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
   useFocusEffect(
@@ -41,13 +51,13 @@ export function MessageThreadScreen({ applicationId }: MessageThreadScreenProps)
         if (!canChat) return;
 
         const task = await tasksRepository.getById(app.taskId);
-        setTaskTitle(task?.title ?? 'Görev');
+        setTaskTitle(task?.title ?? t('messageThreadScreen.defaultTask'));
 
         if (bexUser.role === 'business') {
           setPeerLabel(await usersRepository.getDisplayName(app.userId));
         } else {
           const business = await businessesRepository.getById(app.businessId);
-          setPeerLabel(business?.name ?? 'İşletme');
+          setPeerLabel(business?.name ?? t('messageThreadScreen.defaultBusiness'));
         }
       })();
     }, [applicationId, firebaseUser, bexUser])
@@ -74,13 +84,13 @@ export function MessageThreadScreen({ applicationId }: MessageThreadScreenProps)
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Sohbet</Text>
+          <Text style={styles.headerTitle}>{t('messageThreadScreen.defaultChat')}</Text>
           <View style={styles.backBtn} />
         </View>
         <View style={styles.center}>
-          <Text style={styles.blockedTitle}>Sohbet henüz açılmadı</Text>
+          <Text style={styles.blockedTitle}>{t('messageThreadScreen.notOpenedTitle')}</Text>
           <Text style={styles.blockedText}>
-            Başvuru onaylandıktan sonra mesajlaşma aktif olur.
+            {t('messageThreadScreen.notOpenedText')}
           </Text>
         </View>
       </SafeAreaView>
@@ -111,6 +121,8 @@ export function MessageThreadScreen({ applicationId }: MessageThreadScreenProps)
         variant="fullscreen"
         peerLabel={peerLabel}
         taskTitle={taskTitle}
+        priorUnread={priorUnread}
+        messagingAudience={messagingAudience}
       />
     </SafeAreaView>
   );

@@ -1,0 +1,38 @@
+# Production profile — activate with SPRING_PROFILES_ACTIVE=prod
+
+spring:
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+app:
+  admin:
+    seed-enabled: false
+    sync-password-on-startup: false
+  listings:
+    auto-approve-on-create: false
+  dev:
+    expose-password-reset-token: false
+    expose-phone-code: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    com.takkas: INFO
+    org.springframework.security: WARN

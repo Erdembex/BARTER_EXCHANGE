@@ -13,6 +13,7 @@ import { isPortfolioImageUrl } from '@/lib/portfolioUtils';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ interface ImagePreviewGridProps {
 }
 
 export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps) {
+  const { t } = useTranslation();
   const [preview, setPreview] = useState<PreviewItem | null>(null);
 
   const items = useMemo(() => {
@@ -66,7 +68,7 @@ export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps
               onPress={() => Linking.openURL(item.uri)}
               style={styles.fileLink}
             >
-              <Text style={styles.fileLinkText}>📎 Dosya {index + 1}</Text>
+              <Text style={styles.fileLinkText}>{t('imagePreviewGrid.file', { index: index + 1 })}</Text>
             </TouchableOpacity>
           )
         )}
@@ -83,10 +85,10 @@ export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps
             {preview ? (
               <ZoomableImage uri={preview.uri} style={styles.previewImage} />
             ) : null}
-            <Text style={styles.zoomHint}>İki parmakla yakınlaştır · çift dokun</Text>
+            <Text style={styles.zoomHint}>{t('imagePreviewGrid.zoomHint')}</Text>
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={() => setPreview(null)}>
-            <Text style={styles.closeText}>Kapat</Text>
+            <Text style={styles.closeText}>{t('imagePreviewGrid.close')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>

@@ -20,9 +20,11 @@ import {
 } from '@/lib/credentialStorage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input, BexLogo } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 
 export default function LoginScreen() {
   const { setBexUser, setFirebaseUser } = useAuthStore();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -41,7 +43,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      setError('E-posta ve şifre zorunludur.');
+      setError(t('auth.emailPasswordRequired'));
       return;
     }
 
@@ -91,10 +93,8 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Tekrar Hoş Geldin</Text>
-            <Text style={styles.subtitle}>
-              Hesabına giriş yap ve görevleri keşfetmeye devam et.
-            </Text>
+            <Text style={styles.title}>{t('auth.loginTitle')}</Text>
+            <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
           </View>
 
           <View style={styles.form}>
@@ -105,8 +105,8 @@ export default function LoginScreen() {
             ) : null}
 
             <Input
-              label="E-posta"
-              placeholder="ornek@email.com"
+              label={t('auth.email')}
+              placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -115,7 +115,7 @@ export default function LoginScreen() {
             />
 
             <Input
-              label="Şifre"
+              label={t('auth.password')}
               placeholder="••••••••"
               value={password}
               onChangeText={setPassword}
@@ -132,29 +132,29 @@ export default function LoginScreen() {
               <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
                 {rememberMe ? <Text style={styles.checkmark}>✓</Text> : null}
               </View>
-              <Text style={styles.rememberText}>Beni hatırla</Text>
+              <Text style={styles.rememberText}>{t('auth.rememberMe')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/(auth)/forgot-password')}
               style={styles.forgotLink}
             >
-              <Text style={styles.forgotText}>Şifremi unuttum</Text>
+              <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
             </TouchableOpacity>
 
-            <Button title="Giriş Yap" onPress={handleLogin} loading={loading} />
+            <Button title={t('auth.login')} onPress={handleLogin} loading={loading} />
           </View>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>veya</Text>
+            <Text style={styles.dividerText}>{t('common.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Hesabın yok mu? </Text>
+            <Text style={styles.registerText}>{t('auth.noAccount')}</Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.registerLink}>Kayıt Ol</Text>
+              <Text style={styles.registerLink}>{t('auth.register')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

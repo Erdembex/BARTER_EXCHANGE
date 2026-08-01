@@ -1,21 +1,26 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useMessagingInbox } from '@/hooks/useMessagingInbox';
-import { Colors } from '@/theme';
+import { useMessagingInboxStore } from '@/store/messagingInboxStore';
+import { useThemeColors } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 function TabIcon({
-  emoji,
+  name,
   focused,
   locked,
+  color,
 }: {
-  emoji: string;
+  name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
   locked?: boolean;
+  color: string;
 }) {
   return (
     <View style={styles.iconWrap}>
-      <Text style={{ fontSize: 20, opacity: locked ? 0.35 : focused ? 1 : 0.45 }}>{emoji}</Text>
+      <Ionicons name={name} size={22} color={color} style={{ opacity: locked ? 0.4 : 1 }} />
       {locked ? <Text style={styles.lockDot}>🔒</Text> : null}
     </View>
   );
@@ -23,7 +28,10 @@ function TabIcon({
 
 export default function UserTabsLayout() {
   const { bexUser } = useAuthStore();
-  const { totalUnread, isUnlocked } = useMessagingInbox('user');
+  const { isUnlocked } = useMessagingInbox('user');
+  const totalUnread = useMessagingInboxStore((s) => s.userTotalUnread);
+  const Colors = useThemeColors();
+  const { t } = useTranslation();
 
   if (bexUser?.role === 'business') {
     return <Redirect href="/(business)/panel" />;
@@ -54,39 +62,64 @@ export default function UserTabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Ana Sayfa',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⌂" focused={focused} />,
+          title: t('tabs.home'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="tasks/index"
         options={{
-          title: 'Görevler',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="◎" focused={focused} />,
+          title: t('tabs.tasks'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'briefcase' : 'briefcase-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Sohbet',
+          title: t('tabs.messages'),
           tabBarBadge: totalUnread > 0 ? (totalUnread > 99 ? '99+' : totalUnread) : undefined,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="💬" focused={focused} locked={!isUnlocked} />
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              focused={focused}
+              locked={!isUnlocked}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="applications/index"
         options={{
-          title: 'Başvurular',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="☰" focused={focused} />,
+          title: t('tabs.applications'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'document-text' : 'document-text-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="○" focused={focused} />,
+          title: t('tabs.profile'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen name="trade" options={{ href: null }} />

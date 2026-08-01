@@ -11,12 +11,15 @@ import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { useBusiness } from '@/features/business/useBusiness';
 import { submitBusinessVerification } from '@/features/business/verificationService';
-import { VERIFICATION_STATUS_LABELS } from '@/constants/businessLabels';
+import { useVerificationStatusLabels } from '@/constants/businessLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessVerificationScreen() {
+  const { t } = useTranslation();
+  const VERIFICATION_STATUS_LABELS = useVerificationStatusLabels();
   const { business, reload } = useBusiness();
   const { showToast } = useToast();
   const [selectedFile, setSelectedFile] = useState<{
@@ -51,12 +54,12 @@ export default function BusinessVerificationScreen() {
     setUploading(true);
     try {
       await submitBusinessVerification(business, selectedFile);
-      showToast('Evrak yüklendi. İnceleme bekleniyor.');
+      showToast(t('businessVerificationScreen.uploadedToast'));
       setSelectedFile(null);
       await reload();
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Evrak yüklenemedi.';
+        err instanceof Error ? err.message : t('businessVerificationScreen.uploadFailedToast');
       showToast(message);
     } finally {
       setUploading(false);
@@ -67,17 +70,16 @@ export default function BusinessVerificationScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Geri</Text>
+          <Text style={styles.backText}>{t('businessVerificationScreen.back')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>İşletme Doğrulama</Text>
+        <Text style={styles.title}>{t('businessVerificationScreen.title')}</Text>
         <Text style={styles.subtitle}>
-          Güven ortamı için vergi levhası, işletme belgesi veya resmi evrak
-          yükleyin. Admin onayından sonra doğrulanmış rozet alırsınız.
+          {t('businessVerificationScreen.subtitle')}
         </Text>
 
         <View style={styles.statusCard}>
-          <Text style={styles.statusLabel}>Durum</Text>
+          <Text style={styles.statusLabel}>{t('businessVerificationScreen.statusLabel')}</Text>
           <Text style={styles.statusValue}>
             {VERIFICATION_STATUS_LABELS[status]}
           </Text>
@@ -86,7 +88,7 @@ export default function BusinessVerificationScreen() {
         {status === 'verified' && (
           <View style={styles.successBox}>
             <Text style={styles.successText}>
-              ✓ İşletmeniz doğrulandı. Müşteriler güven rozetinizi görebilir.
+              {t('businessVerificationScreen.verifiedText')}
             </Text>
           </View>
         )}
@@ -94,7 +96,7 @@ export default function BusinessVerificationScreen() {
         {status === 'pending' && (
           <View style={styles.pendingBox}>
             <Text style={styles.pendingText}>
-              Evrakınız inceleniyor. Sonuç bildirimle iletilecek.
+              {t('businessVerificationScreen.pendingText')}
             </Text>
           </View>
         )}
@@ -102,7 +104,7 @@ export default function BusinessVerificationScreen() {
         {canUpload && (
           <>
             <Button
-              title={selectedFile ? 'Dosyayı Değiştir' : 'PDF veya Fotoğraf Seç'}
+              title={selectedFile ? t('businessVerificationScreen.changeFile') : t('businessVerificationScreen.pickFile')}
               variant="outline"
               onPress={pickDocument}
             />
@@ -115,7 +117,7 @@ export default function BusinessVerificationScreen() {
             )}
 
             <Button
-              title="Evrakı Gönder"
+              title={t('businessVerificationScreen.submitDocument')}
               onPress={handleSubmit}
               loading={uploading}
               disabled={!selectedFile}

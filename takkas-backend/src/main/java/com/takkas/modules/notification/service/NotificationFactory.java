@@ -66,12 +66,12 @@ public class NotificationFactory {
 
     public Notification offerReceived(UUID recipientUserId, UUID conversationId, String senderName) {
         return build(recipientUserId, NotificationType.OFFER_RECEIVED, conversationId, "CONVERSATION",
-            "Yeni Teklif", senderName + " sana bir teklif gönderdi.");
+            "Özel İş İlanı", senderName + " sana özel bir iş ilanı gönderdi.");
     }
 
     public Notification offerAccepted(UUID senderUserId, UUID conversationId, String acceptorName) {
         return build(senderUserId, NotificationType.OFFER_ACCEPTED, conversationId, "CONVERSATION",
-            "Teklif Kabul Edildi ✅", acceptorName + " teklifini kabul etti. Kuponun hazırlanıyor!");
+            "İş İlanı Kabul Edildi ✅", acceptorName + " özel iş ilanını kabul etti. Teslimat bekleniyor.");
     }
 
     public Notification offerRejected(UUID senderUserId, UUID conversationId, String rejectorName) {
@@ -123,6 +123,13 @@ public class NotificationFactory {
     public Notification subscriptionRenewed(UUID businessUserId, UUID businessId, String planName) {
         return build(businessUserId, NotificationType.SUBSCRIPTION_RENEWED, businessId, "SUBSCRIPTION",
             "Abonelik Yenilendi", planName + " planınız başarıyla yenilendi.");
+    }
+
+    public Notification subscriptionUpgradeRequested(UUID adminUserId, UUID businessId,
+                                                       String businessName, String targetPlanDisplayName) {
+        return build(adminUserId, NotificationType.SUBSCRIPTION_UPGRADE_REQUESTED, businessId, "SUBSCRIPTION",
+            "Yeni Abonelik Talebi 💳",
+            businessName + " " + targetPlanDisplayName + " planına yükseltme talep etti. Ödeme onayı bekliyor.");
     }
 
     private Notification build(UUID userId, NotificationType type,

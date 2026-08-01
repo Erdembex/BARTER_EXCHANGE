@@ -4,23 +4,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '@/lib/api/config';
 import { useBackendHealth } from '@/hooks/useBackendHealth';
 import { useNetwork } from '@/hooks/useNetwork';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export function BackendStatusBanner() {
   const insets = useSafeAreaInsets();
   const { isConnected } = useNetwork();
   const { reachable, checking, refresh, skip } = useBackendHealth();
+  const { t } = useTranslation();
 
   if (skip || !isConnected || reachable === null || reachable) return null;
 
   return (
     <View style={[styles.banner, { paddingTop: insets.top + Spacing[2] }]}>
-      <Text style={styles.text}>Sunucuya ulaşılamıyor — {API_BASE_URL}</Text>
-      <Text style={styles.hint}>
-        Backend kapalıysa giriş ve görevler çalışmaz. Aynı Wi‑Fi ve doğru IP’yi kontrol et.
-      </Text>
+      <Text style={styles.text}>{t('banners.serverUnreachable', { url: API_BASE_URL })}</Text>
+      <Text style={styles.hint}>{t('banners.serverHint')}</Text>
       <TouchableOpacity onPress={refresh} disabled={checking} style={styles.retry}>
-        <Text style={styles.retryText}>{checking ? 'Kontrol ediliyor…' : 'Tekrar dene'}</Text>
+        <Text style={styles.retryText}>
+          {checking ? t('banners.checking') : t('banners.retry')}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -41,7 +43,7 @@ const styles = StyleSheet.create({
   },
   text: {
     ...Typography.labelMedium,
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   hint: {
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
   },
   retryText: {
     ...Typography.labelMedium,
-    color: Colors.textInverse,
+    color: '#FFFFFF',
     textDecorationLine: 'underline',
   },
 });

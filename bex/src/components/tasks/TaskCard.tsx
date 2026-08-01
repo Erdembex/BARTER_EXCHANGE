@@ -5,6 +5,7 @@ import { DIFFICULTY_LABELS, CATEGORY_LABELS } from '../../constants/taskLabels';
 import { formatDeadline, getDifficultyColor } from '../../lib/taskUtils';
 import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
 import { DangerBadge } from '../profile/DangerBadge';
+import { useTranslation } from '@/i18n';
 
 export interface TaskCardProps {
   task: Task & { locationLabel?: string };
@@ -23,6 +24,7 @@ export function TaskCard({
   compact = false,
   onPress,
 }: TaskCardProps) {
+  const { t } = useTranslation();
   const diffColor = getDifficultyColor(task.difficulty);
 
   return (
@@ -34,7 +36,7 @@ export function TaskCard({
     >
       {task.featured && (
         <View style={styles.featuredBadge}>
-          <Text style={styles.featuredText}>⭐ Öne Çıkan</Text>
+          <Text style={styles.featuredText}>{t('taskCard.featured')}</Text>
         </View>
       )}
 
@@ -47,7 +49,7 @@ export function TaskCard({
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <Text style={styles.businessName} numberOfLines={1}>
-              {businessName ?? 'İşletme'}
+              {businessName ?? t('taskCard.defaultBusiness')}
               {businessVerified ? ' ✓' : ''}
             </Text>
             {businessIsDangerous ? <DangerBadge compact /> : null}
@@ -82,7 +84,7 @@ export function TaskCard({
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.meta}>⏱ ~{task.estimatedHours}s</Text>
+        <Text style={styles.meta}>⏱ {t('taskCard.hours', { count: task.estimatedHours })}</Text>
         <Text style={styles.meta}>👥 {task.currentApplicantCount}/{task.maxApplicants}</Text>
         <Text style={styles.deadline}>{formatDeadline(task.deadline)}</Text>
       </View>

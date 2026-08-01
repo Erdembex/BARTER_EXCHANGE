@@ -3,14 +3,21 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, Input } from '@/components/ui';
 import { ComplaintApplicationPicker } from '@/components/complaint/ComplaintApplicationPicker';
 import {
-  COMPLAINT_REASON_LABELS,
+  useComplaintReasonLabels,
   ComplaintReason,
   submitIndividualComplaint,
   type ComplaintEligibleApplicationDto,
 } from '@/features/complaint/complaintsApi';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
-const REASON_OPTIONS = Object.keys(COMPLAINT_REASON_LABELS) as ComplaintReason[];
+const REASON_OPTIONS: ComplaintReason[] = [
+  'POOR_SERVICE',
+  'FRAUD',
+  'HARASSMENT',
+  'COUPON_ISSUE',
+  'OTHER',
+];
 
 interface IndividualComplaintSubmitFormProps {
   initialApplicationId?: string;
@@ -27,6 +34,8 @@ export function IndividualComplaintSubmitForm({
   onCancel,
   showCancel = false,
 }: IndividualComplaintSubmitFormProps) {
+  const { t } = useTranslation();
+  const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
   const [applicationId, setApplicationId] = useState(initialApplicationId);
   const [applicationLabel, setApplicationLabel] = useState(initialApplicationLabel);
   const [reason, setReason] = useState<ComplaintReason>('POOR_SERVICE');
@@ -42,11 +51,11 @@ export function IndividualComplaintSubmitForm({
 
   const handleSubmit = async () => {
     if (!applicationId.trim()) {
-      setError('Önce şikayet etmek istediğin görev/başvuruyu seç.');
+      setError(t('complaintForm.errorNoTaskUser'));
       return;
     }
     if (description.trim().length < 10) {
-      setError('Açıklama en az 10 karakter olmalı.');
+      setError(t('complaintForm.errorDescMin'));
       return;
     }
     setSubmitting(true);
@@ -59,7 +68,7 @@ export function IndividualComplaintSubmitForm({
       });
       onSuccess?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Şikayet gönderilemedi.');
+      setError(e instanceof Error ? e.message : t('complaintForm.errorGeneric'));
     } finally {
       setSubmitting(false);
     }
@@ -68,8 +77,7 @@ export function IndividualComplaintSubmitForm({
   return (
     <View style={styles.wrap}>
       <Text style={styles.lead}>
-        Yalnızca onayladığın başvurular için kullanıcı şikayeti oluşturabilirsin. Görevi seç,
-        ardından şikayetini yaz.
+        {t('complaintForm.userLead')}
       </Text>
 
       <ComplaintApplicationPicker
@@ -83,7 +91,7 @@ export function IndividualComplaintSubmitForm({
         }}
       />
 
-      <Text style={styles.fieldLabel}>Şikayet nedeni</Text>
+      <Text style={styles.fieldLabel}>{t('complaintForm.reasonLabel')}</Text>
       <View style={styles.reasonRow}>
         {REASON_OPTIONS.map((key) => (
           <TouchableOpacity
@@ -99,10 +107,10 @@ export function IndividualComplaintSubmitForm({
       </View>
 
       <Input
-        label="Açıklama"
+        label={t('complaintForm.descriptionLabel')}
         value={description}
         onChangeText={setDescription}
-        placeholder="Ne yaşandı? En az 10 karakter..."
+        placeholder={t('complaintForm.descriptionPlaceholder')}
         multiline
         numberOfLines={5}
       />
@@ -111,10 +119,10 @@ export function IndividualComplaintSubmitForm({
 
       <View style={styles.actions}>
         {showCancel && onCancel ? (
-          <Button title="Vazgeç" variant="outline" onPress={onCancel} style={{ flex: 1 }} />
+          <Button title={t('complaintForm.cancel')} variant="outline" onPress={onCancel} style={{ flex: 1 }} />
         ) : null}
         <Button
-          title="Şikayeti Gönder"
+          title={t('complaintForm.submit')}
           onPress={handleSubmit}
           loading={submitting}
           style={showCancel ? { flex: 1 } : undefined}

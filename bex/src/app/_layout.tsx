@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -8,7 +8,9 @@ import { ThemeProvider } from '@shopify/restyle';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
-import { Colors, theme } from '@/theme';
+import { useThemeStore } from '@/store/themeStore';
+import { useLocaleStore } from '@/store/localeStore';
+import { useThemeColors, useIsDarkMode, getTheme } from '@/theme';
 import { initAppCheck } from '@/lib/appCheck';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { BackendStatusBanner } from '@/components/common/BackendStatusBanner';
@@ -19,12 +21,20 @@ import { useNotifications } from '@/hooks/useNotifications';
 export default function RootLayout() {
   const { setFirebaseUser, setBexUser, setInitialized, isInitialized } =
     useAuthStore();
+  const hydrateTheme = useThemeStore((s) => s.hydrate);
+  const hydrateLocale = useLocaleStore((s) => s.hydrate);
+  const Colors = useThemeColors();
+  const isDark = useIsDarkMode();
+  const theme = useMemo(() => getTheme(Colors), [Colors]);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
 
   useNotifications();
 
   useEffect(() => {
     initAppCheck();
-  }, []);
+    hydrateTheme();
+    hydrateLocale();
+  }, [hydrateTheme, hydrateLocale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,7 +65,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <ToastProvider>
-              <StatusBar style="light" backgroundColor={Colors.background} />
+              <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={Colors.background} />
               <OfflineBanner />
               <BackendStatusBanner />
               <Stack screenOptions={{ headerShown: false }}>
@@ -72,6 +82,7 @@ export default function RootLayout() {
                 <Stack.Screen name="setup-guide" />
                 <Stack.Screen name="expo-test-guide" />
                 <Stack.Screen name="settings" />
+                <Stack.Screen name="search" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="user/[id]" />
               </Stack>
             </ToastProvider>
@@ -82,12 +93,14 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  splash: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function createStyles(Colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
+    root: { flex: 1 },
+    splash: {
+      flex: 1,
+      backgroundColor: Colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

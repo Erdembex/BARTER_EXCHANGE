@@ -9,6 +9,7 @@ import {
   TradeOffer,
   TradeOfferStatus,
 } from './types';
+import { t, getLocale } from '@/i18n';
 
 /** Takkas JWT oturumu varsa takas işlemleri REST üzerinden yapılır */
 export async function useSwapRestBackend(): Promise<boolean> {
@@ -69,32 +70,32 @@ function formatRewardLabel(dto: SwapListingCardDto): string {
   const parts = [dto.offeredQuantity, dto.offeredUnit, dto.offeredRewardType]
     .filter((part) => part !== null && part !== undefined && `${part}`.trim())
     .map(String);
-  return parts.join(' ') || 'Kupon';
+  return parts.join(' ') || t('swapListingsApi.defaultReward');
 }
 
 function formatWantedLabel(dto: SwapListingCardDto): string {
   if (dto.wantedDescription?.trim()) return dto.wantedDescription.trim();
   const parts = [dto.wantedQuantity, dto.wantedRewardType].filter(Boolean).map(String);
-  return parts.length ? parts.join(' ') : 'Takas teklifi';
+  return parts.length ? parts.join(' ') : t('swapListingsApi.defaultWantedOffer');
 }
 
 function formatCreatedAtLabel(createdAt?: string): string {
-  if (!createdAt) return 'Az önce';
+  if (!createdAt) return t('tradeRepository.justNow');
 
   const diffMs = Date.now() - new Date(createdAt).getTime();
-  if (Number.isNaN(diffMs) || diffMs < 0) return 'Az önce';
+  if (Number.isNaN(diffMs) || diffMs < 0) return t('tradeRepository.justNow');
 
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'Az önce';
-  if (mins < 60) return `${mins} dk önce`;
+  if (mins < 1) return t('tradeRepository.justNow');
+  if (mins < 60) return t('swapListingsApi.minsAgo', { count: mins });
 
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} sa önce`;
+  if (hours < 24) return t('swapListingsApi.hoursAgo', { count: hours });
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} gün önce`;
+  if (days < 7) return t('swapListingsApi.daysAgo', { count: days });
 
-  return new Date(createdAt).toLocaleDateString('tr-TR', {
+  return new Date(createdAt).toLocaleDateString(getLocale() === 'en' ? 'en-US' : 'tr-TR', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -112,7 +113,7 @@ function normalizeStatus(status?: string): TradeListingStatus {
 function mapSwapListingCard(dto: SwapListingCardDto): TradeListing {
   const rewardLabel = formatRewardLabel(dto);
   const wantedLabel = formatWantedLabel(dto);
-  const ownerName = 'Kullanıcı';
+  const ownerName = t('swapListingsApi.defaultUserName');
 
   return {
     id: String(dto.id),
@@ -134,9 +135,9 @@ function mapSwapListingDetail(dto: SwapListingDetailDto): TradeListing {
   const wantedLabel =
     dto.wantedDescription?.trim() ||
     [dto.wantedQuantity, dto.wantedRewardType].filter(Boolean).join(' ') ||
-    'Takas ilanı';
+    t('swapListingsApi.defaultListingTitle');
   const rewardLabel = wantedLabel;
-  const ownerName = 'Kullanıcı';
+  const ownerName = t('swapListingsApi.defaultUserName');
 
   return {
     id: String(dto.id),
@@ -171,10 +172,10 @@ function mapSwapListingsError(error: unknown, fallback: string): Error {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     if (status === 403) {
-      return new Error('Takas pazarı yalnızca bireysel hesaplar içindir.');
+      return new Error(t('swapListingsApi.individualOnly'));
     }
     if (status === 400) {
-      return new Error('Takas ilanları isteği geçersiz. Uygulamayı yenileyip tekrar dene.');
+      return new Error(t('swapListingsApi.invalidRequest'));
     }
     const detail = getApiErrorMessage(error, fallback);
     const prefix = status ? `[${status}] ` : '';
@@ -194,7 +195,7 @@ export async function fetchSwapListings(): Promise<TradeListing[]> {
       .map(mapSwapListingCard)
       .filter((listing) => listing.status === 'active');
   } catch (error) {
-    throw mapSwapListingsError(error, 'Takas ilanları yüklenemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.listingsLoadFailed'));
   }
 }
 
@@ -206,7 +207,7 @@ export async function fetchMySwapListings(): Promise<TradeListing[]> {
       .map(mapSwapListingDetail)
       .filter((listing) => listing.status === 'active' || listing.status === 'paused');
   } catch (error) {
-    throw mapSwapListingsError(error, 'İlanların yüklenemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.myListingsLoadFailed'));
   }
 }
 
@@ -228,7 +229,7 @@ export async function createSwapListing(input: CreateTradeListingInput): Promise
     );
     return String(data.id);
   } catch (error) {
-    throw mapSwapListingsError(error, 'İlan oluşturulamadı.');
+    throw mapSwapListingsError(error, t('swapListingsApi.createFailed'));
   }
 }
 
@@ -256,9 +257,9 @@ function mapSwapOffer(dto: SwapOfferDto, listingTitle: string): TradeOffer {
     listingId: String(dto.swapListingId ?? ''),
     listingTitle,
     fromUserId: dto.offererId ? String(dto.offererId) : '',
-    fromUserName: 'Kullanıcı',
+    fromUserName: t('swapListingsApi.defaultUserName'),
     counterCouponId: dto.offeredCouponId ? String(dto.offeredCouponId) : '',
-    counterRewardLabel: 'Kupon',
+    counterRewardLabel: t('swapListingsApi.defaultReward'),
     message: dto.message?.trim() ?? '',
     status: normalizeOfferStatus(dto.status),
     createdAtLabel: formatCreatedAtLabel(dto.createdAt),
@@ -278,7 +279,7 @@ export async function sendSwapOffer(
     );
     return String(data.id);
   } catch (error) {
-    throw mapSwapListingsError(error, 'Takas teklifi gönderilemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.offerSubmitFailed'));
   }
 }
 
@@ -293,7 +294,7 @@ export async function fetchSwapOffersForListing(
     );
     return (Array.isArray(data) ? data : []).map((dto) => mapSwapOffer(dto, listingTitle));
   } catch (error) {
-    throw mapSwapListingsError(error, 'Teklifler yüklenemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.offersLoadFailed'));
   }
 }
 
@@ -304,7 +305,7 @@ export async function acceptSwapOffer(listingId: string, offerId: string): Promi
       `/api/individual/swap-listings/${listingId}/offers/${offerId}/accept`
     );
   } catch (error) {
-    throw mapSwapListingsError(error, 'Teklif kabul edilemedi.');
+    throw mapSwapListingsError(error, t('tradeRepository.offerAcceptFailed'));
   }
 }
 
@@ -315,7 +316,7 @@ export async function rejectSwapOffer(listingId: string, offerId: string): Promi
       `/api/individual/swap-listings/${listingId}/offers/${offerId}/reject`
     );
   } catch (error) {
-    throw mapSwapListingsError(error, 'Teklif reddedilemedi.');
+    throw mapSwapListingsError(error, t('tradeRepository.offerRejectFailed'));
   }
 }
 
@@ -323,9 +324,9 @@ export async function rejectSwapOffer(listingId: string, offerId: string): Promi
 export async function fetchMySwapOffers(): Promise<TradeOffer[]> {
   try {
     const { data } = await apiClient.get<SwapOfferDto[]>('/api/individual/swap-offers');
-    return (Array.isArray(data) ? data : []).map((dto) => mapSwapOffer(dto, 'Takas ilanı'));
+    return (Array.isArray(data) ? data : []).map((dto) => mapSwapOffer(dto, t('swapListingsApi.defaultListingTitle')));
   } catch (error) {
-    throw mapSwapListingsError(error, 'Tekliflerin yüklenemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.myOffersLoadFailed'));
   }
 }
 
@@ -341,7 +342,7 @@ export async function cancelSwapListing(listingId: string): Promise<void> {
   try {
     await apiClient.delete(`/api/individual/swap-listings/${listingId}`);
   } catch (error) {
-    throw mapSwapListingsError(error, 'İlan iptal edilemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.cancelFailed'));
   }
 }
 
@@ -351,6 +352,6 @@ export async function fetchMySwapTrades(): Promise<SwapTradeDto[]> {
     const { data } = await apiClient.get<SwapTradeDto[]>('/api/individual/swap-trades');
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    throw mapSwapListingsError(error, 'Takas geçmişi yüklenemedi.');
+    throw mapSwapListingsError(error, t('swapListingsApi.historyLoadFailed'));
   }
 }

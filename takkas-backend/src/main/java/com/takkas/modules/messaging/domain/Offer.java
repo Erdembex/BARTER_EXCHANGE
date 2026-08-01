@@ -20,6 +20,12 @@ public class Offer {
     @JoinColumn(name = "message_id", nullable = false, unique = true)
     private Message message;
 
+    @Column(name = "listing_id")
+    private UUID listingId;
+
+    @Column(name = "result_application_id")
+    private UUID resultApplicationId;
+
     @Enumerated(EnumType.STRING) private RewardType rewardType;
     private Integer quantity;
     private String unit;

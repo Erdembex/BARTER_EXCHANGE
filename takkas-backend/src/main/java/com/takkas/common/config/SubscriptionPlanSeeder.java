@@ -25,7 +25,7 @@ public class SubscriptionPlanSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        seedPlan("FREE", "Ücretsiz", BigDecimal.ZERO, BigDecimal.ZERO, List.of(
+        seedPlan("FREE", "Ücretsiz", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, List.of(
             feature("MAX_ACTIVE_LISTINGS",          "2"),
             feature("MAX_UNDER_REVIEW_PER_LISTING", "3"),
             feature("CAN_FEATURE_LISTING",          "false"),
@@ -35,7 +35,8 @@ public class SubscriptionPlanSeeder implements ApplicationRunner {
             feature("PRIORITY_SUPPORT",             "false")
         ));
 
-        seedPlan("STANDARD", "Standart", new BigDecimal("299.00"), new BigDecimal("2990.00"), List.of(
+        seedPlan("STANDARD", "Standart",
+            new BigDecimal("299.00"), new BigDecimal("1590.00"), new BigDecimal("2990.00"), List.of(
             feature("MAX_ACTIVE_LISTINGS",          "10"),
             feature("MAX_UNDER_REVIEW_PER_LISTING", "10"),
             feature("CAN_FEATURE_LISTING",          "false"),
@@ -45,7 +46,8 @@ public class SubscriptionPlanSeeder implements ApplicationRunner {
             feature("PRIORITY_SUPPORT",             "false")
         ));
 
-        seedPlan("PRO", "Pro", new BigDecimal("699.00"), new BigDecimal("6990.00"), List.of(
+        seedPlan("PRO", "Pro",
+            new BigDecimal("699.00"), new BigDecimal("3770.00"), new BigDecimal("6990.00"), List.of(
             feature("MAX_ACTIVE_LISTINGS",          "unlimited"),
             feature("MAX_UNDER_REVIEW_PER_LISTING", "unlimited"),
             feature("CAN_FEATURE_LISTING",          "true"),
@@ -57,7 +59,7 @@ public class SubscriptionPlanSeeder implements ApplicationRunner {
     }
 
     private void seedPlan(String name, String displayName,
-                          BigDecimal priceMonthly, BigDecimal priceYearly,
+                          BigDecimal priceMonthly, BigDecimal priceSemiAnnual, BigDecimal priceYearly,
                           List<PlanFeature> features) {
         if (planRepository.findByName(name).isPresent()) {
             log.debug("[SubscriptionPlanSeeder] Plan zaten mevcut: {}", name);
@@ -67,6 +69,7 @@ public class SubscriptionPlanSeeder implements ApplicationRunner {
             .name(name)
             .displayName(displayName)
             .priceMonthly(priceMonthly)
+            .priceSemiAnnual(priceSemiAnnual)
             .priceYearly(priceYearly)
             .isActive(true)
             .build();

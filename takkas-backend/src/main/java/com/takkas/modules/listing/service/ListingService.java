@@ -26,7 +26,7 @@ public class ListingService {
     private final BusinessProfileRepository businessProfileRepository;
     private final FeatureGateService featureGateService;
 
-    @Value("${app.listings.auto-approve-on-create:false}")
+    @Value("${app.listings.auto-approve-on-create:true}")
     private boolean autoApproveOnCreate;
 
     public ListingResponse create(UUID businessId, CreateListingRequest req) {

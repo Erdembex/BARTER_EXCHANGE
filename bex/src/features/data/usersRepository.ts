@@ -133,6 +133,8 @@ export const usersRepository = {
     completedTasks: CompletedTask[];
     portfolio: PortfolioItem[];
     displayName: string;
+    averageRating: number;
+    feedbackCount: number;
   } | null> {
     if (!(await hasRestAuthSession())) return null;
     try {
@@ -145,6 +147,8 @@ export const usersRepository = {
         completedTasks: profile.completedTasks,
         portfolio: profile.portfolio,
         displayName: profile.username ? `@${profile.username}` : profile.fullName,
+        averageRating: profile.averageRating,
+        feedbackCount: profile.feedbackCount,
       };
     } catch {
       return null;

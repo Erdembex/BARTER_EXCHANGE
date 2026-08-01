@@ -12,17 +12,17 @@ export function getApplicationTarget(app: Application): Href {
 }
 
 export function getApplicationQuickAction(app: Application): {
-  label: string;
+  labelKey: string;
   target: Href;
 } | null {
   if (app.status === 'approved') {
-    return { label: 'Teslim Et →', target: `/task/submit/${app.id}` as Href };
+    return { labelKey: 'applicationsScreen.submit', target: `/task/submit/${app.id}` as Href };
   }
   if (app.status === 'rewarded') {
-    return { label: 'Kuponu Gör →', target: '/(tabs)/wallet' as Href };
+    return { labelKey: 'applicationsScreen.viewCoupon', target: '/(tabs)/wallet' as Href };
   }
   if (app.status === 'submission_approved') {
-    return { label: 'Durumu Gör →', target: `/application/${app.id}` as Href };
+    return { labelKey: 'applicationsScreen.viewStatus', target: `/application/${app.id}` as Href };
   }
   return null;
 }

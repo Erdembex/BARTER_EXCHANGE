@@ -15,8 +15,10 @@ import { CompletedTask, PortfolioItem } from '@/types';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function PublicUserProfileScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export default function PublicUserProfileScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Geri</Text>
+          <Text style={styles.backText}>{t('userProfileScreen.back')}</Text>
         </TouchableOpacity>
 
         <View style={styles.hero}>

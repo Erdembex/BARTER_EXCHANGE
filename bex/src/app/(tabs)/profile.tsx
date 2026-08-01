@@ -14,15 +14,21 @@ import { authService } from '@/features/auth/authService';
 import { usersRepository } from '@/features/data';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { AccountSettings } from '@/components/profile/AccountSettings';
-import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
+import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
-import { PortfolioItem } from '@/types';
+import { CompletedTask, PortfolioItem } from '@/types';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [profileId, setProfileId] = useState<string | undefined>(undefined);
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,9 +45,15 @@ export default function ProfileScreen() {
                 ...user,
                 displayName: stats.displayName || user.displayName,
                 completedTaskCount: stats.completedTaskCount,
+                averageRating: stats.averageRating,
+                feedbackCount: stats.feedbackCount,
                 portfolioItems: stats.portfolio,
               };
               setPortfolio(stats.portfolio);
+              setProfileId(stats.profileId);
+              setCompletedTasks(stats.completedTasks);
+              setAverageRating(stats.averageRating);
+              setFeedbackCount(stats.feedbackCount);
             } else {
               setPortfolio(await usersRepository.getPortfolio(firebaseUser.uid));
             }
@@ -67,7 +79,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Profil" />
+      <AppHeader title={t('profileScreen.title')} />
       <ScrollView contentContainerStyle={styles.scroll}>
         <AccountSettings
           bexUser={bexUser}
@@ -76,25 +88,31 @@ export default function ProfileScreen() {
         />
 
         {bexUser?.role === 'user' ? (
-          <UserPortfolioGallery
-            items={portfolio}
-            emptyText="Admin onaylı teslim görsellerin burada görünür. Görev teslim edip onay aldıkça portföyün büyür."
-          />
+          <View style={styles.fullWidth}>
+            <PublicProfileSections
+              profileId={profileId}
+              completedCount={bexUser.completedTaskCount ?? 0}
+              completedTasks={completedTasks}
+              portfolio={portfolio}
+              averageRating={averageRating}
+              feedbackCount={feedbackCount}
+            />
+          </View>
         ) : null}
 
         <Button
-          title="Yayın Checklist"
+          title={t('profileScreen.releaseChecklist')}
           variant="outline"
           onPress={() => router.push('/setup-guide' as Href)}
         />
 
-        <Button title="Çıkış Yap" variant="outline" onPress={handleLogout} />
+        <Button title={t('profileScreen.logout')} variant="outline" onPress={handleLogout} />
 
         <View style={styles.meta}>
           <Text style={styles.metaText}>BEX v{appVersion}</Text>
           {__DEV__ && (
             <Text style={styles.metaText}>
-              {isAuthEmulatorActive() ? 'Emulator · demo veri' : 'Canlı Firebase'}
+              {isAuthEmulatorActive() ? t('profileScreen.emulatorDemo') : t('profileScreen.liveFirebase')}
             </Text>
           )}
         </View>
@@ -112,6 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing[4],
   },
+  fullWidth: { width: '100%', gap: Spacing[4] },
   meta: { alignItems: 'center', gap: Spacing[1], marginTop: Spacing[2] },
   metaText: { ...Typography.caption, color: Colors.textTertiary },
 });

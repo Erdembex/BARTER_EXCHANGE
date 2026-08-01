@@ -9,14 +9,40 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  Image,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApplicationMessage, UserRole } from '@/types';
 import { messagesRepository } from '@/features/messages';
-import { markConversationRead, resolveConversationId } from '@/features/messages/conversationsApi';
+import {
+  markConversationRead,
+  markConversationReadByApplication,
+  resolveConversationId,
+} from '@/features/messages/conversationsApi';
+import {
+  acceptConversationOffer,
+  rejectConversationOffer,
+  sendConversationOffer,
+  SendChatOfferInput,
+} from '@/features/messages/offersApi';
+import { ChatOfferBubble } from '@/components/messaging/ChatOfferBubble';
+import { ChatImageAttachButton, ChatImageBubble } from '@/components/messaging/ChatImageBubble';
+import { ReportChatImageSheet } from '@/components/messaging/ReportChatImageSheet';
+import { SendOfferSheet } from '@/components/messaging/SendOfferSheet';
+import { markConversationNotificationsRead } from '@/features/notifications/notificationsApi';
+import { notifyMessagingInboxRead } from '@/store/messagingInboxStore';
+import { triggerNotificationRefresh } from '@/store/notificationRefreshBridge';
+import { uploadLocalFiles } from '@/lib/storageUpload';
+import { normalizeUploadPath } from '@/lib/mediaUrl';
+import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface ChatThreadViewProps {
   applicationId: string;
@@ -25,7 +51,16 @@ interface ChatThreadViewProps {
   variant?: 'embedded' | 'fullscreen';
   peerLabel?: string;
   taskTitle?: string;
+  /** Bu sohbetteki okunmamış sayısı — rozet anında düşsün */
+  priorUnread?: number;
+  messagingAudience?: 'user' | 'business';
 }
+
+type PendingChatImage = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
 
 export function ChatThreadView({
   applicationId,
@@ -34,31 +69,65 @@ export function ChatThreadView({
   variant = 'fullscreen',
   peerLabel,
   taskTitle,
+  priorUnread = 0,
+  messagingAudience = 'user',
 }: ChatThreadViewProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<ApplicationMessage[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [imageSending, setImageSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [offerSheetOpen, setOfferSheetOpen] = useState(false);
+  const [offerSending, setOfferSending] = useState(false);
+  const [offerActingId, setOfferActingId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<ApplicationMessage | null>(null);
+  const [reportSheetOpen, setReportSheetOpen] = useState(false);
+  const [pendingImage, setPendingImage] = useState<PendingChatImage | null>(null);
   const listRef = useRef<FlatList<ApplicationMessage>>(null);
   const prevCount = useRef(0);
+  const isNearBottomRef = useRef(true);
+  const didInitialScrollRef = useRef(false);
+  const clearedUnreadRef = useRef(false);
   const isFullscreen = variant === 'fullscreen';
 
-  const scrollToEnd = useCallback(() => {
+  const scrollToEnd = useCallback((animated = true) => {
     if (messages.length > 0) {
-      listRef.current?.scrollToEnd({ animated: true });
+      listRef.current?.scrollToEnd({ animated });
     }
   }, [messages.length]);
 
+  const handleListScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    isNearBottomRef.current =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - 96;
+  }, []);
+
   const markRead = useCallback(async () => {
-    try {
-      const conversationId = await resolveConversationId(applicationId);
-      if (conversationId) await markConversationRead(conversationId);
-    } catch {
-      // sessiz
+    if (!clearedUnreadRef.current && priorUnread > 0) {
+      clearedUnreadRef.current = true;
+      notifyMessagingInboxRead(priorUnread, messagingAudience);
     }
-  }, [applicationId]);
+
+    try {
+      const result = await markConversationReadByApplication(applicationId, priorUnread);
+      const conversationId =
+        result.conversationId ?? (await resolveConversationId(applicationId));
+      if (conversationId) {
+        await markConversationRead(conversationId).catch(() => {});
+        await markConversationNotificationsRead(conversationId);
+        triggerNotificationRefresh();
+      }
+    } catch {
+      // Mesaj GET isteği backend'de okundu işaretler
+    } finally {
+      notifyMessagingInboxRead(0, messagingAudience);
+    }
+  }, [applicationId, priorUnread, messagingAudience]);
 
   useEffect(() => {
     const unsubscribe = messagesRepository.subscribe(applicationId, (list) => {
@@ -68,25 +137,95 @@ export function ChatThreadView({
     return unsubscribe;
   }, [applicationId]);
 
+  useEffect(() => {
+    void resolveConversationId(applicationId).then(setConversationId);
+  }, [applicationId]);
+
   useFocusEffect(
     useCallback(() => {
+      clearedUnreadRef.current = false;
       void messagesRepository.getByApplication(applicationId).then((list) => {
         setMessages(list);
         setLoading(false);
+        void markRead();
       });
-      void markRead();
     }, [applicationId, markRead])
   );
 
   useEffect(() => {
-    if (messages.length > prevCount.current) {
-      scrollToEnd();
+    if (messages.length === 0) {
+      didInitialScrollRef.current = false;
+      prevCount.current = 0;
+      return;
+    }
+
+    if (!didInitialScrollRef.current) {
+      didInitialScrollRef.current = true;
+      requestAnimationFrame(() => scrollToEnd(false));
+      prevCount.current = messages.length;
+      return;
+    }
+
+    if (messages.length > prevCount.current && isNearBottomRef.current) {
+      requestAnimationFrame(() => scrollToEnd(true));
     }
     prevCount.current = messages.length;
   }, [messages.length, scrollToEnd]);
 
+  const refreshMessages = useCallback(async () => {
+    const list = await messagesRepository.getByApplication(applicationId);
+    setMessages(list);
+    return list;
+  }, [applicationId]);
+
+  const handleSendOffer = async (input: SendChatOfferInput) => {
+    if (!conversationId || offerSending) return;
+    setOfferSending(true);
+    setSendError(null);
+    try {
+      await sendConversationOffer(conversationId, input);
+      setOfferSheetOpen(false);
+      await refreshMessages();
+      scrollToEnd();
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : t('chatThreadView.offerSendFailed'));
+    } finally {
+      setOfferSending(false);
+    }
+  };
+
+  const handleAcceptOffer = async (offerId: string) => {
+    if (!conversationId || offerActingId) return;
+    setOfferActingId(offerId);
+    setSendError(null);
+    try {
+      await acceptConversationOffer(conversationId, offerId);
+      await refreshMessages();
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : t('chatThreadView.offerAcceptFailed'));
+    } finally {
+      setOfferActingId(null);
+    }
+  };
+
+  const handleRejectOffer = async (offerId: string) => {
+    if (!conversationId || offerActingId) return;
+    setOfferActingId(offerId);
+    setSendError(null);
+    try {
+      await rejectConversationOffer(conversationId, offerId);
+      await refreshMessages();
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : t('chatThreadView.offerRejectFailed'));
+    } finally {
+      setOfferActingId(null);
+    }
+  };
+
+  const isBusiness = currentUserRole === 'business';
+
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    if (!text.trim() || sending || imageSending) return;
     setSending(true);
     setSendError(null);
     try {
@@ -98,12 +237,87 @@ export function ChatThreadView({
       );
       setMessages((prev) => [...prev, message]);
       setText('');
-      scrollToEnd();
+      isNearBottomRef.current = true;
+      scrollToEnd(true);
     } catch (err: unknown) {
-      setSendError(err instanceof Error ? err.message : 'Mesaj gönderilemedi.');
+      setSendError(err instanceof Error ? err.message : t('chatThreadView.messageSendFailed'));
     } finally {
       setSending(false);
     }
+  };
+
+  const handlePickImage = async () => {
+    if (imageSending || sending) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(t('chatThreadView.permissionRequiredTitle'), t('chatThreadView.permissionRequiredText'));
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: false,
+      quality: 0.82,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+
+    const asset = result.assets[0];
+    setSendError(null);
+    setPendingImage({
+      uri: asset.uri,
+      name: asset.fileName ?? 'chat-photo.jpg',
+      mimeType: asset.mimeType ?? 'image/jpeg',
+    });
+  };
+
+  const handleCancelPendingImage = () => {
+    if (imageSending) return;
+    setPendingImage(null);
+    setSendError(null);
+  };
+
+  const handleConfirmSendImage = async () => {
+    if (!pendingImage || imageSending || sending) return;
+
+    setImageSending(true);
+    setSendError(null);
+    try {
+      const uploaded = await uploadLocalFiles(`chat/${applicationId}`, [
+        {
+          uri: pendingImage.uri,
+          name: pendingImage.name,
+          mimeType: pendingImage.mimeType,
+        },
+      ]);
+      const mediaUrl = normalizeUploadPath(uploaded[0] ?? '');
+      if (!mediaUrl) throw new Error(t('chatThreadView.imageUploadFailed'));
+
+      const caption = text.trim() || undefined;
+      const message = await messagesRepository.sendImage(
+        applicationId,
+        currentUserId,
+        currentUserRole,
+        mediaUrl,
+        caption
+      );
+      setMessages((prev) => [...prev, message]);
+      setPendingImage(null);
+      setText('');
+      isNearBottomRef.current = true;
+      showToast(t('chatThreadView.imageSentToast'));
+      scrollToEnd(true);
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : t('chatThreadView.imageSendFailed'));
+    } finally {
+      setImageSending(false);
+    }
+  };
+
+  const openReportSheet = (item: ApplicationMessage) => {
+    setReportTarget(item);
+    setReportSheetOpen(true);
   };
 
   const inputBar = (
@@ -114,22 +328,71 @@ export function ChatThreadView({
       ]}
     >
       {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
+      {pendingImage ? (
+        <View style={styles.previewBox}>
+          <Image source={{ uri: pendingImage.uri }} style={styles.previewImage} resizeMode="cover" />
+          <View style={styles.previewMeta}>
+            <Text style={styles.previewLabel}>{t('chatThreadView.imagePreviewLabel')}</Text>
+            <Text style={styles.previewHint}>
+              {t('chatThreadView.imagePreviewHint')}
+            </Text>
+            <View style={styles.previewActions}>
+              <TouchableOpacity
+                style={styles.previewCancelBtn}
+                onPress={handleCancelPendingImage}
+                disabled={imageSending}
+              >
+                <Text style={styles.previewCancelText}>{t('chatThreadView.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.previewSendBtn, imageSending && styles.previewSendBtnDisabled]}
+                onPress={handleConfirmSendImage}
+                disabled={imageSending}
+              >
+                {imageSending ? (
+                  <ActivityIndicator color={Colors.textOnPrimary} size="small" />
+                ) : (
+                  <Text style={styles.previewSendText}>{t('chatThreadView.send')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {isBusiness ? (
+        <TouchableOpacity
+          style={[styles.offerBtn, !conversationId && styles.offerBtnDisabled]}
+          onPress={() => setOfferSheetOpen(true)}
+          disabled={!conversationId || offerSending}
+          activeOpacity={0.88}
+        >
+          <Text style={styles.offerBtnText}>{t('chatThreadView.sendOffer')}</Text>
+        </TouchableOpacity>
+      ) : null}
       <View style={styles.inputRow}>
+        <ChatImageAttachButton
+          onPress={handlePickImage}
+          disabled={!conversationId || imageSending}
+          loading={false}
+        />
         <TextInput
           style={styles.input}
           value={text}
           onChangeText={setText}
-          placeholder="Mesaj yaz..."
+          placeholder={pendingImage ? t('chatThreadView.imageNotePlaceholder') : t('chatThreadView.messagePlaceholder')}
           placeholderTextColor={Colors.textMuted}
           multiline
           maxLength={1000}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!text.trim() || sending) && styles.sendBtnDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
+          style={[
+            styles.sendBtn,
+            ((!text.trim() && !pendingImage) || sending || imageSending) && styles.sendBtnDisabled,
+          ]}
+          onPress={pendingImage ? handleConfirmSendImage : handleSend}
+          disabled={(!text.trim() && !pendingImage) || sending || imageSending}
         >
-          {sending ? (
+          {sending || imageSending ? (
             <ActivityIndicator color={Colors.textOnPrimary} size="small" />
           ) : (
             <Text style={styles.sendText}>↑</Text>
@@ -155,7 +418,7 @@ export function ChatThreadView({
     >
       {!isFullscreen && peerLabel ? (
         <View style={styles.embeddedHeader}>
-          <Text style={styles.embeddedTitle}>Mesajlar</Text>
+          <Text style={styles.embeddedTitle}>{t('chatThreadView.messagesTitle')}</Text>
           <Text style={styles.embeddedSubtitle}>
             {peerLabel}
             {taskTitle ? ` · ${taskTitle}` : ''}
@@ -163,46 +426,109 @@ export function ChatThreadView({
         </View>
       ) : null}
 
-      {messages.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyIcon}>💬</Text>
-          <Text style={styles.emptyTitle}>Sohbet başlasın</Text>
-          <Text style={styles.emptyText}>
-            {peerLabel ?? 'İşletme'} ile bu görev hakkında yazışmaya başlayabilirsin.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          style={isFullscreen ? styles.listFullscreen : undefined}
-          contentContainerStyle={[
-            styles.list,
-            isFullscreen && styles.listFullscreenContent,
-          ]}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={scrollToEnd}
-          renderItem={({ item }) => {
+      <View style={[styles.messagesPane, isFullscreen && styles.messagesPaneFullscreen]}>
+        {messages.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyIcon}>💬</Text>
+            <Text style={styles.emptyTitle}>{t('chatThreadView.startChatTitle')}</Text>
+            <Text style={styles.emptyText}>
+              {t('chatThreadView.startChatText', { peer: peerLabel ?? t('chatThreadView.defaultBusiness') })}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            style={isFullscreen ? styles.listFullscreen : styles.listEmbedded}
+            contentContainerStyle={[
+              styles.listContent,
+              isFullscreen && styles.listFullscreenContent,
+            ]}
+            showsVerticalScrollIndicator
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            onScroll={handleListScroll}
+            scrollEventThrottle={16}
+            renderItem={({ item }) => {
             const mine = item.senderId === currentUserId;
+            if (item.messageType === 'offer' && item.offer) {
+              return (
+                <ChatOfferBubble
+                  offer={item.offer}
+                  mine={mine}
+                  createdAt={item.createdAt}
+                  onAccept={
+                    !mine && item.offer.status === 'PENDING'
+                      ? () => handleAcceptOffer(item.offer!.id)
+                      : undefined
+                  }
+                  onReject={
+                    !mine && item.offer.status === 'PENDING'
+                      ? () => handleRejectOffer(item.offer!.id)
+                      : undefined
+                  }
+                  acting={offerActingId === item.offer.id}
+                />
+              );
+            }
+            if (item.messageType === 'system') {
+              return (
+                <View style={styles.systemRow}>
+                  <Text style={styles.systemText}>{item.text}</Text>
+                </View>
+              );
+            }
+            if (item.messageType === 'image' && item.mediaUrl) {
+              return (
+                <ChatImageBubble
+                  mediaUrl={item.mediaUrl}
+                  caption={item.text}
+                  mine={mine}
+                  createdAt={item.createdAt}
+                  isRead={item.isRead}
+                  onReport={!mine ? () => openReportSheet(item) : undefined}
+                />
+              );
+            }
             return (
               <View style={[styles.row, mine ? styles.rowMine : styles.rowOther]}>
                 <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
                   <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>
                     {item.text}
                   </Text>
-                <Text style={[styles.bubbleTime, mine && styles.bubbleTimeMine]}>
-                  {formatRelativeTime(item.createdAt) || 'Az önce'}
-                  {mine && item.isRead ? ' · Okundu' : ''}
-                </Text>
+                  <Text style={[styles.bubbleTime, mine && styles.bubbleTimeMine]}>
+                    {formatRelativeTime(item.createdAt) || t('chatThreadView.justNow')}
+                    {mine && item.isRead ? t('chatThreadView.readSuffix') : ''}
+                  </Text>
                 </View>
               </View>
             );
           }}
-        />
-      )}
+          />
+        )}
+      </View>
 
       {inputBar}
+
+      <SendOfferSheet
+        visible={offerSheetOpen}
+        onClose={() => setOfferSheetOpen(false)}
+        onSubmit={handleSendOffer}
+        loading={offerSending}
+      />
+
+      <ReportChatImageSheet
+        visible={reportSheetOpen}
+        conversationId={conversationId}
+        messageId={reportTarget?.id ?? null}
+        onClose={() => {
+          setReportSheetOpen(false);
+          setReportTarget(null);
+        }}
+        onSubmitted={() => showToast(t('chatThreadView.reportReceivedToast'))}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -234,6 +560,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing[8],
     gap: Spacing[2],
+    minHeight: 160,
+  },
+  messagesPane: {
+    minHeight: 0,
+  },
+  messagesPaneFullscreen: {
+    flex: 1,
+  },
+  listEmbedded: {
+    flexGrow: 0,
+    maxHeight: 320,
+  },
+  listFullscreen: {
+    flex: 1,
+  },
+  listContent: {
+    paddingVertical: Spacing[2],
+    gap: Spacing[2],
+  },
+  listFullscreenContent: {
+    paddingHorizontal: Spacing[4],
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[2],
+    flexGrow: 1,
   },
   emptyIcon: { fontSize: 40, marginBottom: Spacing[2] },
   emptyTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
@@ -243,28 +593,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  list: {
-    gap: Spacing[2],
-    paddingVertical: Spacing[2],
-    maxHeight: 320,
-  },
-  listFullscreen: {
-    flex: 1,
-    maxHeight: undefined,
-  },
-  listFullscreenContent: {
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[3],
-    paddingBottom: Spacing[2],
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-  },
   row: {
     width: '100%',
     marginBottom: Spacing[2],
   },
   rowMine: { alignItems: 'flex-end' },
   rowOther: { alignItems: 'flex-start' },
+  systemRow: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: Spacing[3],
+    paddingHorizontal: Spacing[6],
+  },
+  systemText: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    overflow: 'hidden',
+  },
   bubble: {
     maxWidth: '82%',
     paddingHorizontal: Spacing[4],
@@ -289,7 +640,7 @@ const styles = StyleSheet.create({
   },
   bubbleTextMine: { color: Colors.textOnPrimary },
   bubbleTime: { ...Typography.caption, color: Colors.textMuted, alignSelf: 'flex-end' },
-  bubbleTimeMine: { color: 'rgba(10,10,10,0.55)' },
+  bubbleTimeMine: { color: Colors.textOnGold, opacity: 0.72 },
   inputBar: {
     borderTopWidth: 1,
     borderTopColor: Colors.border,
@@ -299,6 +650,58 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
   },
   error: { ...Typography.caption, color: Colors.error },
+  previewBox: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+    padding: Spacing[3],
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  previewImage: {
+    width: 96,
+    height: 96,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.borderLight,
+  },
+  previewMeta: { flex: 1, gap: Spacing[1], justifyContent: 'center' },
+  previewLabel: { ...Typography.labelMedium, color: Colors.textPrimary },
+  previewHint: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
+  previewActions: {
+    flexDirection: 'row',
+    gap: Spacing[2],
+    marginTop: Spacing[2],
+  },
+  previewCancelBtn: {
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  previewCancelText: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '700' },
+  previewSendBtn: {
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    minWidth: 88,
+    alignItems: 'center',
+  },
+  previewSendBtnDisabled: { opacity: 0.55 },
+  previewSendText: { ...Typography.caption, color: Colors.textOnPrimary, fontWeight: '800' },
+  offerBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  offerBtnDisabled: { opacity: 0.45 },
+  offerBtnText: { ...Typography.caption, color: Colors.primary, fontWeight: '700' },
   inputRow: {
     flexDirection: 'row',
     gap: Spacing[2],
@@ -308,7 +711,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surfaceSecondary,
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,

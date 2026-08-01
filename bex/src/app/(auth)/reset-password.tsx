@@ -13,10 +13,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 
 type Step = 'form' | 'success';
 
 export default function ResetPasswordScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ token?: string }>();
   const [token, setToken] = useState((params.token ?? '').toString().toUpperCase());
   const [password, setPassword] = useState('');
@@ -28,19 +30,19 @@ export default function ResetPasswordScreen() {
   const handleSubmit = async () => {
     const normalizedToken = token.trim().toUpperCase();
     if (normalizedToken.length < 8) {
-      setError('E-postadaki 8 haneli sıfırlama kodunu gir.');
+      setError(t('resetPasswordScreen.errorCodeLength'));
       return;
     }
     if (password.length < 8) {
-      setError('Şifre en az 8 karakter olmalı.');
+      setError(t('resetPasswordScreen.errorPasswordLength'));
       return;
     }
     if (!/(?=.*[0-9])(?=.*[A-Z])/.test(password)) {
-      setError('Şifre en az 1 rakam ve 1 büyük harf içermeli.');
+      setError(t('resetPasswordScreen.errorPasswordComplexity'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Şifreler eşleşmiyor.');
+      setError(t('resetPasswordScreen.errorPasswordMismatch'));
       return;
     }
 
@@ -53,7 +55,7 @@ export default function ResetPasswordScreen() {
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
       const message =
-        (err as Error)?.message || getAuthErrorMessage(code) || 'Şifre güncellenemedi.';
+        (err as Error)?.message || getAuthErrorMessage(code) || t('resetPasswordScreen.errorGeneric');
       setError(message);
     } finally {
       setLoading(false);
@@ -72,7 +74,7 @@ export default function ResetPasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Geri</Text>
+            <Text style={styles.backText}>{t('resetPasswordScreen.back')}</Text>
           </TouchableOpacity>
 
           {step === 'form' ? (
@@ -82,9 +84,9 @@ export default function ResetPasswordScreen() {
               </View>
 
               <View style={styles.header}>
-                <Text style={styles.title}>Yeni Şifre Belirle</Text>
+                <Text style={styles.title}>{t('resetPasswordScreen.title')}</Text>
                 <Text style={styles.subtitle}>
-                  E-postana gelen 8 haneli kodu gir ve yeni şifreni belirle. Kod 1 saat geçerlidir.
+                  {t('resetPasswordScreen.subtitle')}
                 </Text>
               </View>
 
@@ -96,7 +98,7 @@ export default function ResetPasswordScreen() {
                 ) : null}
 
                 <Input
-                  label="Sıfırlama Kodu"
+                  label={t('resetPasswordScreen.codeLabel')}
                   placeholder="AB12CD34"
                   value={token}
                   onChangeText={(value) => setToken(value.toUpperCase())}
@@ -105,26 +107,26 @@ export default function ResetPasswordScreen() {
                 />
 
                 <Input
-                  label="Yeni Şifre"
-                  placeholder="En az 8 karakter"
+                  label={t('resetPasswordScreen.newPasswordLabel')}
+                  placeholder={t('resetPasswordScreen.newPasswordPlaceholder')}
                   value={password}
                   onChangeText={setPassword}
                   isPassword
-                  hint="Büyük harf, küçük harf ve rakam içersin."
+                  hint={t('resetPasswordScreen.newPasswordHint')}
                 />
 
                 <Input
-                  label="Yeni Şifre Tekrar"
-                  placeholder="Şifreni tekrar gir"
+                  label={t('resetPasswordScreen.confirmPasswordLabel')}
+                  placeholder={t('resetPasswordScreen.confirmPasswordPlaceholder')}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   isPassword
                 />
 
-                <Button title="Şifreyi Güncelle" onPress={handleSubmit} loading={loading} />
+                <Button title={t('resetPasswordScreen.submit')} onPress={handleSubmit} loading={loading} />
 
                 <Button
-                  title="Kod gelmedi — tekrar iste"
+                  title={t('resetPasswordScreen.resendCode')}
                   onPress={() => router.replace('/(auth)/forgot-password')}
                   variant="ghost"
                 />
@@ -136,13 +138,13 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.successEmoji}>✅</Text>
               </View>
 
-              <Text style={styles.successTitle}>Şifren Güncellendi</Text>
+              <Text style={styles.successTitle}>{t('resetPasswordScreen.successTitle')}</Text>
               <Text style={styles.successText}>
-                Yeni şifrenle giriş yapabilirsin. Eski oturumlar güvenlik için kapatıldı.
+                {t('resetPasswordScreen.successText')}
               </Text>
 
               <Button
-                title="Giriş Ekranına Git"
+                title={t('resetPasswordScreen.goToLogin')}
                 onPress={() => router.replace('/(auth)/login')}
               />
             </View>

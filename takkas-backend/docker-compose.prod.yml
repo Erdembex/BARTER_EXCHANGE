@@ -1,0 +1,83 @@
+# Production stack: PostgreSQL + Redis + Backend
+# Usage:
+#   cp .env.example .env
+#   docker compose -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: takkas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-takkas}
+      POSTGRES_USER: ${DB_USER:-takkas}
+      POSTGRES_PASSWORD: ${DB_PASS:?DB_PASS required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-takkas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: takkas-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: takkas-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-takkas}
+      DB_USER: ${DB_USER:-takkas}
+      DB_PASS: ${DB_PASS}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      UPLOAD_DIR: /var/takkas/uploads
+      LISTINGS_AUTO_APPROVE: ${LISTINGS_AUTO_APPROVE:-false}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      ADMIN_SEED_ENABLED: ${ADMIN_SEED_ENABLED:-false}
+      ADMIN_SYNC_PASSWORD: ${ADMIN_SYNC_PASSWORD:-false}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_S3_REGION: ${AWS_S3_REGION:-eu-central-1}
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+      APP_PAYMENT_PROVIDER: ${APP_PAYMENT_PROVIDER:-manual}
+    # Firebase SA mount (opsiyonel):
+    #   - ./firebase-sa.json:/app/firebase-sa.json:ro
+    #   FIREBASE_SERVICE_ACCOUNT_PATH=/app/firebase-sa.json
+    volumes:
+      - upload_data:/var/takkas/uploads
+
+volumes:
+  postgres_data:
+  redis_data:
+  upload_data:

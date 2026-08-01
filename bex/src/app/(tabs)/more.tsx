@@ -5,39 +5,41 @@ import { AppHeader } from '@/components/navigation/AppHeader';
 import { useOpenNotifications } from '@/hooks/useOpenNotifications';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type MoreLink = {
   route: Href;
-  label: string;
-  hint: string;
+  labelKey: string;
+  hintKey: string;
   icon: string;
 };
 
 const MORE_LINKS: MoreLink[] = [
-  { route: '/(tabs)/trade' as Href, label: 'Takas', hint: 'Kupon takası yap', icon: '⇄' },
-  { route: '/(tabs)/wallet' as Href, label: 'Cüzdan', hint: 'Kuponlarını gör', icon: '▣' },
+  { route: '/(tabs)/trade' as Href, labelKey: 'moreScreen.trade', hintKey: 'moreScreen.tradeHint', icon: '⇄' },
+  { route: '/(tabs)/wallet' as Href, labelKey: 'moreScreen.wallet', hintKey: 'moreScreen.walletHint', icon: '▣' },
   {
     route: '/(tabs)/complaints/index' as Href,
-    label: 'Şikayet BEX',
-    hint: 'Şikayet bildir',
+    labelKey: 'moreScreen.complaint',
+    hintKey: 'moreScreen.complaintHint',
     icon: '⚠',
   },
 ];
 
 export default function MoreScreen() {
+  const { t } = useTranslation();
   const openNotifications = useOpenNotifications();
   const { unreadCount } = useNotifications();
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Menü" showMenu={false} showNotifications={false} onBack={() => router.back()} />
+      <AppHeader title={t('moreScreen.title')} showMenu={false} showNotifications={false} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity style={styles.noticeCard} activeOpacity={0.88} onPress={openNotifications}>
           <View style={styles.noticeLeft}>
             <Text style={styles.noticeIcon}>◉</Text>
             <View>
-              <Text style={styles.noticeTitle}>Bildirimler</Text>
-              <Text style={styles.noticeHint}>Başvuru, mesaj ve kupon güncellemeleri</Text>
+              <Text style={styles.noticeTitle}>{t('moreScreen.notifications')}</Text>
+              <Text style={styles.noticeHint}>{t('moreScreen.notificationsHint')}</Text>
             </View>
           </View>
           {unreadCount > 0 ? (
@@ -49,18 +51,18 @@ export default function MoreScreen() {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.section}>Diğer</Text>
+        <Text style={styles.section}>{t('moreScreen.other')}</Text>
         {MORE_LINKS.map((link) => (
           <TouchableOpacity
-            key={link.label}
+            key={link.labelKey}
             style={styles.linkRow}
             activeOpacity={0.88}
             onPress={() => router.push(link.route)}
           >
             <Text style={styles.linkIcon}>{link.icon}</Text>
             <View style={styles.linkBody}>
-              <Text style={styles.linkTitle}>{link.label}</Text>
-              <Text style={styles.linkHint}>{link.hint}</Text>
+              <Text style={styles.linkTitle}>{t(link.labelKey)}</Text>
+              <Text style={styles.linkHint}>{t(link.hintKey)}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>

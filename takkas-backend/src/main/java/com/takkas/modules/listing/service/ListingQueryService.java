@@ -2,6 +2,7 @@ package com.takkas.modules.listing.service;
 
 import com.takkas.common.exception.ResourceNotFoundException;
 import com.takkas.common.pagination.PageResponse;
+import com.takkas.modules.application.repository.ApplicationRepository;
 import com.takkas.modules.complaint.domain.enums.ComplaintStatus;
 import com.takkas.modules.complaint.repository.BusinessComplaintRepository;
 import com.takkas.modules.complaint.service.TrustMetricsService;
@@ -29,6 +30,7 @@ public class ListingQueryService {
     private final ListingCacheService cacheService;
     private final TrustMetricsService trustMetricsService;
     private final BusinessComplaintRepository businessComplaintRepository;
+    private final ApplicationRepository applicationRepository;
 
     public List<ListingCardResponse> getBusinessListings(UUID businessId) {
         return enrichCards(listingRepository.findAllByBusinessIdOrderByCreatedAtDesc(businessId)
@@ -41,9 +43,13 @@ public class ListingQueryService {
         Instant cursor = filter.cursor() != null ? filter.cursor() : now.plusSeconds(60);
         String city = blankToNull(filter.city());
         String district = blankToNull(filter.district());
-        var listings = listingRepository.findActiveListingsForDiscover(
-            city, district, filter.skills(),
-            now, cursor, PageRequest.of(0, size));
+        String q = blankToNull(filter.q());
+        var page = PageRequest.of(0, size);
+        var listings = q == null
+            ? listingRepository.findActiveListingsForDiscover(
+                city, district, filter.skills(), now, cursor, page)
+            : listingRepository.searchActiveListingsForDiscover(
+                city, district, filter.skills(), q, now, cursor, page);
         var cards = enrichCards(listings.stream().map(ListingMapper::toCardResponse).toList());
         var nextCursor = listings.isEmpty() ? null : listings.getLast().getCreatedAt();
         return PageResponse.of(cards, nextCursor);
@@ -61,6 +67,12 @@ public class ListingQueryService {
 
     private List<ListingCardResponse> enrichCards(List<ListingCardResponse> cards) {
         if (cards.isEmpty()) return cards;
+        var listingIds = cards.stream().map(ListingCardResponse::id).collect(Collectors.toSet());
+        Map<UUID, Long> applicantCounts = toCountMap(
+            applicationRepository.countActiveApplicantsByListingIds(listingIds));
+        Map<UUID, Long> acceptedCounts = toCountMap(
+            applicationRepository.countAcceptedApplicantsByListingIds(listingIds));
+
         var businessIds = cards.stream()
             .map(ListingCardResponse::businessProfileId)
             .filter(id -> id != null)
@@ -88,12 +100,22 @@ public class ListingQueryService {
                 card.rewardUnit(),
                 card.rewardDescription(),
                 card.status(),
-                card.applicantCount(),
+                applicantCounts.getOrDefault(card.id(), 0L),
+                acceptedCounts.getOrDefault(card.id(), 0L),
                 card.createdAt(),
                 card.expiresAt(),
                 listed,
-                trust != null && trust.isDangerous());
+                trust != null && trust.isDangerous(),
+                card.businessVerified());
         }).toList();
+    }
+
+    private static Map<UUID, Long> toCountMap(List<Object[]> rows) {
+        if (rows == null || rows.isEmpty()) return Map.of();
+        return rows.stream().collect(Collectors.toMap(
+            row -> (UUID) row[0],
+            row -> (Long) row[1]
+        ));
     }
 
     private static String blankToNull(String value) {

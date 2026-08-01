@@ -3,7 +3,6 @@ package com.takkas.modules.subscription.api;
 import com.takkas.common.exception.ResourceNotFoundException;
 import com.takkas.common.security.*;
 import com.takkas.modules.subscription.api.dto.*;
-import com.takkas.modules.subscription.domain.enums.BillingPeriod;
 import com.takkas.modules.subscription.listener.StripeWebhookHandler;
 import com.takkas.modules.subscription.mapper.SubscriptionMapper;
 import com.takkas.modules.subscription.repository.*;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Abonelik", description = "Planlar, Stripe ödeme, fatura yönetimi")
+@Tag(name = "Abonelik", description = "Planlar, ödeme (PaymentGateway), fatura yönetimi")
 @RestController
 @RequiredArgsConstructor
 public class SubscriptionController {
@@ -56,15 +55,9 @@ public class SubscriptionController {
     @PreAuthorize("hasRole('BUSINESS')")
     public CheckoutResponse createCheckout(@CurrentUser UserPrincipal p,
                                             @Valid @RequestBody CheckoutRequest req) {
-        var sub = subscriptionRepository.findByBusinessId(p.profileId())
-            .orElseThrow(() -> new ResourceNotFoundException("Abonelik bulunamadı."));
-        var targetPlan = planRepository.findById(req.targetPlanId())
-            .orElseThrow(() -> new ResourceNotFoundException("Hedef plan bulunamadı."));
-        String priceId = req.billingPeriod() == BillingPeriod.YEARLY
-            ? targetPlan.getStripePriceIdYearly()
-            : targetPlan.getStripePriceIdMonthly();
-        return new CheckoutResponse(stripeService.createCheckoutSession(
-            p.profileId(), req.targetPlanId(), priceId, sub.getStripeCustomerId()));
+        var result = subscriptionService.requestUpgrade(p.profileId(), req.targetPlanId(), req.billingPeriod());
+        return new CheckoutResponse(result.requiresRedirect(), result.redirectUrl(),
+            result.message(), result.reference());
     }
 
     @PostMapping("/api/business/subscription/portal")

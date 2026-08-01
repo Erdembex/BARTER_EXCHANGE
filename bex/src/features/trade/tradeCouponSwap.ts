@@ -5,6 +5,7 @@ import { generateCouponCode } from '@/lib/couponCode';
 import { couponsRepository } from '@/features/data/applicationsRepository';
 import { Coupon } from '@/types';
 import { TradeListingRecord, TradeOfferRecord, TradeSwapResult } from './types';
+import { t } from '@/i18n';
 
 export type { TradeSwapResult };
 
@@ -48,27 +49,27 @@ export async function executeTradeSwap(
   offer: TradeOfferRecord
 ): Promise<TradeSwapResult> {
   if (!offer.counterCouponId) {
-    throw Object.assign(new Error('Teklifte kupon seçilmemiş.'), { code: 'missing-counter-coupon' });
+    throw Object.assign(new Error(t('tradeCouponSwap.missingCounterCoupon')), { code: 'missing-counter-coupon' });
   }
 
   const listingCoupon = await couponsRepository.getById(listing.couponId);
   const offerCoupon = await couponsRepository.getById(offer.counterCouponId);
 
   if (!listingCoupon || listingCoupon.userId !== listing.ownerId) {
-    throw Object.assign(new Error('İlan kuponu geçersiz.'), { code: 'invalid-listing-coupon' });
+    throw Object.assign(new Error(t('tradeCouponSwap.invalidListingCoupon')), { code: 'invalid-listing-coupon' });
   }
   if (!offerCoupon || offerCoupon.userId !== offer.fromUserId) {
-    throw Object.assign(new Error('Teklif kuponu geçersiz.'), { code: 'invalid-offer-coupon' });
+    throw Object.assign(new Error(t('tradeCouponSwap.invalidOfferCoupon')), { code: 'invalid-offer-coupon' });
   }
   if (listingCoupon.status !== 'active' || offerCoupon.status !== 'active') {
-    throw Object.assign(new Error('Takas için her iki kupon da aktif olmalı.'), {
+    throw Object.assign(new Error(t('tradeCouponSwap.couponsMustBeActive')), {
       code: 'coupon-not-active',
     });
   }
 
   if (!shouldUseDemoData()) {
     throw Object.assign(
-      new Error('Kupon takası yalnızca demo modda veya Cloud Function ile yapılabilir.'),
+      new Error(t('tradeCouponSwap.demoOrCloudOnly')),
       { code: 'swap-needs-function' }
     );
   }

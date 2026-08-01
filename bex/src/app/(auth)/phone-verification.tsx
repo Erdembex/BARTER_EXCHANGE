@@ -26,10 +26,12 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 
 const OTP_LENGTH = 6;
 
 export default function PhoneVerificationScreen() {
+  const { t } = useTranslation();
   const { firebaseUser, setBexUser } = useAuthStore();
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -83,7 +85,7 @@ export default function PhoneVerificationScreen() {
 
   const handleSendOTP = async () => {
     if (!phone.trim()) {
-      setError('Telefon numarası gir.');
+      setError(t('phoneVerificationScreen.errorPhoneRequired'));
       return;
     }
 
@@ -145,7 +147,7 @@ export default function PhoneVerificationScreen() {
   const handleVerifyOTP = async () => {
     const code = otp.join('');
     if (code.length < OTP_LENGTH) {
-      setError('Lütfen 6 haneli kodu girin.');
+      setError(t('phoneVerificationScreen.errorOtpLength'));
       return;
     }
 
@@ -183,7 +185,7 @@ export default function PhoneVerificationScreen() {
         >
           {step === 'phone' && (
             <TouchableOpacity onPress={handleSkip} style={styles.skip}>
-              <Text style={styles.skipText}>Daha Sonra</Text>
+              <Text style={styles.skipText}>{t('phoneVerificationScreen.later')}</Text>
             </TouchableOpacity>
           )}
 
@@ -200,32 +202,28 @@ export default function PhoneVerificationScreen() {
           {step === 'phone' ? (
             <>
               <View style={styles.header}>
-                <Text style={styles.title}>Telefonu Doğrula</Text>
+                <Text style={styles.title}>{t('phoneVerificationScreen.title')}</Text>
                 <Text style={styles.subtitle}>
-                  Hesabının güvenliğini artırmak için telefon numaranı doğrula.
-                  Opsiyonel — atlayabilirsin.
+                  {t('phoneVerificationScreen.subtitle')}
                 </Text>
               </View>
 
               {isAuthEmulatorActive() ? (
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    Emulator modu: Kod Auth Emulator arayüzünde görünür (localhost:4000 →
-                    Authentication). Test numarası: 555 555 0100
+                    {t('phoneVerificationScreen.emulatorHint')}
                   </Text>
                 </View>
               ) : !phoneSupported ? (
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    Telefon doğrulama Expo Go&apos;da production modunda henüz aktif değil.
-                    Şimdilik atlayabilirsin.
+                    {t('phoneVerificationScreen.notSupportedHint')}
                   </Text>
                 </View>
               ) : (
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    Backend doğrulama aktif. SMS henüz bağlı değil; geliştirmede kod ekranda
-                    gösterilir.
+                    {t('phoneVerificationScreen.backendHint')}
                   </Text>
                 </View>
               )}
@@ -243,7 +241,7 @@ export default function PhoneVerificationScreen() {
                   </View>
                   <TextInput
                     style={styles.phoneInput}
-                    placeholder="5XX XXX XX XX"
+                    placeholder={t('phoneVerificationScreen.phonePlaceholder')}
                     placeholderTextColor={Colors.textTertiary}
                     value={phone}
                     onChangeText={setPhone}
@@ -254,36 +252,35 @@ export default function PhoneVerificationScreen() {
                 </View>
 
                 <Button
-                  title="Kod Gönder"
+                  title={t('phoneVerificationScreen.sendCode')}
                   onPress={handleSendOTP}
                   loading={loading}
                   disabled={!phoneSupported}
                 />
 
-                <Button title="Şimdilik Atla" onPress={handleSkip} variant="ghost" />
+                <Button title={t('phoneVerificationScreen.skipForNow')} onPress={handleSkip} variant="ghost" />
               </View>
             </>
           ) : (
             <>
               <View style={styles.header}>
-                <Text style={styles.title}>Kodu Gir</Text>
+                <Text style={styles.title}>{t('phoneVerificationScreen.enterCode')}</Text>
                 <Text style={styles.subtitle}>
-                  <Text style={styles.phoneHighlight}>{phone}</Text> numarasına 6 haneli
-                  doğrulama kodu gönderdik.
+                  <Text style={styles.phoneHighlight}>{phone}</Text>
+                  {t('phoneVerificationScreen.codeSentTo')}
                 </Text>
               </View>
 
               {isAuthEmulatorActive() ? (
                 <View style={styles.hintBox}>
                   <Text style={styles.hintText}>
-                    Emulator modu: Kod Auth Emulator arayüzünde görünür (localhost:4000 →
-                    Authentication).
-                    {devCode ? `\n\nTest kodu: ${devCode}` : ''}
+                    {t('phoneVerificationScreen.emulatorHint')}
+                    {devCode ? t('phoneVerificationScreen.testCodeSuffix', { code: devCode }) : ''}
                   </Text>
                 </View>
               ) : devCode ? (
                 <View style={styles.hintBox}>
-                  <Text style={styles.hintText}>Geliştirme kodu: {devCode}</Text>
+                  <Text style={styles.hintText}>{t('phoneVerificationScreen.devCode', { code: devCode })}</Text>
                 </View>
               ) : null}
 
@@ -317,15 +314,15 @@ export default function PhoneVerificationScreen() {
                   ))}
                 </View>
 
-                <Button title="Doğrula" onPress={handleVerifyOTP} loading={loading} />
+                <Button title={t('phoneVerificationScreen.verify')} onPress={handleVerifyOTP} loading={loading} />
 
                 <View style={styles.resendRow}>
-                  <Text style={styles.resendText}>Kod gelmedi mi? </Text>
+                  <Text style={styles.resendText}>{t('phoneVerificationScreen.resendPrompt')}</Text>
                   {resendTimer > 0 ? (
                     <Text style={styles.resendTimer}>{resendTimer}s</Text>
                   ) : (
                     <TouchableOpacity onPress={handleSendOTP}>
-                      <Text style={styles.resendLink}>Tekrar Gönder</Text>
+                      <Text style={styles.resendLink}>{t('phoneVerificationScreen.resend')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -339,7 +336,7 @@ export default function PhoneVerificationScreen() {
                     setOtp(Array(OTP_LENGTH).fill(''));
                   }}
                 >
-                  <Text style={styles.changePhoneText}>Telefon numarasını değiştir</Text>
+                  <Text style={styles.changePhoneText}>{t('phoneVerificationScreen.changePhone')}</Text>
                 </TouchableOpacity>
               </View>
             </>

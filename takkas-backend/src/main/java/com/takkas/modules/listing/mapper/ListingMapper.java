@@ -41,10 +41,12 @@ public class ListingMapper {
             r != null ? r.getUnit() : null,
             r != null ? r.getDescription() : null,
             l.getStatus(),
-            0,
+            0L,
+            0L,
             l.getCreatedAt(),
             l.getExpiresAt(),
             false,
-            false);
+            false,
+            l.getBusiness().isVerified());
     }
 }

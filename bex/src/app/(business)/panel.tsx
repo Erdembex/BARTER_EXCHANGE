@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -26,11 +26,15 @@ import { useMessagingInbox } from '@/hooks/useMessagingInbox';
 import { StatCard } from '@/components/business';
 import { Button } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { Typography, Spacing, Radius, Shadow, useThemeColors } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessDashboardScreen() {
   const { bexUser, signOut } = useAuthStore();
   const { business, loading, reload } = useBusiness();
+  const Colors = useThemeColors();
+  const { t } = useTranslation();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { totalUnread: messageUnread, isUnlocked: messagingUnlocked } = useMessagingInbox('business');
   const [stats, setStats] = useState({
     newApplications: 0,
@@ -96,7 +100,7 @@ export default function BusinessDashboardScreen() {
         }
       >
         <LinearGradient
-          colors={[Colors.secondary, Colors.gradientMid, '#000000']}
+          colors={[Colors.gradientBlue, Colors.gradientMid, Colors.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -107,14 +111,14 @@ export default function BusinessDashboardScreen() {
             size={56}
           />
           <View style={styles.heroText}>
-            <Text style={styles.greeting}>Merhaba,</Text>
+            <Text style={styles.greeting}>{t('business.panel.hello')}</Text>
             <Text style={styles.name}>{business?.name ?? bexUser?.displayName}</Text>
             {business?.isVerified ? (
-              <Text style={styles.verified}>✓ Doğrulanmış işletme</Text>
+              <Text style={styles.verified}>{t('business.panel.verified')}</Text>
             ) : null}
           </View>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>Çıkış</Text>
+            <Text style={styles.logoutText}>{t('business.panel.logout')}</Text>
           </TouchableOpacity>
         </LinearGradient>
 
@@ -124,8 +128,10 @@ export default function BusinessDashboardScreen() {
             activeOpacity={0.88}
             onPress={() => router.push('/(business)/messages' as Href)}
           >
-            <Text style={styles.messageTitle}>{messageUnread} okunmamış mesaj</Text>
-            <Text style={styles.messageHint}>Sohbet sekmesine git →</Text>
+            <Text style={styles.messageTitle}>
+              {t('business.panel.unreadMessages', { count: messageUnread })}
+            </Text>
+            <Text style={styles.messageHint}>{t('business.panel.goToMessages')}</Text>
           </TouchableOpacity>
         ) : messagingUnlocked ? (
           <TouchableOpacity
@@ -133,20 +139,20 @@ export default function BusinessDashboardScreen() {
             activeOpacity={0.88}
             onPress={() => router.push('/(business)/messages' as Href)}
           >
-            <Text style={styles.messageTitleMuted}>Adaylarla sohbet et</Text>
-            <Text style={styles.messageHintMuted}>Onaylı başvurulardan yaz →</Text>
+            <Text style={styles.messageTitleMuted}>{t('business.panel.chatCandidates')}</Text>
+            <Text style={styles.messageHintMuted}>{t('business.panel.chatFromApproved')}</Text>
           </TouchableOpacity>
         ) : null}
 
         <View style={styles.statsRow}>
           <StatCard
-            label="Yeni başvuru"
+            label={t('business.panel.stats.newApplications')}
             value={stats.newApplications}
             emoji="📥"
             onPress={() => router.push('/(business)/applications' as Href)}
           />
           <StatCard
-            label="Devam eden"
+            label={t('business.panel.stats.inProgress')}
             value={stats.inProgressApps}
             emoji="💬"
             onPress={() => router.push('/(business)/applications' as Href)}
@@ -154,24 +160,33 @@ export default function BusinessDashboardScreen() {
         </View>
         <View style={styles.statsRow}>
           <StatCard
-            label="Aktif görev"
+            label={t('business.panel.stats.activeTasks')}
             value={stats.activeTasks}
             emoji="🎯"
             onPress={() => router.push('/(business)/tasks' as Href)}
           />
           <StatCard
-            label="Admin onayı bekleyen"
+            label={t('business.panel.stats.pendingApproval')}
             value={stats.pendingApproval}
             emoji="⏳"
             onPress={() => router.push('/(business)/tasks' as Href)}
           />
         </View>
         <View style={styles.statsRow}>
-          <StatCard label="Tamamlanan görev" value={stats.completedTasks} emoji="✅" />
-          <View style={styles.statSpacer} />
+          <StatCard label={t('business.panel.stats.completedTasksLong')} value={stats.completedTasks} emoji="✅" />
+          <StatCard
+            label={t('businessDashboardScreen.averageRating')}
+            value={business?.averageRating ? `${business.averageRating.toFixed(1)} ⭐` : '—'}
+            emoji="🌟"
+          />
         </View>
+        {business?.feedbackCount ? (
+          <Text style={styles.ratingHint}>
+            {t('businessDashboardScreen.ratingHint', { count: business.feedbackCount })}
+          </Text>
+        ) : null}
 
-        <Text style={styles.sectionTitle}>Hızlı erişim</Text>
+        <Text style={styles.sectionTitle}>{t('businessDashboardScreen.quickAccess')}</Text>
         <View style={styles.quickGrid}>
           <TouchableOpacity
             style={styles.quickCard}
@@ -179,8 +194,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/messages' as Href)}
           >
             <Text style={styles.quickIcon}>💬</Text>
-            <Text style={styles.quickLabel}>Sohbet</Text>
-            <Text style={styles.quickHint}>Aday mesajları</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickChat')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickChatHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -188,8 +203,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/profile-search' as Href)}
           >
             <Text style={styles.quickIcon}>🔍</Text>
-            <Text style={styles.quickLabel}>Profil Ara</Text>
-            <Text style={styles.quickHint}>Aday portföyü</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickProfileSearch')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickProfileSearchHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -197,8 +212,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/analytics' as Href)}
           >
             <Text style={styles.quickIcon}>📈</Text>
-            <Text style={styles.quickLabel}>Analitik</Text>
-            <Text style={styles.quickHint}>Performans özeti</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickAnalytics')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickAnalyticsHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -206,8 +221,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/notifications' as Href)}
           >
             <Text style={styles.quickIcon}>🔔</Text>
-            <Text style={styles.quickLabel}>Bildirimler</Text>
-            <Text style={styles.quickHint}>Son güncellemeler</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickNotifications')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickNotificationsHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -215,8 +230,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/complaint/submit-user' as Href)}
           >
             <Text style={styles.quickIcon}>⚠</Text>
-            <Text style={styles.quickLabel}>Kullanıcı Şikayet</Text>
-            <Text style={styles.quickHint}>Tehlikeli aday bildir</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickUserComplaint')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickUserComplaintHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -224,8 +239,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/complaints/index' as Href)}
           >
             <Text style={styles.quickIcon}>📋</Text>
-            <Text style={styles.quickLabel}>Şikayetlerim</Text>
-            <Text style={styles.quickHint}>Gönderdiğin şikayetler</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickMyComplaints')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickMyComplaintsHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -233,8 +248,8 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/(business)/subscription' as Href)}
           >
             <Text style={styles.quickIcon}>💳</Text>
-            <Text style={styles.quickLabel}>Abonelik</Text>
-            <Text style={styles.quickHint}>Plan ve faturalar</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickSubscription')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickSubscriptionHint')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickCard}
@@ -242,29 +257,29 @@ export default function BusinessDashboardScreen() {
             onPress={() => router.push('/settings' as Href)}
           >
             <Text style={styles.quickIcon}>⚙️</Text>
-            <Text style={styles.quickLabel}>Ayarlar</Text>
-            <Text style={styles.quickHint}>Hesap yönetimi</Text>
+            <Text style={styles.quickLabel}>{t('businessDashboardScreen.quickSettings')}</Text>
+            <Text style={styles.quickHint}>{t('businessDashboardScreen.quickSettingsHint')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.actions}>
           <Button
-            title="Yeni Görev Oluştur"
+            title={t('businessDashboardScreen.createTask')}
             onPress={() => router.push('/(business)/create-task')}
           />
           <Button
-            title="Başvuruları İncele"
+            title={t('businessDashboardScreen.reviewApplications')}
             variant="secondary"
             onPress={() => router.push('/(business)/applications')}
           />
           <Button
-            title="Kupon Doğrula"
+            title={t('businessDashboardScreen.verifyCoupon')}
             variant="outline"
             onPress={() => router.push('/(business)/coupons/index' as Href)}
           />
           {business && business.verificationStatus !== 'verified' && (
             <Button
-              title="İşletme Doğrulama (KYC)"
+              title={t('businessDashboardScreen.businessVerification')}
               variant="secondary"
               onPress={() => router.push('/(business)/verification' as Href)}
             />
@@ -272,18 +287,16 @@ export default function BusinessDashboardScreen() {
         </View>
 
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>Bilgi</Text>
-          <Text style={styles.noteText}>
-            Yeni görevler admin onayından sonra yayına alınır. Başvuruyu onayladıktan sonra
-            kullanıcı görevi teslim eder; admin teslimi onaylar, ardından kupon verirsin.
-          </Text>
+            <Text style={styles.noteTitle}>{t('business.panel.infoTitle')}</Text>
+            <Text style={styles.noteText}>{t('business.panel.infoText')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.surface },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
@@ -301,7 +314,7 @@ const styles = StyleSheet.create({
   name: { ...Typography.headingMedium, color: Colors.textInverse, fontWeight: '700' },
   verified: {
     ...Typography.caption,
-    color: Colors.primary,
+    color: Colors.business,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -353,6 +366,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[3],
   },
   statSpacer: { flex: 1 },
+  ratingHint: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginTop: -Spacing[2],
+    marginBottom: Spacing[2],
+  },
   sectionTitle: {
     ...Typography.labelLarge,
     color: Colors.textPrimary,
@@ -381,12 +400,13 @@ const styles = StyleSheet.create({
   quickHint: { ...Typography.caption, color: Colors.textMuted },
   actions: { gap: Spacing[3], marginBottom: Spacing[6] },
   note: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.businessLight,
     borderRadius: Radius.lg,
     padding: Spacing[4],
     borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: Colors.business,
   },
   noteTitle: { ...Typography.labelLarge, color: Colors.textPrimary, marginBottom: Spacing[1] },
   noteText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
-});
+  });
+}

@@ -20,9 +20,8 @@ import {
   issueCouponForSubmission,
   usersRepository,
 } from '@/features/data';
-import { notifyUser } from '@/features/notifications/notificationsRepository';
 import { Application, Task, PortfolioItem } from '@/types';
-import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { useApplicationStatusLabels } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
 import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
@@ -32,8 +31,11 @@ import { TaskFeedbackModal } from '@/components/profile/TaskFeedbackModal';
 import { submitBusinessFeedback } from '@/features/feedback/feedbackApi';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function ApplicationDetailScreen() {
+  const { t } = useTranslation();
+  const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser, bexUser } = useAuthStore();
   const { showToast } = useToast();
@@ -62,8 +64,8 @@ export default function ApplicationDetailScreen() {
     } catch (err: unknown) {
       setApplication(null);
       Alert.alert(
-        'Yüklenemedi',
-        err instanceof Error ? err.message : 'Başvuru detayı açılamadı.'
+        t('applicationDetailBizScreen.loadFailedTitle'),
+        err instanceof Error ? err.message : t('applicationDetailBizScreen.loadFailedText')
       );
     } finally {
       setLoading(false);
@@ -78,21 +80,35 @@ export default function ApplicationDetailScreen() {
   );
 
   const handleApproveApplication = async () => {
-    if (!application) return;
+    if (!application || actionLoading) return;
     setActionLoading(true);
     try {
-      const ok = await approveApplication(application.id, reviewNote);
-      Alert.alert(
-        ok ? 'Başvuru onaylandı' : 'Onaylanamadı',
-        ok
-          ? 'Kullanıcı görevi teslim edebilir. Mesajlaşma da açıldı.'
-          : 'Bu başvuru onaylanamaz.',
-        [{ text: 'Tamam', onPress: () => (ok ? router.back() : undefined) }]
-      );
+      const updated = await approveApplication(application.id, reviewNote);
+      if (updated) {
+        setApplication(updated);
+        setReviewNote('');
+        showToast(t('applicationDetailBizScreen.approvedToast'));
+        return;
+      }
+
+      const fresh = await applicationsRepository.getById(application.id);
+      if (fresh && fresh.status !== 'pending') {
+        setApplication(fresh);
+        showToast(t('applicationDetailBizScreen.alreadyApprovedToast'));
+        return;
+      }
+
+      Alert.alert(t('applicationDetailBizScreen.cannotApproveTitle'), t('applicationDetailBizScreen.cannotApproveText'));
     } catch (err: unknown) {
+      const fresh = await applicationsRepository.getById(application.id).catch(() => null);
+      if (fresh && fresh.status !== 'pending') {
+        setApplication(fresh);
+        showToast(t('applicationDetailBizScreen.approvedToast2'));
+        return;
+      }
       Alert.alert(
-        'Hata',
-        err instanceof Error ? err.message : 'İşlem tamamlanamadı.'
+        t('applicationDetailBizScreen.errorTitle'),
+        err instanceof Error ? err.message : t('applicationDetailBizScreen.genericActionFailed')
       );
     } finally {
       setActionLoading(false);
@@ -100,7 +116,7 @@ export default function ApplicationDetailScreen() {
   };
 
   const handleIssueCoupon = async () => {
-    if (!application || !firebaseUser) return;
+    if (!application || !firebaseUser || actionLoading) return;
     setActionLoading(true);
     try {
       const coupon = await issueCouponForSubmission(
@@ -108,17 +124,18 @@ export default function ApplicationDetailScreen() {
         firebaseUser.uid,
         reviewNote
       );
-      Alert.alert(
-        coupon ? 'Kupon oluşturuldu' : 'İşlem başarısız',
-        coupon
-          ? `Kupon: ${coupon.couponCode}`
-          : 'Teslim onaylanamadı.',
-        [{ text: 'Tamam', onPress: () => router.back() }]
-      );
+      if (coupon) {
+        const fresh = await applicationsRepository.getById(application.id);
+        if (fresh) setApplication(fresh);
+        setReviewNote('');
+        showToast(t('applicationDetailBizScreen.couponCreatedToast', { code: coupon.couponCode }));
+        return;
+      }
+      Alert.alert(t('applicationDetailBizScreen.couponFailedTitle'), t('applicationDetailBizScreen.couponFailedText'));
     } catch (err: unknown) {
       Alert.alert(
-        'Hata',
-        err instanceof Error ? err.message : 'İşlem tamamlanamadı.'
+        t('applicationDetailBizScreen.errorTitle'),
+        err instanceof Error ? err.message : t('applicationDetailBizScreen.genericActionFailed')
       );
     } finally {
       setActionLoading(false);
@@ -126,27 +143,19 @@ export default function ApplicationDetailScreen() {
   };
 
   const handleReject = async () => {
-    if (!application) return;
+    if (!application || actionLoading) return;
     setActionLoading(true);
     try {
       await applicationsRepository.updateStatus(
         application.id,
         'rejected',
-        reviewNote || 'Başvuru reddedildi.'
+        reviewNote || t('applicationDetailBizScreen.rejectedDefaultReason')
       );
-      await notifyUser({
-        userId: application.userId,
-        title: 'Başvurun reddedildi',
-        body: reviewNote || 'İşletme başvurunu maalesef kabul etmedi.',
-        type: 'application_rejected',
-        data: { applicationId: application.id },
-        showLocalForUserId: application.userId,
-      });
-      Alert.alert('Reddedildi', 'Başvuru reddedildi.', [
-        { text: 'Tamam', onPress: () => router.back() },
-      ]);
+      const fresh = await applicationsRepository.getById(application.id);
+      if (fresh) setApplication(fresh);
+      showToast(t('applicationDetailBizScreen.rejectedToast'));
     } catch {
-      Alert.alert('Hata', 'İşlem tamamlanamadı.');
+      Alert.alert(t('applicationDetailBizScreen.errorTitle'), t('applicationDetailBizScreen.genericActionFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -163,7 +172,7 @@ export default function ApplicationDetailScreen() {
   if (!application) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Başvuru bulunamadı.</Text>
+        <Text style={styles.errorText}>{t('applicationDetailBizScreen.notFound')}</Text>
       </View>
     );
   }
@@ -176,9 +185,9 @@ export default function ApplicationDetailScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Geri</Text>
+          <Text style={styles.back}>{t('applicationDetailBizScreen.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Başvuru Detayı</Text>
+        <Text style={styles.screenTitle}>{t('applicationDetailBizScreen.screenTitle')}</Text>
         <View style={{ width: 48 }} />
       </View>
 
@@ -189,30 +198,34 @@ export default function ApplicationDetailScreen() {
           </Text>
         </View>
 
-        <Text style={styles.taskTitle}>{task?.title ?? 'Görev'}</Text>
-        <Text style={styles.meta}>Başvuran: {applicantName || application.userId.slice(0, 8)}</Text>
+        <Text style={styles.taskTitle}>{task?.title ?? t('applicationDetailBizScreen.defaultTask')}</Text>
+        <Text style={styles.meta}>{t('applicationDetailBizScreen.applicantLabel', { name: applicantName || application.userId.slice(0, 8) })}</Text>
 
-        <UserPortfolioGallery
-          items={applicantPortfolio}
-          title="Başvuranın onaylı portföyü"
-          subtitle="Admin tarafından onaylanmış geçmiş çalışmalar. Başvuruyu değerlendirmeden önce inceleyin."
-          emptyText="Henüz onaylı portföy görseli yok. İlk teslim admin onayından sonra burada görünür."
-        />
+        {canApproveApplication ? (
+          <>
+            <UserPortfolioGallery
+              items={applicantPortfolio}
+              title={t('applicationDetailBizScreen.approvedPortfolioTitle')}
+              subtitle={t('applicationDetailBizScreen.approvedPortfolioSubtitle')}
+              emptyText={t('applicationDetailBizScreen.approvedPortfolioEmpty')}
+            />
 
-        {applicantPortfolio.length > 0 ? (
-          <Button
-            title="Portföyün tamamını gör"
-            variant="ghost"
-            size="sm"
-            onPress={() =>
-              router.push({ pathname: '/user/[id]', params: { id: application.userId } } as Href)
-            }
-            style={{ alignSelf: 'flex-start' }}
-          />
+            {applicantPortfolio.length > 0 ? (
+              <Button
+                title={t('applicationDetailBizScreen.viewFullPortfolio')}
+                variant="ghost"
+                size="sm"
+                onPress={() =>
+                  router.push({ pathname: '/user/[id]', params: { id: application.userId } } as Href)
+                }
+                style={{ alignSelf: 'flex-start' }}
+              />
+            ) : null}
+          </>
         ) : null}
 
         <View style={styles.block}>
-          <Text style={styles.blockTitle}>Başvuru mesajı</Text>
+          <Text style={styles.blockTitle}>{t('applicationDetailBizScreen.coverLetterTitle')}</Text>
           <Text style={styles.blockText}>{application.coverLetter || '—'}</Text>
         </View>
 
@@ -220,7 +233,7 @@ export default function ApplicationDetailScreen() {
           <TouchableOpacity
             onPress={() => Linking.openURL(application.portfolioUrl!)}
           >
-            <Text style={styles.link}>Portfolio linkini aç →</Text>
+            <Text style={styles.link}>{t('applicationDetailBizScreen.openPortfolioLink')}</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -236,7 +249,7 @@ export default function ApplicationDetailScreen() {
               taskTitle={task?.title}
             />
             <Button
-              title="Sohbeti tam ekran aç"
+              title={t('applicationDetailBizScreen.openChatFullscreen')}
               variant="outline"
               onPress={() =>
                 router.push(`/(business)/messages/${application.id}` as Href)
@@ -247,14 +260,14 @@ export default function ApplicationDetailScreen() {
 
         {application.submissionText ? (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>Teslim açıklaması</Text>
+            <Text style={styles.blockTitle}>{t('applicationDetailBizScreen.submissionDescTitle')}</Text>
             <Text style={styles.blockText}>{application.submissionText}</Text>
           </View>
         ) : null}
 
         {application.submissionFiles.length > 0 ? (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>Teslim dosyaları</Text>
+            <Text style={styles.blockTitle}>{t('applicationDetailBizScreen.submissionFilesTitle')}</Text>
             <ImagePreviewGrid urls={application.submissionFiles} />
           </View>
         ) : null}
@@ -262,8 +275,7 @@ export default function ApplicationDetailScreen() {
         {awaitingAdminReview && (
           <View style={styles.waitingBox}>
             <Text style={styles.waitingText}>
-              Admin ekibi teslim içeriğini inceliyor (uygunsuz fotoğraf kontrolü). Onaylandıktan
-              sonra buradan kupon verebilirsin.
+              {t('applicationDetailBizScreen.awaitingAdminReview')}
             </Text>
           </View>
         )}
@@ -271,7 +283,7 @@ export default function ApplicationDetailScreen() {
         {application.status === 'submission_approved' && (
           <View style={[styles.waitingBox, { backgroundColor: Colors.success + '18' }]}>
             <Text style={styles.waitingText}>
-              Admin teslimi onayladı. Kupon oluşturmak için aşağıdaki butonu kullan.
+              {t('applicationDetailBizScreen.submissionApprovedHint')}
             </Text>
           </View>
         )}
@@ -279,7 +291,7 @@ export default function ApplicationDetailScreen() {
         {application.status === 'approved' && (
           <View style={styles.waitingBox}>
             <Text style={styles.waitingText}>
-              Kullanıcı görev teslimi bekleniyor. Teslim gelince burada onaylayıp kupon verebilirsin.
+              {t('applicationDetailBizScreen.awaitingSubmissionHint')}
             </Text>
           </View>
         )}
@@ -287,22 +299,22 @@ export default function ApplicationDetailScreen() {
         {canApproveApplication && (
           <>
             <Input
-              label="Değerlendirme notu (opsiyonel)"
+              label={t('applicationDetailBizScreen.reviewNoteLabel')}
               value={reviewNote}
               onChangeText={setReviewNote}
-              placeholder="Onay veya red gerekçesi..."
+              placeholder={t('applicationDetailBizScreen.reviewNotePlaceholder')}
               multiline
               numberOfLines={3}
               style={{ minHeight: 80, textAlignVertical: 'top' }}
             />
             <View style={styles.actions}>
               <Button
-                title="Başvuruyu Onayla"
+                title={t('applicationDetailBizScreen.approveApplication')}
                 onPress={handleApproveApplication}
                 loading={actionLoading}
               />
               <Button
-                title="Reddet"
+                title={t('applicationDetailBizScreen.reject')}
                 variant="danger"
                 onPress={handleReject}
                 loading={actionLoading}
@@ -315,17 +327,17 @@ export default function ApplicationDetailScreen() {
         {canIssueCoupon && (
           <>
             <Input
-              label="Teslim değerlendirme notu (opsiyonel)"
+              label={t('applicationDetailBizScreen.submissionReviewNoteLabel')}
               value={reviewNote}
               onChangeText={setReviewNote}
-              placeholder="Kupon notu..."
+              placeholder={t('applicationDetailBizScreen.couponNotePlaceholder')}
               multiline
               numberOfLines={3}
               style={{ minHeight: 80, textAlignVertical: 'top' }}
             />
             <View style={styles.actions}>
               <Button
-                title="Teslimi Onayla & Kupon Ver"
+                title={t('applicationDetailBizScreen.approveAndIssueCoupon')}
                 onPress={handleIssueCoupon}
                 loading={actionLoading}
               />
@@ -339,20 +351,20 @@ export default function ApplicationDetailScreen() {
           <>
             {['submission_approved', 'rewarded'].includes(application.status) ? (
               <Button
-                title="Kullanıcıya Geri Bildirim Ver"
+                title={t('applicationDetailBizScreen.giveFeedbackToUser')}
                 variant="secondary"
                 onPress={() => setShowFeedback(true)}
               />
             ) : null}
             <Button
-              title="Bu Kullanıcıyı Şikayet Et"
+              title={t('applicationDetailBizScreen.reportUser')}
               variant="outline"
               onPress={() =>
                 router.push({
                   pathname: '/complaint/submit-user',
                   params: {
                     applicationId: application.id,
-                    applicationLabel: `${task?.title ?? 'Görev'} · ${applicantName}`,
+                    applicationLabel: `${task?.title ?? t('applicationDetailBizScreen.defaultTask')} · ${applicantName}`,
                   },
                 })
               }
@@ -363,11 +375,11 @@ export default function ApplicationDetailScreen() {
 
       <TaskFeedbackModal
         visible={showFeedback}
-        title="Kullanıcıya geri bildirim"
+        title={t('applicationDetailBizScreen.feedbackModalTitle')}
         onClose={() => setShowFeedback(false)}
         onSubmit={async (stars, comment) => {
           await submitBusinessFeedback(application.id, stars, comment);
-          showToast('Geri bildirimin kaydedildi.');
+          showToast(t('applicationDetailBizScreen.feedbackSavedToast'));
         }}
       />
     </SafeAreaView>

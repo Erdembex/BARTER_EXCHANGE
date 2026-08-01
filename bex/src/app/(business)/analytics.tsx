@@ -14,12 +14,15 @@ import {
   getBusinessAnalytics,
   BusinessAnalytics,
 } from '@/features/business/businessAnalyticsService';
-import { CATEGORY_LABELS } from '@/constants/taskLabels';
+import { useCategoryLabels } from '@/constants/taskLabels';
 import { StatCard } from '@/components/business';
 import { BackHeader } from '@/components/navigation/BackHeader';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessAnalyticsScreen() {
+  const { t } = useTranslation();
+  const CATEGORY_LABELS = useCategoryLabels();
   const { business, loading: bizLoading, reload } = useBusiness();
   const [stats, setStats] = useState<BusinessAnalytics | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,49 +56,49 @@ export default function BusinessAnalyticsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <BackHeader title="Analitik" />
+      <BackHeader title={t('businessAnalyticsScreen.title')} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
-        <Text style={styles.title}>Analitik</Text>
+        <Text style={styles.title}>{t('businessAnalyticsScreen.title')}</Text>
         <Text style={styles.subtitle}>{business?.name}</Text>
 
-        <Text style={styles.section}>Görevler</Text>
+        <Text style={styles.section}>{t('businessAnalyticsScreen.tasksSection')}</Text>
         <View style={styles.row}>
-          <StatCard label="Yayınlanan" value={stats.publishedTasks} emoji="📋" />
-          <StatCard label="Aktif" value={stats.activeTasks} emoji="🟢" />
+          <StatCard label={t('businessAnalyticsScreen.published')} value={stats.publishedTasks} emoji="📋" />
+          <StatCard label={t('businessAnalyticsScreen.active')} value={stats.activeTasks} emoji="🟢" />
         </View>
         <View style={styles.row}>
-          <StatCard label="Onay bekleyen" value={stats.pendingApproval} emoji="⏳" />
-          <StatCard label="Tamamlanan" value={stats.completedTasks} emoji="✅" />
-        </View>
-
-        <Text style={styles.section}>Başvurular</Text>
-        <View style={styles.row}>
-          <StatCard label="Toplam" value={stats.totalApplications} emoji="📥" />
-          <StatCard label="Bekleyen" value={stats.pendingApplications} emoji="🕐" />
-        </View>
-        <View style={styles.row}>
-          <StatCard label="Teslim edilen" value={stats.submittedApplications} emoji="📤" />
+          <StatCard label={t('businessAnalyticsScreen.pendingApproval')} value={stats.pendingApproval} emoji="⏳" />
+          <StatCard label={t('businessAnalyticsScreen.completed')} value={stats.completedTasks} emoji="✅" />
         </View>
 
-        <Text style={styles.section}>Kuponlar</Text>
+        <Text style={styles.section}>{t('businessAnalyticsScreen.applicationsSection')}</Text>
         <View style={styles.row}>
-          <StatCard label="Dağıtılan" value={stats.couponsDistributed} emoji="🎟️" />
-          <StatCard label="Kullanılan" value={stats.couponsUsed} emoji="✔️" />
+          <StatCard label={t('businessAnalyticsScreen.total')} value={stats.totalApplications} emoji="📥" />
+          <StatCard label={t('businessAnalyticsScreen.pending')} value={stats.pendingApplications} emoji="🕐" />
         </View>
         <View style={styles.row}>
-          <StatCard label="Kullanım oranı" value={`%${stats.couponUseRate}`} emoji="📈" />
+          <StatCard label={t('businessAnalyticsScreen.submitted')} value={stats.submittedApplications} emoji="📤" />
+        </View>
+
+        <Text style={styles.section}>{t('businessAnalyticsScreen.couponsSection')}</Text>
+        <View style={styles.row}>
+          <StatCard label={t('businessAnalyticsScreen.distributed')} value={stats.couponsDistributed} emoji="🎟️" />
+          <StatCard label={t('businessAnalyticsScreen.used')} value={stats.couponsUsed} emoji="✔️" />
+        </View>
+        <View style={styles.row}>
+          <StatCard label={t('businessAnalyticsScreen.usageRate')} value={`%${stats.couponUseRate}`} emoji="📈" />
         </View>
 
         {stats.topCategory && (
           <View style={styles.insight}>
-            <Text style={styles.insightTitle}>En popüler kategori</Text>
+            <Text style={styles.insightTitle}>{t('businessAnalyticsScreen.topCategory')}</Text>
             <Text style={styles.insightValue}>
-              {CATEGORY_LABELS[stats.topCategory]} ({stats.topCategoryCount} görev)
+              {t('businessAnalyticsScreen.topCategoryValue', { category: CATEGORY_LABELS[stats.topCategory], count: stats.topCategoryCount })}
             </Text>
           </View>
         )}

@@ -1,4 +1,4 @@
-import { formatLocationLabel } from '@/constants/turkeyLocations';
+import { matchCity, matchDistrict, formatLocationLabel } from '@/constants/turkeyLocations';
 
 /** Konum filtresinde “tümü” seçeneği */
 export const LOCATION_ALL = 'Hepsi';
@@ -9,8 +9,7 @@ export function isLocationAll(value: string | null | undefined): boolean {
 
 export function toApiCityFilter(city: string | null | undefined): string | undefined {
   if (!city || isLocationAll(city)) return undefined;
-  const trimmed = city.trim();
-  return trimmed || undefined;
+  return matchCity(city) ?? (city.trim() || undefined);
 }
 
 export function toApiDistrictFilter(
@@ -18,6 +17,10 @@ export function toApiDistrictFilter(
   district: string | null | undefined
 ): string | undefined {
   if (!district || isLocationAll(district) || isLocationAll(city)) return undefined;
+  const matchedCity = matchCity(city);
+  if (matchedCity) {
+    return matchDistrict(matchedCity, district) ?? (district.trim() || undefined);
+  }
   const trimmed = district.trim();
   return trimmed || undefined;
 }

@@ -4,6 +4,7 @@ import { Application, ApplicationStatus } from '@/types';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface ApplicationCardProps {
   application: Application;
@@ -26,12 +27,14 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
 export function ApplicationCard({
   application,
   taskTitle,
-  applicantName = 'Kullanıcı',
+  applicantName,
   portfolioThumbs = [],
   onPress,
 }: ApplicationCardProps) {
+  const { t } = useTranslation();
   const statusColor = STATUS_COLORS[application.status];
   const thumbs = portfolioThumbs.slice(0, 3);
+  const resolvedApplicantName = applicantName ?? t('applicationCard.defaultApplicant');
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -45,18 +48,18 @@ export function ApplicationCard({
           </Text>
         </View>
       </View>
-      <Text style={styles.applicant}>{applicantName}</Text>
+      <Text style={styles.applicant}>{resolvedApplicantName}</Text>
       {thumbs.length > 0 ? (
         <View style={styles.thumbRow}>
           {thumbs.map((url, i) => (
             <AuthenticatedImage key={`${url}-${i}`} uri={url} style={styles.thumb} />
           ))}
           <Text style={styles.thumbHint}>
-            {thumbs.length} onaylı çalışma
+            {t('applicationCard.approvedWorkCount', { count: thumbs.length })}
           </Text>
         </View>
       ) : application.status === 'pending' ? (
-        <Text style={styles.portfolioHint}>Portföy detayda — başvuruyu aç</Text>
+        <Text style={styles.portfolioHint}>{t('applicationCard.portfolioHint')}</Text>
       ) : null}
       <Text style={styles.preview} numberOfLines={2}>
         {application.submissionText || application.coverLetter}

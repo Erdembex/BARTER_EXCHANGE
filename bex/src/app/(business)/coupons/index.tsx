@@ -13,7 +13,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
 import { couponsRepository } from '@/features/data';
 import { Coupon } from '@/types';
-import { parseCouponScan, getCouponDisplayStatus, COUPON_STATUS_LABELS } from '@/lib/couponUtils';
+import { parseCouponScan, getCouponDisplayStatus, useCouponStatusLabels } from '@/lib/couponUtils';
 import {
   hasRestAuthSession,
   verifyCouponByToken,
@@ -26,14 +26,7 @@ import {
 import { CouponQrScanner } from '@/components/business/CouponQrScanner';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-const ISSUED_STATUS_LABELS: Record<BusinessIssuedCoupon['statusRaw'], string> = {
-  DRAFT: 'Taslak',
-  ACTIVE: 'Aktif',
-  USED: 'Kullanıldı',
-  EXPIRED: 'Süresi doldu',
-  SWAPPED: 'Takas edildi',
-};
+import { useTranslation } from '@/i18n';
 
 function formatDateTime(ts: BusinessIssuedCoupon['issuedAt']): string {
   if (!ts) return '-';
@@ -51,6 +44,15 @@ function formatDateTime(ts: BusinessIssuedCoupon['issuedAt']): string {
 }
 
 export default function CouponVerifyScreen() {
+  const { t } = useTranslation();
+  const COUPON_STATUS_LABELS = useCouponStatusLabels();
+  const ISSUED_STATUS_LABELS: Record<BusinessIssuedCoupon['statusRaw'], string> = {
+    DRAFT: t('couponVerifyScreen.statusDraft'),
+    ACTIVE: t('couponVerifyScreen.statusActive'),
+    USED: t('couponVerifyScreen.statusUsed'),
+    EXPIRED: t('couponVerifyScreen.statusExpired'),
+    SWAPPED: t('couponVerifyScreen.statusSwapped'),
+  };
   const { firebaseUser } = useAuthStore();
   const { business } = useBusiness();
   const [code, setCode] = useState('');
@@ -86,24 +88,23 @@ export default function CouponVerifyScreen() {
       const outcome = await verifyCouponByToken(token);
       const messages: Record<CouponVerifyResult, { title: string; body: string }> = {
         SUCCESS: {
-          title: 'Kupon kullanıldı ✓',
-          body: `${outcome.rewardDescription} — kupon başarıyla doğrulandı ve kullanıldı.`,
+          title: t('couponVerifyScreen.verifiedTitle'),
+          body: t('couponVerifyScreen.verifiedBody', { reward: outcome.rewardDescription }),
         },
         ALREADY_USED: {
-          title: 'Zaten kullanılmış',
-          body: 'Bu kupon daha önce kullanılmış.',
+          title: t('couponVerifyScreen.alreadyUsedTitle'),
+          body: t('couponVerifyScreen.alreadyUsedBody'),
         },
         EXPIRED: {
-          title: 'Süresi dolmuş',
-          body: 'Bu kuponun süresi dolmuş veya aktif değil.',
+          title: t('couponVerifyScreen.expiredTitle'),
+          body: t('couponVerifyScreen.expiredBody'),
         },
       };
       const msg = messages[outcome.result];
       Alert.alert(msg.title, msg.body);
-      // Doğrulama sonrası geçmişi tazele ki kullanım kaydı görünsün
       await loadHistory();
     } catch (err) {
-      Alert.alert('Doğrulanamadı', (err as Error).message || 'Kupon doğrulanamadı.');
+      Alert.alert(t('couponVerifyScreen.verifyFailedTitle'), (err as Error).message || t('couponVerifyScreen.verifyFailedBody'));
     }
   };
 
@@ -115,7 +116,7 @@ export default function CouponVerifyScreen() {
 
     const parsed = parseCouponScan(raw);
     if (!parsed) {
-      Alert.alert('Geçersiz kod', 'QR veya kupon kodu okunamadı.');
+      Alert.alert(t('couponVerifyScreen.invalidCodeTitle'), t('couponVerifyScreen.invalidCodeBody'));
       return null;
     }
 
@@ -128,12 +129,12 @@ export default function CouponVerifyScreen() {
     }
 
     if (!found) {
-      Alert.alert('Bulunamadı', 'Bu kupon geçersiz veya süresi dolmuş.');
+      Alert.alert(t('couponVerifyScreen.notFoundTitle'), t('couponVerifyScreen.notFoundBody'));
       return null;
     }
 
     if (found.businessId !== business?.id) {
-      Alert.alert('Uyarı', 'Bu kupon başka bir işletmeye ait.');
+      Alert.alert(t('couponVerifyScreen.warningTitle'), t('couponVerifyScreen.warningBody'));
       return null;
     }
 
@@ -161,11 +162,11 @@ export default function CouponVerifyScreen() {
     if (updated) {
       setCoupon(updated);
       Alert.alert(
-        'Kullanıldı',
-        `Kalan hak: ${updated.totalUses - updated.usedCount}/${updated.totalUses}`
+        t('couponVerifyScreen.redeemedTitle'),
+        t('couponVerifyScreen.redeemedBody', { remaining: updated.totalUses - updated.usedCount, total: updated.totalUses })
       );
     } else {
-      Alert.alert('Hata', 'Kupon kullanılamadı. Süresi dolmuş veya tükenmiş olabilir.');
+      Alert.alert(t('couponVerifyScreen.redeemErrorTitle'), t('couponVerifyScreen.redeemErrorBody'));
     }
     setLoading(false);
   };
@@ -173,46 +174,46 @@ export default function CouponVerifyScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Kupon Doğrula</Text>
+        <Text style={styles.title}>{t('couponVerifyScreen.title')}</Text>
         <Text style={styles.subtitle}>
-          Müşterinin QR kodunu okut veya kupon kodunu elle gir.
+          {t('couponVerifyScreen.subtitle')}
         </Text>
 
         <Button
-          title="QR Kod Okut"
+          title={t('couponVerifyScreen.scanQr')}
           onPress={() => setScannerOpen(true)}
           style={{ marginBottom: Spacing[4] }}
         />
 
         <Input
-          label="Kupon kodu"
+          label={t('couponVerifyScreen.codeLabel')}
           value={code}
           onChangeText={setCode}
-          placeholder="BEX-XXXX-XXXX"
+          placeholder={t('couponVerifyScreen.codePlaceholder')}
           autoCapitalize="characters"
         />
 
-        <Button title="Kuponu Bul" onPress={handleLookup} loading={loading} variant="secondary" />
+        <Button title={t('couponVerifyScreen.findCoupon')} onPress={handleLookup} loading={loading} variant="secondary" />
 
         {coupon && (
           <View style={styles.card}>
             <Text style={styles.cardCode}>{coupon.couponCode}</Text>
             <Text style={styles.reward}>{coupon.rewardDescription}</Text>
             <View style={styles.row}>
-              <Text style={styles.label}>Durum</Text>
+              <Text style={styles.label}>{t('couponVerifyScreen.statusLabel')}</Text>
               <Text style={styles.value}>
                 {COUPON_STATUS_LABELS[getCouponDisplayStatus(coupon)]}
               </Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Kullanım</Text>
+              <Text style={styles.label}>{t('couponVerifyScreen.usageLabel')}</Text>
               <Text style={styles.value}>
                 {coupon.usedCount} / {coupon.totalUses}
               </Text>
             </View>
             {coupon.status === 'active' && coupon.usedCount < coupon.totalUses && (
               <Button
-                title="Kullanımı Onayla"
+                title={t('couponVerifyScreen.confirmUsage')}
                 onPress={handleRedeem}
                 loading={loading}
                 style={{ marginTop: Spacing[4] }}
@@ -222,15 +223,15 @@ export default function CouponVerifyScreen() {
         )}
 
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>Dağıtılan Kuponlar</Text>
+          <Text style={styles.historyTitle}>{t('couponVerifyScreen.distributedCouponsTitle')}</Text>
           {historyLoading && <ActivityIndicator size="small" color={Colors.primary} />}
         </View>
         <Text style={styles.historySubtitle}>
-          Oluşturulan kuponların durumu ve kullanım geçmişi.
+          {t('couponVerifyScreen.distributedCouponsSubtitle')}
         </Text>
 
         {!historyLoading && history.length === 0 && (
-          <Text style={styles.emptyText}>Henüz dağıtılmış kupon yok.</Text>
+          <Text style={styles.emptyText}>{t('couponVerifyScreen.emptyHistory')}</Text>
         )}
 
         {history.map((item) => (
@@ -241,15 +242,15 @@ export default function CouponVerifyScreen() {
               </Text>
               {item.recipientName && (
                 <Text style={styles.historyRecipient} numberOfLines={1}>
-                  Alıcı: {item.recipientName}
+                  {t('couponVerifyScreen.recipientLabel', { name: item.recipientName })}
                 </Text>
               )}
               <Text style={styles.historyMeta}>
-                Verildi: {formatDateTime(item.issuedAt)}
+                {t('couponVerifyScreen.issuedLabel', { date: formatDateTime(item.issuedAt) })}
               </Text>
               {item.statusRaw === 'USED' && (
                 <Text style={styles.historyUsed}>
-                  Kullanıldı: {formatDateTime(item.usedAt)}
+                  {t('couponVerifyScreen.usedLabel', { date: formatDateTime(item.usedAt) })}
                 </Text>
               )}
             </View>

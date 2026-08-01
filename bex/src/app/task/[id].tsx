@@ -17,16 +17,20 @@ import {
 } from '@/features/data';
 import { useAuthStore } from '@/store/authStore';
 import { Application, Business } from '@/types';
-import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
-import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { formatDeadline, getDifficultyColor, isTaskOpenForApplications } from '@/lib/taskUtils';
 import { TaskCard } from '@/components/tasks';
 import { TaskDetailSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Button } from '@/components/ui';
 import { DangerBadge } from '@/components/profile/DangerBadge';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { useTranslation } from '@/i18n';
+import { useApplicationStatusLabels, useCategoryLabels, useDifficultyLabels } from '@/constants/taskLabels';
 
 export default function TaskDetailScreen() {
+  const { t } = useTranslation();
+  const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
+  const CATEGORY_LABELS = useCategoryLabels();
+  const DIFFICULTY_LABELS = useDifficultyLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser } = useAuthStore();
   const [task, setTask] = useState<EnrichedTask | null>(null);
@@ -88,11 +92,11 @@ export default function TaskDetailScreen() {
 
   const primaryLabel = (() => {
     if (!existingApp) {
-      return taskOpen ? 'Başvur' : 'Süresi doldu';
+      return taskOpen ? t('taskDetailScreen.apply') : t('taskDetailScreen.expired');
     }
-    if (existingApp.status === 'rewarded') return 'Kuponumu Gör';
-    if (existingApp.status === 'approved') return 'Görevi Teslim Et';
-    return `Başvurum: ${APPLICATION_STATUS_LABELS[existingApp.status]}`;
+    if (existingApp.status === 'rewarded') return t('taskDetailScreen.viewCoupon');
+    if (existingApp.status === 'approved') return t('taskDetailScreen.submitTask');
+    return t('taskDetailScreen.myApplication', { status: APPLICATION_STATUS_LABELS[existingApp.status] });
   })();
 
   if (loading) {
@@ -106,9 +110,9 @@ export default function TaskDetailScreen() {
   if (!task) {
     return (
       <View style={styles.loader}>
-        <Text style={styles.error}>Görev bulunamadı.</Text>
+        <Text style={styles.error}>{t('taskDetailScreen.notFound')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backLink}>← Geri dön</Text>
+          <Text style={styles.backLink}>{t('taskDetailScreen.backLink')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -120,12 +124,12 @@ export default function TaskDetailScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Geri</Text>
+          <Text style={styles.backText}>{t('taskDetailScreen.back')}</Text>
         </TouchableOpacity>
 
         {task.featured && (
           <View style={styles.featuredBadge}>
-            <Text style={styles.featuredText}>⭐ Öne Çıkan Görev</Text>
+            <Text style={styles.featuredText}>{t('taskDetailScreen.featured')}</Text>
           </View>
         )}
 
@@ -137,7 +141,7 @@ export default function TaskDetailScreen() {
               {DIFFICULTY_LABELS[task.difficulty]}
             </Text>
           </View>
-          <Text style={styles.meta}>⏱ ~{task.estimatedHours} saat</Text>
+          <Text style={styles.meta}>{t('taskDetailScreen.hoursSuffix', { count: task.estimatedHours })}</Text>
           <Text style={styles.meta}>{formatDeadline(task.deadline)}</Text>
         </View>
 
@@ -148,11 +152,11 @@ export default function TaskDetailScreen() {
         ) : null}
 
         <View style={styles.rewardBox}>
-          <Text style={styles.rewardLabel}>Kazanılacak Ödül</Text>
+          <Text style={styles.rewardLabel}>{t('taskDetailScreen.rewardLabel')}</Text>
           <Text style={styles.rewardValue}>🎁 {task.rewardDescription}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Görev Açıklaması</Text>
+        <Text style={styles.sectionTitle}>{t('taskDetailScreen.descriptionTitle')}</Text>
         <Text style={styles.description}>{task.description}</Text>
 
         {business && (
@@ -170,39 +174,39 @@ export default function TaskDetailScreen() {
                 {business.isDangerous ? <DangerBadge compact /> : null}
               </View>
               {business.isVerified ? (
-                <Text style={styles.businessVerified}>✓ Doğrulanmış işletme</Text>
+                <Text style={styles.businessVerified}>{t('taskDetailScreen.verifiedBusiness')}</Text>
               ) : null}
               <Text style={styles.businessAddr}>📍 {business.address}</Text>
               <Text style={styles.businessScore}>
                 ⭐ {business.reputationScore} · {CATEGORY_LABELS[task.category]}
               </Text>
-              <Text style={styles.businessLink}>İşletme profilini gör →</Text>
+              <Text style={styles.businessLink}>{t('taskDetailScreen.viewBusinessProfile')}</Text>
             </View>
           </TouchableOpacity>
         )}
 
         <View style={styles.detailsGrid}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Başvuru</Text>
+            <Text style={styles.detailLabel}>{t('taskDetailScreen.applications')}</Text>
             <Text style={styles.detailValue}>
               {task.currentApplicantCount}/{task.maxApplicants}
             </Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Kategori</Text>
+            <Text style={styles.detailLabel}>{t('taskDetailScreen.category')}</Text>
             <Text style={styles.detailValue}>{CATEGORY_LABELS[task.category]}</Text>
           </View>
         </View>
 
         {!existingApp && !taskOpen ? (
           <Text style={styles.expiredHint}>
-            Bu görevin başvuru süresi doldu. Benzer görevlere göz atabilirsin.
+            {t('taskDetailScreen.expiredHint')}
           </Text>
         ) : null}
 
         {existingApp && existingApp.status !== 'approved' && existingApp.status !== 'rewarded' ? (
           <Text style={styles.appHint}>
-            Bu göreve zaten başvurdun — durumunu takip edebilirsin.
+            {t('taskDetailScreen.alreadyAppliedHint')}
           </Text>
         ) : null}
 
@@ -215,7 +219,7 @@ export default function TaskDetailScreen() {
 
         {similar.length > 0 && (
           <View style={styles.similarSection}>
-            <Text style={styles.sectionTitle}>Benzer Görevler</Text>
+            <Text style={styles.sectionTitle}>{t('taskDetailScreen.similarTasks')}</Text>
             {similar.map((t) => (
               <View key={t.id} style={{ marginBottom: Spacing[3] }}>
                 <TaskCard

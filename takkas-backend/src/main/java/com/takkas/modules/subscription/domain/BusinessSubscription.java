@@ -1,5 +1,6 @@
 package com.takkas.modules.subscription.domain;
 
+import com.takkas.modules.subscription.domain.enums.BillingPeriod;
 import com.takkas.modules.subscription.domain.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,6 +37,22 @@ public class BusinessSubscription {
     @Column(nullable = false) @Builder.Default private boolean cancelAtPeriodEnd = false;
     private Instant pastDueSince;
 
+    // Ödeme sağlayıcısından (şu an: manuel onay, ileride: sanal POS) bağımsız "yükseltme talebi" izi.
+    // Talep oluşturulduğunda mevcut plan/erişim değişmez; yalnızca admin onayı ile aktive olur.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pending_plan_id")
+    private SubscriptionPlan pendingPlan;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pending_billing_period")
+    private BillingPeriod pendingBillingPeriod;
+
+    @Column(name = "pending_reference")
+    private String pendingReference;
+
+    @Column(name = "pending_requested_at")
+    private Instant pendingRequestedAt;
+
     @CreatedDate  private Instant createdAt;
     @LastModifiedDate private Instant updatedAt;
 
@@ -44,6 +61,25 @@ public class BusinessSubscription {
         this.status = SubscriptionStatus.ACTIVE;
         this.currentPeriodStart = start; this.currentPeriodEnd = end;
         this.pastDueSince = null; this.cancelAtPeriodEnd = false;
+        clearPendingUpgrade();
+    }
+
+    public void requestUpgrade(SubscriptionPlan targetPlan, BillingPeriod period, String reference) {
+        this.pendingPlan = targetPlan;
+        this.pendingBillingPeriod = period;
+        this.pendingReference = reference;
+        this.pendingRequestedAt = Instant.now();
+    }
+
+    public void clearPendingUpgrade() {
+        this.pendingPlan = null;
+        this.pendingBillingPeriod = null;
+        this.pendingReference = null;
+        this.pendingRequestedAt = null;
+    }
+
+    public boolean hasPendingUpgrade() {
+        return pendingPlan != null;
     }
 
     public void markPastDue() { status = SubscriptionStatus.PAST_DUE; pastDueSince = Instant.now(); }

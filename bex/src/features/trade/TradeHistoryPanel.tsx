@@ -5,16 +5,9 @@ import { Text } from '@/components/ui/Text';
 import { tradeTheme, TradeTheme } from './tradeTheme';
 import { tradeRepository } from './tradeRepository';
 import { TradeHistoryEntry, TradeHistoryStatus } from './types';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
-
-const STATUS_LABEL: Record<TradeHistoryStatus, string> = {
-  completed: 'Tamamlandı',
-  accepted: 'Kabul',
-  rejected: 'Red',
-  cancelled: 'İptal',
-  pending: 'Bekliyor',
-};
 
 const STATUS_COLOR: Record<TradeHistoryStatus, string> = {
   completed: tradeTheme.colors.success,
@@ -29,6 +22,14 @@ interface TradeHistoryPanelProps {
 }
 
 export function TradeHistoryPanel({ userId }: TradeHistoryPanelProps) {
+  const { t } = useTranslation();
+  const STATUS_LABEL: Record<TradeHistoryStatus, string> = {
+    completed: t('tradeHistoryPanel.statusCompleted'),
+    accepted: t('tradeHistoryPanel.statusAccepted'),
+    rejected: t('tradeHistoryPanel.statusRejected'),
+    cancelled: t('tradeHistoryPanel.statusCancelled'),
+    pending: t('tradeHistoryPanel.statusPending'),
+  };
   const [entries, setEntries] = useState<TradeHistoryEntry[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -74,18 +75,17 @@ export function TradeHistoryPanel({ userId }: TradeHistoryPanelProps) {
           borderColor="border"
         >
           <Text variant="caption" style={{ color: tradeTheme.colors.tradePrimary, fontWeight: '700' }}>
-            İŞLEM GEÇMİŞİ
+            {t('tradeHistoryPanel.headerTitle')}
           </Text>
           <Text variant="bodyMuted" marginTop="xs">
-            Tamamlanan takaslar, kabul ve red kayıtları.
+            {t('tradeHistoryPanel.headerSubtitle')}
           </Text>
         </Box>
       }
       ListEmptyComponent={
         <Box paddingTop="xl" alignItems="center" paddingHorizontal="md">
           <Text variant="bodyMuted" style={{ textAlign: 'center', lineHeight: 22 }}>
-            Henüz kayıtlı işlem yok. Yeni takas oluşturduğunda veya teklif
-            sonuçlandığında burada görünür.
+            {t('tradeHistoryPanel.empty')}
           </Text>
         </Box>
       }

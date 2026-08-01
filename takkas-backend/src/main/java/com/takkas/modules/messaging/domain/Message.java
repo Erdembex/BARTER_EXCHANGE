@@ -30,6 +30,14 @@ public class Message {
     private MessageType messageType = MessageType.TEXT;
 
     @Column(columnDefinition = "TEXT") private String content;
+
+    @Column(name = "media_url", length = 2048)
+    private String mediaUrl;
+
+    /** SYSTEM tipi mesajlarda dolu — yalnızca bu kullanıcıya görünür (null ise herkese görünür). */
+    @Column(name = "visible_to_user_id")
+    private UUID visibleToUserId;
+
     @CreatedDate private Instant createdAt;
     @Column(nullable = false) @Builder.Default private boolean isRead = false;
 

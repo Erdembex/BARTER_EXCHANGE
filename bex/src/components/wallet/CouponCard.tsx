@@ -10,6 +10,7 @@ import {
 import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -39,6 +40,7 @@ export function CouponCard({
   layout = 'stack',
   style,
 }: CouponCardProps) {
+  const { t } = useTranslation();
   const displayStatus = getCouponDisplayStatus(coupon);
   const expiringSoon = isCouponExpiringSoon(coupon);
   const remaining = getCouponRemainingUses(coupon);
@@ -81,7 +83,7 @@ export function CouponCard({
             </View>
             <View style={[styles.badge, { borderColor: statusColor + '55' }]}>
               <Text style={[styles.badgeText, { color: statusColor }]}>
-                {expiringSoon ? 'Yakında bitiyor' : COUPON_STATUS_LABELS[displayStatus]}
+                {expiringSoon ? t('couponCard.expiringSoon') : COUPON_STATUS_LABELS[displayStatus]}
               </Text>
             </View>
           </View>
@@ -94,11 +96,11 @@ export function CouponCard({
             {coupon.couponCode ? (
               <Text style={styles.code}>{coupon.couponCode}</Text>
             ) : (
-              <Text style={styles.codeMuted}>Dijital Kupon</Text>
+              <Text style={styles.codeMuted}>{t('couponCard.digitalCoupon')}</Text>
             )}
             {isActive && (
               <Text style={styles.uses}>
-                {remaining}/{coupon.totalUses} hak
+                {t('couponCard.usesLeft', { remaining, total: coupon.totalUses })}
               </Text>
             )}
           </View>
@@ -106,7 +108,7 @@ export function CouponCard({
           <View style={styles.bottomRow}>
             <Text style={styles.expiry}>
               {displayStatus === 'expired'
-                ? `Süresi doldu · ${formatShortDate(coupon.expiresAt)}`
+                ? t('couponCard.expired', { date: formatShortDate(coupon.expiresAt) })
                 : formatDaysUntil(coupon.expiresAt)}
             </Text>
             {isActive && <Text style={styles.tapHint}>Detay →</Text>}

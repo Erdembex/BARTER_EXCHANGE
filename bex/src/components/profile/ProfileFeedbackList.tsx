@@ -5,6 +5,7 @@ import { StarRatingDisplay } from '@/components/profile/StarRating';
 import { formatShortDate } from '@/lib/dateUtils';
 import { Timestamp } from 'firebase/firestore';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface ProfileFeedbackListProps {
   averageStars: number;
@@ -17,16 +18,17 @@ export function ProfileFeedbackList({
   averageStars,
   totalCount,
   items,
-  title = 'Geri bildirimler',
+  title,
 }: ProfileFeedbackListProps) {
+  const { t } = useTranslation();
   if (totalCount === 0 && items.length === 0) return null;
 
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{title ?? t('profileFeedbackList.defaultTitle')}</Text>
         <StarRatingDisplay value={averageStars} />
-        <Text style={styles.meta}>{totalCount} değerlendirme</Text>
+        <Text style={styles.meta}>{t('profileFeedbackList.reviewCount', { count: totalCount })}</Text>
       </View>
       {items.map((item) => (
         <View key={item.id} style={styles.row}>

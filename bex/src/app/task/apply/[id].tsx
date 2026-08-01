@@ -21,8 +21,10 @@ import { PortfolioItem } from '@/types';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { isTaskOpenForApplications } from '@/lib/taskUtils';
+import { useTranslation } from '@/i18n';
 
 export default function ApplyScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser, bexUser } = useAuthStore();
   const { showToast } = useToast();
@@ -50,15 +52,15 @@ export default function ApplyScreen() {
     if (!trimmed || trimmed.length < minLength) {
       setError(
         minLength >= 50
-          ? 'Lütfen en az 50 karakterlik bir açıklama yaz.'
-          : 'Lütfen en az 20 karakterlik bir açıklama yaz.'
+          ? t('applyScreen.errorMin50')
+          : t('applyScreen.errorMin20')
       );
       return;
     }
     if (!firebaseUser || !task) return;
 
     if (!isTaskOpenForApplications(task)) {
-      setError('Bu görevin başvuru süresi doldu.');
+      setError(t('applyScreen.errorExpired'));
       return;
     }
 
@@ -72,16 +74,16 @@ export default function ApplyScreen() {
         coverLetter: trimmed,
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
-      showToast('Başvurun gönderildi!');
+      showToast(t('applyScreen.successToast'));
       router.replace('/(tabs)/applications' as Href);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code;
       setError(
         code === 'already-applied'
-          ? 'Bu göreve zaten başvurdun. Başvurularım sekmesinden takip edebilirsin.'
+          ? t('applyScreen.errorAlreadyApplied')
           : err instanceof Error
             ? err.message
-            : 'Başvuru gönderilemedi.'
+            : t('applyScreen.errorGeneric')
       );
     } finally {
       setLoading(false);
@@ -96,10 +98,10 @@ export default function ApplyScreen() {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Geri</Text>
+            <Text style={styles.backText}>{t('applyScreen.back')}</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Başvuru Yap</Text>
+          <Text style={styles.title}>{t('applyScreen.title')}</Text>
           {task && (
             <View style={styles.taskPreview}>
               <Text style={styles.taskTitle}>{task.title}</Text>
@@ -110,8 +112,10 @@ export default function ApplyScreen() {
           {bexUser && bexUser.role === 'user' ? (
             <View style={styles.statsRow}>
               <Text style={styles.statText}>
-                ⭐ {bexUser.reputationScore ?? 0} itibar · {bexUser.completedTaskCount ?? 0}{' '}
-                tamamlanan görev
+                {t('applyScreen.statsRow', {
+                  reputation: bexUser.reputationScore ?? 0,
+                  completed: bexUser.completedTaskCount ?? 0,
+                })}
               </Text>
             </View>
           ) : null}
@@ -119,8 +123,8 @@ export default function ApplyScreen() {
           {portfolio.length > 0 ? (
             <UserPortfolioGallery
               items={portfolio}
-              title="Onaylı portföyün"
-              subtitle="İşletme başvurunu incelerken bu görselleri de görür."
+              title={t('applyScreen.portfolioTitle')}
+              subtitle={t('applyScreen.portfolioSubtitle')}
               compact
             />
           ) : null}
@@ -132,8 +136,8 @@ export default function ApplyScreen() {
           ) : null}
 
           <Input
-            label="Neden bu göreve uygunsun?"
-            placeholder="Deneyimlerini, becerilerini ve motivasyonunu anlat..."
+            label={t('applyScreen.coverLetterLabel')}
+            placeholder={t('applyScreen.coverLetterPlaceholder')}
             value={coverLetter}
             onChangeText={setCoverLetter}
             multiline
@@ -141,7 +145,7 @@ export default function ApplyScreen() {
           />
 
           <Input
-            label="Portfolio / örnek çalışma linki (opsiyonel)"
+            label={t('applyScreen.portfolioUrlLabel')}
             placeholder="https://..."
             value={portfolioUrl}
             onChangeText={setPortfolioUrl}
@@ -150,7 +154,7 @@ export default function ApplyScreen() {
           />
 
           <Button
-            title="Başvuruyu Gönder"
+            title={t('applyScreen.submit')}
             onPress={handleSubmit}
             loading={loading}
             disabled={!task || !isTaskOpenForApplications(task)}

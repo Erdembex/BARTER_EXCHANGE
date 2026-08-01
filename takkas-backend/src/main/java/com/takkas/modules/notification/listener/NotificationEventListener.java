@@ -122,11 +122,41 @@ public class NotificationEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void on(OfferAcceptedEvent e) {
+    public void on(OfferSentEvent e) {
+        try {
+            String senderName = userFacade.getBusinessSummary(
+                userFacade.getBusinessProfileIdByUserId(e.senderUserId())).businessName();
+            notificationService.create(
+                factory.offerReceived(e.recipientUserId(), e.conversationId(), senderName));
+        } catch (Exception ex) { log.error("[NTF] OFFER_RECEIVED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(PrivateListingAcceptedEvent e) {
         try {
             notificationService.create(
-                factory.offerAccepted(e.individualUserId(), e.conversationId(), "Karşı Taraf"));
+                factory.offerAccepted(e.businessUserId(), e.conversationId(), "Aday"));
+        } catch (Exception ex) { log.error("[NTF] PRIVATE_LISTING_ACCEPTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(OfferAcceptedEvent e) {
+        try {
+            var businessUserId = userFacade.getUserIdByBusinessProfileId(e.businessId());
+            notificationService.create(
+                factory.offerAccepted(businessUserId, e.conversationId(), "Aday"));
         } catch (Exception ex) { log.error("[NTF] OFFER_ACCEPTED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(OfferRejectedEvent e) {
+        try {
+            notificationService.create(
+                factory.offerRejected(e.businessUserId(), e.conversationId(), "Aday"));
+        } catch (Exception ex) { log.error("[NTF] OFFER_REJECTED: {}", ex.getMessage()); }
     }
 
     // ── Kupon ─────────────────────────────────────────────
@@ -217,5 +247,16 @@ public class NotificationEventListener {
                 : factory.subscriptionRenewed(businessUserId, e.businessId(), e.newPlanName());
             notificationService.create(notification);
         } catch (Exception ex) { log.error("[NTF] SUBSCRIPTION_CHANGED: {}", ex.getMessage()); }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(SubscriptionUpgradeRequestedEvent e) {
+        try {
+            for (var admin : userRepository.findByUserType(UserType.ADMIN)) {
+                notificationService.create(factory.subscriptionUpgradeRequested(
+                    admin.getId(), e.businessId(), e.businessName(), e.targetPlanDisplayName()));
+            }
+        } catch (Exception ex) { log.error("[NTF] SUBSCRIPTION_UPGRADE_REQUESTED: {}", ex.getMessage()); }
     }
 }

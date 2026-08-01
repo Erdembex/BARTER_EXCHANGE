@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Business } from '../../types';
 import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
+import { useTranslation } from '@/i18n';
 
 interface BusinessCardProps {
   business: Business;
@@ -9,6 +10,7 @@ interface BusinessCardProps {
 }
 
 export function BusinessCard({ business, onPress }: BusinessCardProps) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       style={[styles.card, Shadow.sm]}
@@ -27,11 +29,11 @@ export function BusinessCard({ business, onPress }: BusinessCardProps) {
       </Text>
       <View style={styles.scoreRow}>
         <Text style={styles.score}>⭐ {business.reputationScore}</Text>
-        <Text style={styles.tasks}>{business.totalTasksPublished} görev</Text>
+        <Text style={styles.tasks}>{t('businessCard.taskCount', { count: business.totalTasksPublished })}</Text>
       </View>
       {business.isVerified && (
         <View style={styles.verified}>
-          <Text style={styles.verifiedText}>✓ Doğrulanmış</Text>
+          <Text style={styles.verifiedText}>{t('businessCard.verified')}</Text>
         </View>
       )}
     </TouchableOpacity>

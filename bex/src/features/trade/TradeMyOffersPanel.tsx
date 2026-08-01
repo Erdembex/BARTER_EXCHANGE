@@ -6,15 +6,9 @@ import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { tradeTheme, TradeTheme } from './tradeTheme';
 import { TradeOffer, TradeOfferStatus } from './types';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
-
-const STATUS_LABEL: Record<TradeOfferStatus, string> = {
-  pending: 'Bekliyor',
-  accepted: 'Kabul edildi',
-  rejected: 'Reddedildi',
-  cancelled: 'İptal',
-};
 
 interface TradeMyOffersPanelProps {
   userId: string;
@@ -28,6 +22,13 @@ export function TradeMyOffersPanel({
   onRefresh,
   refreshing = false,
 }: TradeMyOffersPanelProps) {
+  const { t } = useTranslation();
+  const STATUS_LABEL: Record<TradeOfferStatus, string> = {
+    pending: t('tradeMyOffersPanel.statusPending'),
+    accepted: t('tradeMyOffersPanel.statusAccepted'),
+    rejected: t('tradeMyOffersPanel.statusRejected'),
+    cancelled: t('tradeMyOffersPanel.statusCancelled'),
+  };
   return (
     <Box flex={1}>
       <FlatList
@@ -51,7 +52,7 @@ export function TradeMyOffersPanel({
         ListEmptyComponent={
           <Box paddingTop="xl" alignItems="center">
             <Text variant="bodyMuted" style={{ textAlign: 'center' }}>
-              Henüz teklif göndermedin. Pazardan ilan seçip kuponunu takasa koyabilirsin.
+              {t('tradeMyOffersPanel.empty')}
             </Text>
           </Box>
         }
@@ -88,16 +89,16 @@ export function TradeMyOffersPanel({
             </Box>
 
             <Text variant="caption" marginTop="sm" style={{ color: tradeTheme.colors.tradePrimary }}>
-              Senin kuponun: {item.counterRewardLabel}
+              {t('tradeMyOffersPanel.yourCoupon', { label: item.counterRewardLabel })}
             </Text>
 
             {item.status === 'accepted' ? (
               <Box marginTop="md">
                 <Text variant="bodyMuted" marginBottom="sm">
-                  Takas tamamlandı. Eski kodun iptal edildi; yeni kuponun Kuponlarım sekmesinde.
+                  {t('tradeMyOffersPanel.completedText')}
                 </Text>
                 <Button
-                  title="Kuponlarım'a Git"
+                  title={t('tradeMyOffersPanel.goToMyCoupons')}
                   size="sm"
                   onPress={() => router.push('/(tabs)/wallet' as Href)}
                 />

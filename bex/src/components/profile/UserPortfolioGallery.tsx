@@ -11,6 +11,7 @@ import { PortfolioItem } from '@/types';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const THUMB_SIZE = (SCREEN_WIDTH - Spacing[5] * 2 - Spacing[2] * 2) / 3;
@@ -26,12 +27,15 @@ interface UserPortfolioGalleryProps {
 
 export function UserPortfolioGallery({
   items,
-  title = 'Onaylı portföy',
-  subtitle = 'Admin tarafından onaylanmış teslim görselleri — işletmeler başvuru öncesi görür.',
+  title,
+  subtitle,
   emptyText,
   compact = false,
   maxItems,
 }: UserPortfolioGalleryProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('userPortfolioGallery.title');
+  const resolvedSubtitle = subtitle ?? t('userPortfolioGallery.subtitle');
   const [preview, setPreview] = useState<PortfolioItem | null>(null);
   const visibleItems = maxItems && maxItems > 0 ? items.slice(0, maxItems) : items;
   const hiddenCount = items.length - visibleItems.length;
@@ -50,12 +54,12 @@ export function UserPortfolioGallery({
   return (
     <>
       <View style={styles.wrap}>
-        <Text style={styles.title}>{title}</Text>
-        {!compact && subtitle ? (
+        <Text style={styles.title}>{resolvedTitle}</Text>
+        {!compact && resolvedSubtitle ? (
           <Text style={styles.subtitle}>
             {hiddenCount > 0
-              ? `Son ${visibleItems.length} görsel · toplam ${items.length} onaylı görsel.`
-              : subtitle}
+              ? t('userPortfolioGallery.subtitleWithCount', { shown: visibleItems.length, total: items.length })
+              : resolvedSubtitle}
           </Text>
         ) : null}
         <View style={styles.grid}>
@@ -84,12 +88,12 @@ export function UserPortfolioGallery({
               <>
                 <ZoomableImage uri={preview.imageUrl} style={styles.previewImage} />
                 <Text style={styles.previewTitle}>{preview.taskTitle}</Text>
-                <Text style={styles.zoomHint}>İki parmakla yakınlaştır · çift dokun</Text>
+                <Text style={styles.zoomHint}>{t('userPortfolioGallery.zoomHint')}</Text>
               </>
             ) : null}
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={() => setPreview(null)}>
-            <Text style={styles.closeText}>Kapat</Text>
+            <Text style={styles.closeText}>{t('userPortfolioGallery.close')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>

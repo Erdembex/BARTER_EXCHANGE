@@ -5,8 +5,10 @@ import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BannedScreen() {
+  const { t } = useTranslation();
   const { signOut } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
@@ -21,12 +23,11 @@ export default function BannedScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.content}>
         <Text style={styles.emoji}>⛔</Text>
-        <Text style={styles.title}>Hesabın askıya alındı</Text>
+        <Text style={styles.title}>{t('bannedScreen.title')}</Text>
         <Text style={styles.text}>
-          BEX hesabına erişim geçici olarak kapatıldı. Bunun bir hata olduğunu düşünüyorsan
-          destek ekibiyle iletişime geç.
+          {t('bannedScreen.text')}
         </Text>
-        <Button title="Çıkış Yap" variant="outline" onPress={handleLogout} loading={loading} />
+        <Button title={t('bannedScreen.logout')} variant="outline" onPress={handleLogout} loading={loading} />
       </View>
     </SafeAreaView>
   );

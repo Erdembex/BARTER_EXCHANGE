@@ -1,11 +1,14 @@
 import axios from 'axios';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
 
+export type BillingPeriod = 'MONTHLY' | 'SEMIANNUAL' | 'YEARLY';
+
 export type SubscriptionPlan = {
   id: string;
   name: string;
   displayName: string;
   priceMonthly: number;
+  priceSemiAnnual: number;
   priceYearly: number;
   features: Record<string, string>;
 };
@@ -18,6 +21,11 @@ export type BusinessSubscription = {
   cancelAtPeriodEnd: boolean;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
+  pendingPlanName?: string;
+  pendingPlanDisplayName?: string;
+  pendingBillingPeriod?: BillingPeriod;
+  pendingReference?: string;
+  pendingRequestedAt?: string;
 };
 
 export type SubscriptionInvoice = {
@@ -29,11 +37,19 @@ export type SubscriptionInvoice = {
   createdAt?: string;
 };
 
+export type CheckoutOutcome = {
+  requiresRedirect: boolean;
+  redirectUrl?: string;
+  message?: string;
+  reference?: string;
+};
+
 type PlanDto = {
   id: string;
   name?: string;
   displayName?: string;
   priceMonthly?: number | string;
+  priceSemiAnnual?: number | string;
   priceYearly?: number | string;
   features?: Record<string, string>;
 };
@@ -46,6 +62,11 @@ type SubscriptionDto = {
   cancelAtPeriodEnd?: boolean;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
+  pendingPlanName?: string;
+  pendingPlanDisplayName?: string;
+  pendingBillingPeriod?: BillingPeriod;
+  pendingReference?: string;
+  pendingRequestedAt?: string;
 };
 
 type InvoiceDto = {
@@ -57,12 +78,20 @@ type InvoiceDto = {
   createdAt?: string;
 };
 
+type CheckoutDto = {
+  requiresRedirect?: boolean;
+  redirectUrl?: string;
+  message?: string;
+  reference?: string;
+};
+
 function mapPlan(dto: PlanDto): SubscriptionPlan {
   return {
     id: String(dto.id),
     name: dto.name ?? '',
     displayName: dto.displayName ?? dto.name ?? 'Plan',
     priceMonthly: Number(dto.priceMonthly ?? 0),
+    priceSemiAnnual: Number(dto.priceSemiAnnual ?? 0),
     priceYearly: Number(dto.priceYearly ?? 0),
     features: dto.features ?? {},
   };
@@ -77,6 +106,11 @@ function mapSubscription(dto: SubscriptionDto): BusinessSubscription {
     cancelAtPeriodEnd: dto.cancelAtPeriodEnd ?? false,
     currentPeriodStart: dto.currentPeriodStart,
     currentPeriodEnd: dto.currentPeriodEnd,
+    pendingPlanName: dto.pendingPlanName,
+    pendingPlanDisplayName: dto.pendingPlanDisplayName,
+    pendingBillingPeriod: dto.pendingBillingPeriod,
+    pendingReference: dto.pendingReference,
+    pendingRequestedAt: dto.pendingRequestedAt,
   };
 }
 
@@ -128,17 +162,21 @@ export async function fetchSubscriptionInvoices(): Promise<SubscriptionInvoice[]
 
 export async function createSubscriptionCheckout(
   targetPlanId: string,
-  billingPeriod: 'MONTHLY' | 'YEARLY'
-): Promise<string> {
+  billingPeriod: BillingPeriod
+): Promise<CheckoutOutcome> {
   try {
-    const { data } = await apiClient.post<{ checkoutUrl?: string }>(
-      '/api/business/subscription/checkout',
-      { targetPlanId, billingPeriod }
-    );
-    if (!data.checkoutUrl) throw new Error('Ödeme bağlantısı alınamadı.');
-    return data.checkoutUrl;
+    const { data } = await apiClient.post<CheckoutDto>('/api/business/subscription/checkout', {
+      targetPlanId,
+      billingPeriod,
+    });
+    return {
+      requiresRedirect: data.requiresRedirect ?? false,
+      redirectUrl: data.redirectUrl,
+      message: data.message,
+      reference: data.reference,
+    };
   } catch (error) {
-    throw mapError(error, 'Ödeme oturumu başlatılamadı.');
+    throw mapError(error, 'Yükseltme talebi başlatılamadı.');
   }
 }
 

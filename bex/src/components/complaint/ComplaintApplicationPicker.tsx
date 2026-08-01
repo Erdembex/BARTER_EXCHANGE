@@ -15,6 +15,7 @@ import {
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import type { ApplicationStatus } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface ComplaintApplicationPickerProps {
   mode: 'individual' | 'business';
@@ -43,6 +44,7 @@ export function ComplaintApplicationPicker({
   const [items, setItems] = useState<ComplaintEligibleApplicationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,7 +57,7 @@ export function ComplaintApplicationPicker({
       setItems(list);
     } catch {
       setItems([]);
-      setError('Uygun görevler yüklenemedi.');
+      setError(t('complaintApplicationPicker.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -69,12 +71,12 @@ export function ComplaintApplicationPicker({
     return (
       <View style={styles.selectedCard}>
         <View style={styles.selectedText}>
-          <Text style={styles.selectedLabel}>Seçilen görev</Text>
+          <Text style={styles.selectedLabel}>{t('complaintApplicationPicker.selectedTask')}</Text>
           <Text style={styles.selectedName}>{selectedLabel}</Text>
         </View>
         {onClear ? (
           <TouchableOpacity onPress={onClear} hitSlop={8}>
-            <Text style={styles.changeLink}>Değiştir</Text>
+            <Text style={styles.changeLink}>{t('complaintApplicationPicker.change')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -84,7 +86,7 @@ export function ComplaintApplicationPicker({
   return (
     <View style={styles.wrap}>
       <Text style={styles.hint}>
-        Yalnızca işletmenin onayladığı görevlerin için şikayet oluşturabilirsin. Kupon şart değil.
+        {t('complaintApplicationPicker.hint')}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loading ? (
@@ -92,8 +94,8 @@ export function ComplaintApplicationPicker({
       ) : items.length === 0 ? (
         <Text style={styles.empty}>
           {businessProfileIdFilter
-            ? 'Bu işletmede onaylanmış görevin yok veya bu görev için zaten şikayetin var.'
-            : 'Şikayet edebileceğin onaylanmış görev bulunamadı.'}
+            ? t('complaintApplicationPicker.emptyWithBusiness')
+            : t('complaintApplicationPicker.emptyGeneric')}
         </Text>
       ) : (
         <ScrollView style={styles.scroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">

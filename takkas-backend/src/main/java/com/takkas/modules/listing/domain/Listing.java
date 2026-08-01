@@ -3,6 +3,7 @@ package com.takkas.modules.listing.domain;
 import com.takkas.common.exception.BusinessRuleException;
 import com.takkas.modules.listing.domain.enums.*;
 import com.takkas.modules.user.domain.BusinessProfile;
+import com.takkas.modules.user.domain.IndividualProfile;
 import com.takkas.modules.user.domain.enums.Skill;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,18 @@ public class Listing {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
+    private ListingVisibility visibility = ListingVisibility.PUBLIC;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_individual_id")
+    private IndividualProfile targetIndividual;
+
+    @Column(name = "source_conversation_id")
+    private UUID sourceConversationId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
     private ListingStatus status = ListingStatus.DRAFT;
 
     @Column(nullable = false) @Builder.Default private Integer viewCount = 0;
@@ -59,6 +72,17 @@ public class Listing {
             throw new BusinessRuleException("Sadece taslak ilanlar yayınlanabilir.");
         status = ListingStatus.ACTIVE;
     }
+
+    /** Özel (sohbet) ilanları doğrudan aktif yapar */
+    public void publishPrivate() {
+        if (visibility != ListingVisibility.PRIVATE)
+            throw new BusinessRuleException("Yalnızca özel ilanlar bu yöntemle yayınlanabilir.");
+        if (status != ListingStatus.DRAFT)
+            throw new BusinessRuleException("Özel ilan zaten yayınlandı.");
+        status = ListingStatus.ACTIVE;
+    }
+
+    public boolean isPrivate() { return visibility == ListingVisibility.PRIVATE; }
 
     public void close() {
         if (status != ListingStatus.ACTIVE)

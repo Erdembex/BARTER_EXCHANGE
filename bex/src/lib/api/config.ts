@@ -6,7 +6,7 @@ function resolveDefaultApiBaseUrl(): string {
     return 'http://localhost:8080';
   }
   // Telefon / emülatör — LAN IP (bilgisayarın yerel ağ adresi)
-  return 'http://192.168.1.105:8080';
+  return 'http://192.168.1.102:8080';
 }
 
 /** Spring Boot REST API kök adresi */

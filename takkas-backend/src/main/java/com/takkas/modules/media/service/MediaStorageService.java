@@ -2,19 +2,17 @@ package com.takkas.modules.media.service;
 
 import com.takkas.common.exception.BusinessRuleException;
 import com.takkas.common.exception.ResourceNotFoundException;
+import com.takkas.infrastructure.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -34,74 +32,46 @@ public class MediaStorageService {
     private static final Set<String> BUSINESS_DOC_CONTENT_TYPES = Set.of(
         "image/jpeg", "image/png", "image/webp", "application/pdf");
 
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
+    private final StorageService storageService;
 
     public List<String> storeUserFiles(UUID userId, MultipartFile[] files) {
-        if (files == null || files.length == 0) {
-            throw new BusinessRuleException("En az bir dosya seçmelisin.");
-        }
-        if (files.length > 5) {
-            throw new BusinessRuleException("En fazla 5 dosya yüklenebilir.");
-        }
-
-        List<String> urls = new ArrayList<>();
-        Path rootDir = Path.of(uploadDir).toAbsolutePath().normalize();
-        Path userDir = rootDir.resolve(userId.toString());
-        try {
-            Files.createDirectories(userDir);
-            for (MultipartFile file : files) {
-                if (file == null || file.isEmpty()) continue;
-                validateImage(file);
-                String ext = extensionOf(file.getOriginalFilename(), file.getContentType());
-                String filename = UUID.randomUUID() + ext;
-                Path target = userDir.resolve(filename).normalize();
-                if (!target.startsWith(userDir)) {
-                    throw new BusinessRuleException("Geçersiz dosya yolu.");
-                }
-                file.transferTo(target);
-                urls.add("/uploads/" + userId + "/" + filename);
-            }
-        } catch (IOException e) {
-            log.error("Dosya kaydedilemedi userId={} dir={}: {}", userId, userDir, e.getMessage());
-            throw new BusinessRuleException("Dosya yüklenemedi.");
-        }
-
-        if (urls.isEmpty()) {
-            throw new BusinessRuleException("Geçerli dosya bulunamadı.");
-        }
-        return urls;
+        return storeFiles(userId, files, 5, this::validateImage, ALLOWED_EXTENSIONS);
     }
 
     /** KYC evrakları — JPG, PNG, WEBP ve PDF */
     public List<String> storeBusinessFiles(UUID userId, MultipartFile[] files) {
+        return storeFiles(userId, files, 3, this::validateBusinessDocument, BUSINESS_DOC_EXTENSIONS);
+    }
+
+    private List<String> storeFiles(
+        UUID userId,
+        MultipartFile[] files,
+        int maxCount,
+        java.util.function.Consumer<MultipartFile> validator,
+        Set<String> allowedExts
+    ) {
         if (files == null || files.length == 0) {
             throw new BusinessRuleException("En az bir dosya seçmelisin.");
         }
-        if (files.length > 3) {
-            throw new BusinessRuleException("En fazla 3 evrak yüklenebilir.");
+        if (files.length > maxCount) {
+            throw new BusinessRuleException(
+                maxCount == 3 ? "En fazla 3 evrak yüklenebilir." : "En fazla 5 dosya yüklenebilir.");
         }
 
         List<String> urls = new ArrayList<>();
-        Path rootDir = Path.of(uploadDir).toAbsolutePath().normalize();
-        Path userDir = rootDir.resolve(userId.toString());
-        try {
-            Files.createDirectories(userDir);
-            for (MultipartFile file : files) {
-                if (file == null || file.isEmpty()) continue;
-                validateBusinessDocument(file);
-                String ext = businessExtensionOf(file.getOriginalFilename(), file.getContentType());
-                String filename = UUID.randomUUID() + ext;
-                Path target = userDir.resolve(filename).normalize();
-                if (!target.startsWith(userDir)) {
-                    throw new BusinessRuleException("Geçersiz dosya yolu.");
-                }
-                file.transferTo(target);
-                urls.add("/uploads/" + userId + "/" + filename);
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) continue;
+            validator.accept(file);
+            String ext = extensionOf(file.getOriginalFilename(), file.getContentType(), allowedExts);
+            String filename = UUID.randomUUID() + ext;
+            String key = storageKey(userId, filename);
+            try (InputStream in = file.getInputStream()) {
+                storageService.store(key, in, file.getContentType(), file.getSize());
+            } catch (IOException e) {
+                log.error("Dosya kaydedilemedi userId={} key={}: {}", userId, key, e.getMessage());
+                throw new BusinessRuleException("Dosya yüklenemedi.");
             }
-        } catch (IOException e) {
-            log.error("İşletme evrakı kaydedilemedi userId={}: {}", userId, e.getMessage());
-            throw new BusinessRuleException("Dosya yüklenemedi.");
+            urls.add(publicPath(userId, filename));
         }
 
         if (urls.isEmpty()) {
@@ -111,19 +81,13 @@ public class MediaStorageService {
     }
 
     public Resource loadAsResource(UUID ownerUserId, String filename) {
-        Path file = resolveStoredFile(ownerUserId, filename);
-        if (!Files.exists(file) || !Files.isRegularFile(file)) {
+        validateFilename(filename);
+        String key = storageKey(ownerUserId, filename);
+        if (!storageService.exists(key)) {
             throw new ResourceNotFoundException("Dosya bulunamadı.");
         }
-        try {
-            Resource resource = new UrlResource(file.toUri());
-            if (!resource.exists() || !resource.isReadable()) {
-                throw new ResourceNotFoundException("Dosya okunamadı.");
-            }
-            return resource;
-        } catch (MalformedURLException e) {
-            throw new BusinessRuleException("Dosya yolu geçersiz.");
-        }
+        InputStream stream = storageService.open(key);
+        return new InputStreamResource(stream);
     }
 
     public MediaType probeMediaType(String filename) {
@@ -134,17 +98,18 @@ public class MediaStorageService {
         return MediaType.IMAGE_JPEG;
     }
 
-    private Path resolveStoredFile(UUID ownerUserId, String filename) {
+    private static String storageKey(UUID userId, String filename) {
+        return userId + "/" + filename;
+    }
+
+    private static String publicPath(UUID userId, String filename) {
+        return "/uploads/" + userId + "/" + filename;
+    }
+
+    private static void validateFilename(String filename) {
         if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
             throw new BusinessRuleException("Geçersiz dosya adı.");
         }
-        Path rootDir = Path.of(uploadDir).toAbsolutePath().normalize();
-        Path userDir = rootDir.resolve(ownerUserId.toString()).normalize();
-        Path file = userDir.resolve(filename).normalize();
-        if (!file.startsWith(userDir)) {
-            throw new BusinessRuleException("Geçersiz dosya yolu.");
-        }
-        return file;
     }
 
     private void validateImage(MultipartFile file) {
@@ -165,14 +130,6 @@ public class MediaStorageService {
         if (!allowedExts.contains(ext)) {
             throw new BusinessRuleException("Geçersiz dosya uzantısı.");
         }
-    }
-
-    private String extensionOf(String originalName, String contentType) {
-        return extensionOf(originalName, contentType, ALLOWED_EXTENSIONS);
-    }
-
-    private String businessExtensionOf(String originalName, String contentType) {
-        return extensionOf(originalName, contentType, BUSINESS_DOC_EXTENSIONS);
     }
 
     private String extensionOf(String originalName, String contentType, Set<String> allowedExts) {

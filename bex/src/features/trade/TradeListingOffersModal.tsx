@@ -17,18 +17,12 @@ import { useToast } from '@/components/common/Toast';
 import { tradeRepository } from './tradeRepository';
 import { tradeTheme, TradeTheme } from './tradeTheme';
 import { TradeListing, TradeOffer, TradeOfferStatus } from './types';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_HEIGHT = Math.round(SCREEN_HEIGHT * 0.88);
-
-const STATUS_LABEL: Record<TradeOfferStatus, string> = {
-  pending: 'Bekliyor',
-  accepted: 'Kabul edildi',
-  rejected: 'Reddedildi',
-  cancelled: 'İptal',
-};
 
 interface TradeListingOffersModalProps {
   visible: boolean;
@@ -45,6 +39,13 @@ export function TradeListingOffersModal({
   onClose,
   onUpdated,
 }: TradeListingOffersModalProps) {
+  const { t } = useTranslation();
+  const STATUS_LABEL: Record<TradeOfferStatus, string> = {
+    pending: t('tradeListingOffersModal.statusPending'),
+    accepted: t('tradeListingOffersModal.statusAccepted'),
+    rejected: t('tradeListingOffersModal.statusRejected'),
+    cancelled: t('tradeListingOffersModal.statusCancelled'),
+  };
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [offers, setOffers] = useState<TradeOffer[]>([]);
@@ -72,11 +73,11 @@ export function TradeListingOffersModal({
     setActingId(offer.id);
     try {
       await tradeRepository.rejectOffer(ownerId, offer.id);
-      showToast('Teklif reddedildi.');
+      showToast(t('tradeListingOffersModal.rejectedToast'));
       await loadOffers();
       onUpdated();
     } catch (err) {
-      showToast((err as Error).message || 'Teklif reddedilemedi.');
+      showToast((err as Error).message || t('tradeListingOffersModal.rejectFailedToast'));
     } finally {
       setActingId(null);
     }
@@ -84,12 +85,12 @@ export function TradeListingOffersModal({
 
   const handleAccept = (offer: TradeOffer) => {
     Alert.alert(
-      'Takası onayla',
-      `${offer.fromUserName}, "${offer.counterRewardLabel}" kuponunu takasa koyuyor.\n\nOnaylarsan her iki eski kupon imha edilir ve yeni kodlar Kuponlarım sekmesinde oluşur.`,
+      t('tradeListingOffersModal.acceptTitle'),
+      t('tradeListingOffersModal.acceptBody', { name: offer.fromUserName, coupon: offer.counterRewardLabel }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('tradeListingOffersModal.dismiss'), style: 'cancel' },
         {
-          text: 'Takası Onayla',
+          text: t('tradeListingOffersModal.confirmAccept'),
           onPress: async () => {
             setActingId(offer.id);
             try {
@@ -98,11 +99,11 @@ export function TradeListingOffersModal({
               onUpdated();
 
               Alert.alert(
-                'Takas tamamlandı',
-                'Eski kuponların iptal edildi. Yeni kuponun Kuponlarım sekmesinde — yeni kodunu oradan kullan.'
+                t('tradeListingOffersModal.completedTitle'),
+                t('tradeListingOffersModal.completedBody')
               );
             } catch (err) {
-              showToast((err as Error).message || 'Takas tamamlanamadı.');
+              showToast((err as Error).message || t('tradeListingOffersModal.tradeFailedToast'));
             } finally {
               setActingId(null);
             }
@@ -136,10 +137,10 @@ export function TradeListingOffersModal({
         >
           <View style={styles.handle} />
 
-          <Text variant="headingSmall">Gelen Teklifler</Text>
+          <Text variant="headingSmall">{t('tradeListingOffersModal.header')}</Text>
           {listing ? (
             <Text variant="bodyMuted" marginTop="xs" marginBottom="md">
-              {listing.title} · {listing.offerCount} teklif
+              {t('tradeListingOffersModal.subtitle', { title: listing.title, count: listing.offerCount })}
             </Text>
           ) : null}
 
@@ -149,7 +150,7 @@ export function TradeListingOffersModal({
             </View>
           ) : offers.length === 0 ? (
             <View style={styles.centered}>
-              <Text variant="bodyMuted">Henüz teklif yok.</Text>
+              <Text variant="bodyMuted">{t('tradeListingOffersModal.empty')}</Text>
             </View>
           ) : (
             <FlatList
@@ -182,7 +183,7 @@ export function TradeListingOffersModal({
                         {item.message || '—'}
                       </Text>
                       <Text variant="caption" marginTop="xs" style={{ color: tradeTheme.colors.tradePrimary }}>
-                        Sunulan kupon: {item.counterRewardLabel}
+                        {t('tradeListingOffersModal.offeredCoupon', { coupon: item.counterRewardLabel })}
                       </Text>
                     <Text variant="caption" marginTop="xs">
                       {item.createdAtLabel}
@@ -192,7 +193,7 @@ export function TradeListingOffersModal({
                       <Box flexDirection="row" marginTop="md">
                         <Box flex={1} marginRight="sm">
                           <Button
-                            title="Reddet"
+                            title={t('tradeListingOffersModal.reject')}
                             variant="outline"
                             size="sm"
                             onPress={() => handleReject(item)}
@@ -202,7 +203,7 @@ export function TradeListingOffersModal({
                         </Box>
                         <Box flex={1}>
                           <Button
-                            title="Kabul Et"
+                            title={t('tradeListingOffersModal.accept')}
                             size="sm"
                             onPress={() => handleAccept(item)}
                             loading={busy}
@@ -217,7 +218,7 @@ export function TradeListingOffersModal({
             />
           )}
 
-          <Button title="Kapat" variant="ghost" onPress={onClose} style={{ marginTop: 8 }} />
+          <Button title={t('tradeListingOffersModal.close')} variant="ghost" onPress={onClose} style={{ marginTop: 8 }} />
         </View>
       </View>
     </Modal>

@@ -3,6 +3,7 @@ package com.takkas.modules.media.service;
 import com.takkas.common.exception.ForbiddenException;
 import com.takkas.common.security.UserPrincipal;
 import com.takkas.modules.application.repository.ApplicationRepository;
+import com.takkas.modules.messaging.repository.MessageRepository;
 import com.takkas.modules.user.domain.enums.UserType;
 import com.takkas.modules.user.repository.BusinessProfileRepository;
 import com.takkas.modules.user.repository.IndividualProfileRepository;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class UploadAccessService {
 
     private final ApplicationRepository applicationRepository;
+    private final MessageRepository messageRepository;
     private final IndividualProfileRepository individualProfileRepository;
     private final BusinessProfileRepository businessProfileRepository;
 
@@ -30,6 +32,10 @@ public class UploadAccessService {
         }
 
         String url = "/uploads/" + ownerUserId + "/" + filename;
+
+        if (messageRepository.participantCanAccessMediaUrl(principal.userId(), url)) {
+            return;
+        }
 
         if (principal.userType() == UserType.BUSINESS
             && applicationRepository.businessCanAccessSubmissionImage(

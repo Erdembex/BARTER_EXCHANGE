@@ -3,6 +3,7 @@ import { Timestamp } from 'firebase/firestore';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
 import { getSessionClaims, hasRestAuthSession } from '@/lib/auth/sessionClaims';
 import { ApplicationMessage, UserRole } from '@/types';
+import { formatOfferLabel, mapOfferDto } from './offersApi';
 
 type ConversationDto = {
   id: string;
@@ -27,8 +28,23 @@ type MessageDto = {
   senderId?: string;
   messageType?: string;
   content?: string;
+  mediaUrl?: string | null;
   createdAt?: string;
   isRead?: boolean;
+  offer?: {
+    id?: string;
+    messageId?: string;
+    listingId?: string;
+    listingTitle?: string | null;
+    listingDescription?: string | null;
+    resultApplicationId?: string | null;
+    rewardType?: string;
+    quantity?: number;
+    unit?: string;
+    validityDays?: number;
+    note?: string | null;
+    status?: string;
+  };
 };
 
 type MessagesPageDto = {
@@ -60,14 +76,38 @@ function mapMessage(
     senderRole = currentUserType === 'BUSINESS' ? 'user' : 'business';
   }
 
+  const isOffer = dto.messageType?.toUpperCase() === 'OFFER';
+  const isImage = dto.messageType?.toUpperCase() === 'IMAGE';
+  const isSystem = dto.messageType?.toUpperCase() === 'SYSTEM';
+  const offer = isOffer && dto.offer ? mapOfferDto(dto.offer) : undefined;
+  const offerPreview = offer ? formatOfferLabel(offer) : '';
+  const caption = dto.content?.trim() ?? '';
+  const mediaUrl = dto.mediaUrl?.trim() || undefined;
+
+  let messageType: ApplicationMessage['messageType'] = 'text';
+  let text = caption;
+  if (isOffer) {
+    messageType = 'offer';
+    text = offerPreview;
+  } else if (isImage) {
+    messageType = 'image';
+    text = caption || '📷 Fotoğraf';
+  } else if (isSystem) {
+    messageType = 'system';
+    text = caption;
+  }
+
   return {
     id: String(dto.id),
     applicationId,
     senderId,
     senderRole,
-    text: dto.content?.trim() ?? '',
+    text,
     createdAt: toTimestamp(dto.createdAt),
     isRead: dto.isRead ?? false,
+    messageType,
+    offer,
+    mediaUrl,
   };
 }
 
@@ -104,11 +144,33 @@ export async function fetchInbox(): Promise<InboxConversation[]> {
   }
 }
 
-export async function markConversationRead(conversationId: string): Promise<void> {
+export async function resolveApplicationIdByConversation(conversationId: string): Promise<string | null> {
   try {
-    await apiClient.patch(`/api/conversations/${conversationId}/read`);
+    const { data } = await apiClient.get<ConversationDto>(`/api/conversations/${conversationId}`);
+    return data.applicationId ? String(data.applicationId) : null;
   } catch {
-    // Okundu işareti kritik değil
+    return null;
+  }
+}
+
+export async function markConversationRead(conversationId: string): Promise<void> {
+  await apiClient.patch(`/api/conversations/${conversationId}/read`);
+}
+
+/** Mesajları yüklerken okundu işaretle — PATCH başarısız olsa bile GET sonrası backend temizler */
+export async function markConversationReadByApplication(
+  applicationId: string,
+  priorUnread = 0
+): Promise<{ ok: boolean; conversationId: string | null; unreadCleared: number }> {
+  const conversationId = await resolveConversationId(applicationId);
+  if (!conversationId) {
+    return { ok: false, conversationId: null, unreadCleared: 0 };
+  }
+  try {
+    await markConversationRead(conversationId);
+    return { ok: true, conversationId, unreadCleared: priorUnread };
+  } catch {
+    return { ok: false, conversationId, unreadCleared: 0 };
   }
 }
 
@@ -195,6 +257,31 @@ export async function sendMessageByApplication(
     return mapMessage(data, applicationId, claims?.sub, claims?.userType);
   } catch (error) {
     throw mapMessagesError(error, 'Mesaj gönderilemedi.');
+  }
+}
+
+export async function sendImageMessageByApplication(
+  applicationId: string,
+  mediaUrl: string,
+  caption?: string
+): Promise<ApplicationMessage> {
+  const conversationId = await resolveConversationId(applicationId);
+  if (!conversationId) {
+    throw new Error('Bu başvuru için mesajlaşma henüz açılmadı. Başvuru onaylandıktan sonra yazışabilirsiniz.');
+  }
+
+  try {
+    const claims = await getSessionClaims();
+    const { data } = await apiClient.post<MessageDto>(
+      `/api/conversations/${conversationId}/messages`,
+      {
+        mediaUrl: mediaUrl.trim(),
+        content: caption?.trim() || null,
+      }
+    );
+    return mapMessage(data, applicationId, claims?.sub, claims?.userType);
+  } catch (error) {
+    throw mapMessagesError(error, 'Görsel gönderilemedi.');
   }
 }
 

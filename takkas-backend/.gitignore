@@ -6,3 +6,4 @@ upload-test.jpg
 upload-result.json
 .env
 .env.*
+!.env.example

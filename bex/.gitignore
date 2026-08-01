@@ -35,6 +35,14 @@ ui-debug.log
 
 # local env files
 .env*.local
+.env
+.env.production
+
+# Store submit credentials (never commit)
+google-play-service-account.json
+
+# Firebase service account (backend)
+firebase-sa.json
 
 # typescript
 *.tsbuildinfo

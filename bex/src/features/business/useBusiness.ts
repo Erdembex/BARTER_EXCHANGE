@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { ensureBusinessForOwner } from '@/features/business/businessService';
+import { fetchPublicBusinessProfile } from '@/features/business/businessProfileApi';
 import { Business } from '@/types';
 
 export function useBusiness() {
@@ -34,6 +35,25 @@ export function useBusiness() {
         const biz = await ensureBusinessForOwner(uid, displayName ?? '');
         setBusiness(biz);
         loadedOnceRef.current = true;
+
+        // Yıldız/tamamlanan görev istatistikleri yalnızca public profil endpoint'inde var.
+        if (biz.id) {
+          fetchPublicBusinessProfile(biz.id)
+            .then((stats) => {
+              if (!stats) return;
+              setBusiness((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      averageRating: stats.averageRating,
+                      feedbackCount: stats.feedbackCount,
+                      completedTaskCount: stats.completedTaskCount,
+                    }
+                  : prev
+              );
+            })
+            .catch(() => {});
+        }
       } catch {
         setError('İşletme profili yüklenemedi.');
       } finally {

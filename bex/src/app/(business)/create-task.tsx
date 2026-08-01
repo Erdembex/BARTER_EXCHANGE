@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
@@ -17,12 +18,14 @@ import { tasksRepository } from '@/features/data';
 import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { TaskCategory, TaskDifficulty, CreateTask } from '@/types';
-import { ALL_CATEGORIES, CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
+import { ALL_CATEGORIES, useCategoryLabels, useDifficultyLabels } from '@/constants/taskLabels';
 import { StepIndicator } from '@/components/business';
 import { Button, Input } from '@/components/ui';
+import { useToast } from '@/components/common/Toast';
+import { getListingLimitInfo, ListingLimitInfo } from '@/lib/listingLimit';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
-const STEPS = ['Temel Bilgiler', 'Ödül', 'Gereksinimler', 'Önizleme'];
 const DIFFICULTIES: TaskDifficulty[] = ['easy', 'medium', 'hard'];
 
 interface FormState {
@@ -50,11 +53,40 @@ const initialForm: FormState = {
 };
 
 export default function CreateTaskScreen() {
-  const { business } = useBusiness();
+  const { business, loading: businessLoading } = useBusiness();
+  const { showToast } = useToast();
+  const { t } = useTranslation();
+  const CATEGORY_LABELS = useCategoryLabels();
+  const DIFFICULTY_LABELS = useDifficultyLabels();
+  const STEPS = useMemo(
+    () => [
+      t('createTask.steps.basic'),
+      t('createTask.steps.reward'),
+      t('createTask.steps.requirements'),
+      t('createTask.steps.preview'),
+    ],
+    [t]
+  );
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [limitInfo, setLimitInfo] = useState<ListingLimitInfo | null>(null);
+  const [limitLoading, setLimitLoading] = useState(true);
+  const submitLock = useRef(false);
+
+  useEffect(() => {
+    if (businessLoading) return;
+    if (!business?.id) {
+      setLimitLoading(false);
+      return;
+    }
+    setLimitLoading(true);
+    void getListingLimitInfo(business.id)
+      .then(setLimitInfo)
+      .finally(() => setLimitLoading(false));
+  }, [business?.id, businessLoading]);
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -62,45 +94,65 @@ export default function CreateTaskScreen() {
     setError('');
     if (step === 0) {
       if (form.title.trim().length < 5) {
-        setError('Başlık en az 5 karakter olmalı.');
+        setError(t('createTask.titleMinLength'));
         return false;
       }
       if (form.description.trim().length < 20) {
-        setError('Açıklama en az 20 karakter olmalı.');
+        setError(t('createTask.descriptionMinLength'));
         return false;
       }
     }
     if (step === 1 && !form.rewardDescription.trim()) {
-      setError('Ödül açıklaması gerekli.');
+      setError(t('createTask.rewardRequired'));
       return false;
     }
     return true;
   };
 
   const handleNext = () => {
+    if (loading || submitted || submitLock.current) return;
     if (!validateStep()) return;
     if (step < STEPS.length - 1) setStep(step + 1);
-    else handleSubmit();
+    else void handleSubmit();
+  };
+
+  const navigateAfterCreate = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(business)/tasks');
+    }
   };
 
   const validateAll = (): boolean => {
     if (form.title.trim().length < 5) {
-      setError('Başlık en az 5 karakter olmalı.');
+      setError(t('createTask.titleMinLength'));
       return false;
     }
     if (form.description.trim().length < 20) {
-      setError('Açıklama en az 20 karakter olmalı.');
+      setError(t('createTask.descriptionMinLength'));
       return false;
     }
     if (!form.rewardDescription.trim()) {
-      setError('Ödül açıklaması gerekli.');
+      setError(t('createTask.rewardRequired'));
       return false;
     }
     return true;
   };
 
   const handleSubmit = async () => {
-    if (!business || !validateAll()) return;
+    if (!business || !validateAll() || loading || submitted || submitLock.current) return;
+    if (limitInfo && !limitInfo.canCreate) {
+      setError(
+        t('createTask.limitReached', {
+          active: limitInfo.active,
+          max: Number.isFinite(limitInfo.max) ? limitInfo.max : '∞',
+        })
+      );
+      return;
+    }
+
+    submitLock.current = true;
     setLoading(true);
     setError('');
 
@@ -126,39 +178,93 @@ export default function CreateTaskScreen() {
         ),
       };
 
-      await tasksRepository.create(business.id, data);
+      const created = await tasksRepository.create(business.id, data);
+      setSubmitted(true);
 
-      Alert.alert(
-        'Görev yayınlandı',
-        'Görevin kullanıcılar tarafından Görevler sekmesinde görünecek.',
-        [
-          {
-            text: 'Tamam',
-            onPress: () => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(business)/tasks');
-              }
-            },
-          },
-        ]
-      );
+      if (created.approvedByAdmin) {
+        showToast(t('createTaskScreen.createSuccessToast'));
+        Alert.alert(
+          t('createTaskScreen.createSuccessTitle'),
+          t('createTaskScreen.createSuccessBody'),
+          [{ text: t('createTaskScreen.ok'), onPress: navigateAfterCreate }]
+        );
+      } else {
+        showToast(t('createTaskScreen.createPendingToast'));
+        Alert.alert(
+          t('createTaskScreen.createPendingTitle'),
+          t('createTaskScreen.createPendingBody'),
+          [{ text: t('createTaskScreen.goToMyTasks'), onPress: () => router.replace('/(business)/tasks') }]
+        );
+      }
     } catch (err: unknown) {
+      submitLock.current = false;
+      setLoading(false);
       let message =
-        err instanceof Error ? err.message : 'Görev oluşturulamadı. Tekrar dene.';
+        err instanceof Error ? err.message : t('createTaskScreen.createFailedDefault');
       if (/plan limit|aktif görev/i.test(message)) {
-        message +=
-          ' İşletme paneli → Görevlerim → eski bir görevde Kapat.';
+        message += t('createTaskScreen.createFailedLimitHint');
       }
       if (__DEV__) {
         console.error('[create-task] submit failed:', err);
       }
       setError(message);
-    } finally {
-      setLoading(false);
+      showToast(message);
     }
   };
+
+  if (limitLoading || businessLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.back}>{t('common.back')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.screenTitle}>{t('createTask.title')}</Text>
+          <View style={{ width: 48 }} />
+        </View>
+        <View style={styles.limitBlockWrap}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (limitInfo && !limitInfo.canCreate) {
+    const maxLabel = Number.isFinite(limitInfo.max) ? limitInfo.max : '∞';
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.back}>{t('common.back')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.screenTitle}>{t('createTask.title')}</Text>
+          <View style={{ width: 48 }} />
+        </View>
+        <View style={styles.limitBlockWrap}>
+          <Text style={styles.limitBlockEmoji}>🔒</Text>
+          <Text style={styles.limitBlockTitle}>{t('createTask.limitTitle')}</Text>
+          <Text style={styles.limitBlockText}>
+            {t('createTask.limitText', {
+              plan: limitInfo.planLabel,
+              max: maxLabel,
+              active: limitInfo.active,
+            })}
+          </Text>
+          <Button
+            title={t('createTask.upgradePlan')}
+            onPress={() => router.push('/(business)/subscription')}
+            style={styles.limitBlockBtn}
+          />
+          <Button
+            title={t('createTask.backToTasks')}
+            variant="outline"
+            onPress={() => router.replace('/(business)/tasks')}
+            style={styles.limitBlockBtn}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -168,14 +274,27 @@ export default function CreateTaskScreen() {
       >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.back}>← Geri</Text>
+            <Text style={styles.back}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.screenTitle}>Görev Oluştur</Text>
+          <Text style={styles.screenTitle}>{t('createTask.title')}</Text>
           <View style={{ width: 48 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <StepIndicator steps={STEPS} currentStep={step} />
+
+          {limitInfo ? (
+            <View style={styles.limitBanner}>
+              <Text style={styles.limitBannerTitle}>
+                {t('createTask.limitBanner', {
+                  plan: limitInfo.planLabel,
+                  active: limitInfo.active,
+                  max: Number.isFinite(limitInfo.max) ? limitInfo.max : '∞',
+                })}
+              </Text>
+              <Text style={styles.limitBannerHint}>{t('createTask.limitBannerOk')}</Text>
+            </View>
+          ) : null}
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -183,29 +302,29 @@ export default function CreateTaskScreen() {
             <View style={styles.section}>
               {business?.address ? (
                 <View style={styles.locationBanner}>
-                  <Text style={styles.locationBannerTitle}>📍 İlan konumu</Text>
+                  <Text style={styles.locationBannerTitle}>{t('createTaskScreen.locationBannerTitle')}</Text>
                   <Text style={styles.locationBannerText}>{business.address}</Text>
                   <Text style={styles.locationBannerHint}>
-                    İlan bu konumda listelenir. Profil → İşletme konumu ile değiştirebilirsin.
+                    {t('createTaskScreen.locationBannerHint')}
                   </Text>
                 </View>
               ) : null}
               <Input
-                label="Görev başlığı"
+                label={t('createTaskScreen.titleLabel')}
                 value={form.title}
-                onChangeText={(t) => update({ title: t })}
-                placeholder="Örn: Sosyal medya içerik paketi"
+                onChangeText={(v) => update({ title: v })}
+                placeholder={t('createTaskScreen.titlePlaceholder')}
               />
               <Input
-                label="Açıklama"
+                label={t('createTaskScreen.descriptionLabel')}
                 value={form.description}
-                onChangeText={(t) => update({ description: t })}
-                placeholder="Görevin detaylarını yaz..."
+                onChangeText={(v) => update({ description: v })}
+                placeholder={t('createTaskScreen.descriptionPlaceholder')}
                 multiline
                 numberOfLines={5}
                 style={{ minHeight: 120, textAlignVertical: 'top' }}
               />
-              <Text style={styles.fieldLabel}>Kategori</Text>
+              <Text style={styles.fieldLabel}>{t('createTaskScreen.categoryLabel')}</Text>
               <View style={styles.chips}>
                 {ALL_CATEGORIES.map((cat) => (
                   <TouchableOpacity
@@ -224,7 +343,7 @@ export default function CreateTaskScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={styles.fieldLabel}>Zorluk</Text>
+              <Text style={styles.fieldLabel}>{t('createTaskScreen.difficultyLabel')}</Text>
               <View style={styles.chips}>
                 {DIFFICULTIES.map((d) => (
                   <TouchableOpacity
@@ -244,9 +363,9 @@ export default function CreateTaskScreen() {
                 ))}
               </View>
               <Input
-                label="Tahmini süre (saat)"
+                label={t('createTaskScreen.estimatedHoursLabel')}
                 value={form.estimatedHours}
-                onChangeText={(t) => update({ estimatedHours: t })}
+                onChangeText={(v) => update({ estimatedHours: v })}
                 keyboardType="number-pad"
               />
             </View>
@@ -255,22 +374,22 @@ export default function CreateTaskScreen() {
           {step === 1 && (
             <View style={styles.section}>
               <Input
-                label="Ödül açıklaması"
+                label={t('createTaskScreen.rewardDescriptionLabel')}
                 value={form.rewardDescription}
-                onChangeText={(t) => update({ rewardDescription: t })}
-                placeholder="Örn: 5 ücretsiz kahve"
+                onChangeText={(v) => update({ rewardDescription: v })}
+                placeholder={t('createTaskScreen.rewardDescriptionPlaceholder')}
               />
               <Input
-                label="Ödül adedi (kupon kullanım hakkı)"
+                label={t('createTaskScreen.rewardQuantityLabel')}
                 value={form.rewardQuantity}
-                onChangeText={(t) => update({ rewardQuantity: t })}
+                onChangeText={(v) => update({ rewardQuantity: v })}
                 keyboardType="number-pad"
-                hint="Kullanıcı kuponu kaç kez kullanabilir?"
+                hint={t('createTaskScreen.rewardQuantityHint')}
               />
               <Input
-                label="Maksimum başvuru sayısı"
+                label={t('createTaskScreen.maxApplicantsLabel')}
                 value={form.maxApplicants}
-                onChangeText={(t) => update({ maxApplicants: t })}
+                onChangeText={(v) => update({ maxApplicants: v })}
                 keyboardType="number-pad"
               />
             </View>
@@ -279,11 +398,11 @@ export default function CreateTaskScreen() {
           {step === 2 && (
             <View style={styles.section}>
               <Input
-                label="Son başvuru (gün)"
+                label={t('createTaskScreen.deadlineDaysLabel')}
                 value={form.deadlineDays}
-                onChangeText={(t) => update({ deadlineDays: t })}
+                onChangeText={(v) => update({ deadlineDays: v })}
                 keyboardType="number-pad"
-                hint="Bugünden itibaren kaç gün geçerli?"
+                hint={t('createTaskScreen.deadlineDaysHint')}
               />
             </View>
           )}
@@ -293,20 +412,20 @@ export default function CreateTaskScreen() {
               <Text style={styles.previewTitle}>{form.title}</Text>
               <Text style={styles.previewDesc}>{form.description}</Text>
               <View style={styles.previewRow}>
-                <Text style={styles.previewLabel}>Ödül</Text>
+                <Text style={styles.previewLabel}>{t('createTaskScreen.rewardLabel')}</Text>
                 <Text style={styles.previewValue}>{form.rewardDescription}</Text>
               </View>
               <View style={styles.previewRow}>
-                <Text style={styles.previewLabel}>Kategori</Text>
+                <Text style={styles.previewLabel}>{t('createTaskScreen.categoryLabel')}</Text>
                 <Text style={styles.previewValue}>{CATEGORY_LABELS[form.category]}</Text>
               </View>
               <View style={styles.previewRow}>
-                <Text style={styles.previewLabel}>Zorluk</Text>
+                <Text style={styles.previewLabel}>{t('createTaskScreen.difficultyLabel')}</Text>
                 <Text style={styles.previewValue}>{DIFFICULTY_LABELS[form.difficulty]}</Text>
               </View>
               <View style={styles.previewNote}>
                 <Text style={styles.previewNoteText}>
-                  Yayınlandığında kullanıcılar Görevler sekmesinde görebilir.
+                  {t('createTaskScreen.previewNote')}
                 </Text>
               </View>
             </View>
@@ -315,16 +434,17 @@ export default function CreateTaskScreen() {
           <View style={styles.actions}>
             {step > 0 && (
               <Button
-                title="Geri"
+                title={t('createTaskScreen.back')}
                 variant="outline"
                 onPress={() => setStep(step - 1)}
                 style={styles.halfBtn}
               />
             )}
             <Button
-              title={step === STEPS.length - 1 ? 'Yayınla' : 'İleri'}
+              title={submitted ? t('createTaskScreen.submittedButton') : step === STEPS.length - 1 ? t('createTaskScreen.publishButton') : t('createTaskScreen.nextButton')}
               onPress={handleNext}
               loading={loading}
+              disabled={submitted}
               style={step > 0 ? styles.halfBtn : undefined}
             />
           </View>
@@ -348,6 +468,42 @@ const styles = StyleSheet.create({
   screenTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
   section: { gap: Spacing[1] },
+  limitBanner: {
+    padding: Spacing[4],
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.infoLight,
+    borderWidth: 1,
+    borderColor: Colors.info,
+    gap: Spacing[1],
+    marginBottom: Spacing[3],
+  },
+  limitBannerTitle: {
+    ...Typography.labelMedium,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  limitBannerHint: { ...Typography.caption, color: Colors.textSecondary },
+  limitBlockWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing[6],
+    gap: Spacing[3],
+  },
+  limitBlockEmoji: { fontSize: 44, marginBottom: Spacing[2] },
+  limitBlockTitle: {
+    ...Typography.headingMedium,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  limitBlockText: {
+    ...Typography.bodyMedium,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing[2],
+  },
+  limitBlockBtn: { width: '100%' },
   locationBanner: {
     backgroundColor: Colors.primaryLight,
     borderRadius: Radius.md,

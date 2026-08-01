@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,44 +12,46 @@ import {
 import { router } from 'expo-router';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 
 const { width } = Dimensions.get('window');
 
-const SLIDES = [
-  {
-    id: '1',
-    emoji: '🎯',
-    title: 'Becerinle\nÖdül Kazan',
-    description:
-      'Para harcamadan, sahip olduğun yeteneği kullanarak gerçek ürün ve hizmetlere kavuş.',
-    accentText: 'Ücretsiz saç tıraşı, spor salonu, kahve ve çok daha fazlası...',
-    bg: Colors.background,
-  },
-  {
-    id: '2',
-    emoji: '⚡',
-    title: 'Görev Al,\nTamamla, Kazan',
-    description:
-      'İşletmeler görev yayınlar. Sen başvurursun, teslim edersin. Platform onaylar — ödül otomatik senindir.',
-    accentText: 'Tamamen güvenli ve şeffaf bir sistem.',
-    bg: Colors.background,
-  },
-  {
-    id: '3',
-    emoji: '🏆',
-    title: 'Dijital Kuponlarla\nÖdeme Yok',
-    description:
-      'Kazandığın her ödül QR kodlu dijital kupona dönüşür. İşletmeye git, göster, kullan.',
-    accentText: 'Para transferi yok. Sadece değer takası.',
-    bg: Colors.background,
-  },
-];
-
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const isLast = activeIndex === SLIDES.length - 1;
+  const slides = useMemo(
+    () => [
+      {
+        id: '1',
+        emoji: '🎯',
+        title: t('auth.onboarding.slide1Title'),
+        description: t('auth.onboarding.slide1Desc'),
+        accentText: t('auth.onboarding.slide1Accent'),
+        bg: Colors.background,
+      },
+      {
+        id: '2',
+        emoji: '⚡',
+        title: t('auth.onboarding.slide2Title'),
+        description: t('auth.onboarding.slide2Desc'),
+        accentText: t('auth.onboarding.slide2Accent'),
+        bg: Colors.background,
+      },
+      {
+        id: '3',
+        emoji: '🏆',
+        title: t('auth.onboarding.slide3Title'),
+        description: t('auth.onboarding.slide3Desc'),
+        accentText: t('auth.onboarding.slide3Accent'),
+        bg: Colors.background,
+      },
+    ],
+    [t]
+  );
+
+  const isLast = activeIndex === slides.length - 1;
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -82,14 +84,14 @@ export default function OnboardingScreen() {
         {/* Skip butonu */}
         {!isLast && (
           <TouchableOpacity style={styles.skip} onPress={skip} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.skipText}>Atla</Text>
+            <Text style={styles.skipText}>{t('common.skip')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Slide listesi */}
         <FlatList
           ref={flatListRef}
-          data={SLIDES}
+          data={slides}
           keyExtractor={(item) => item.id}
           horizontal
           pagingEnabled
@@ -135,7 +137,7 @@ export default function OnboardingScreen() {
         <View style={styles.footer}>
           {/* Dot indicators */}
           <View style={styles.dots}>
-            {SLIDES.map((_, i) => (
+            {slides.map((_, i) => (
               <View
                 key={i}
                 style={[
@@ -149,7 +151,7 @@ export default function OnboardingScreen() {
           {/* Butonlar */}
           <View style={styles.buttons}>
             <Button
-              title={isLast ? "Hemen Başla" : "Devam Et"}
+              title={isLast ? t('common.getStarted') : t('common.continue')}
               onPress={goNext}
             />
 
@@ -158,9 +160,7 @@ export default function OnboardingScreen() {
                 style={styles.loginLink}
                 onPress={() => router.replace('/(auth)/login')}
               >
-                <Text style={styles.loginLinkText}>
-                  Zaten hesabım var →
-                </Text>
+                <Text style={styles.loginLinkText}>{t('auth.alreadyHaveAccount')}</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -45,6 +45,12 @@ public class ListingController {
         listingService.close(p.profileId(), id);
     }
 
+    @PatchMapping("/api/business/listings/{id}/publish")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public ListingResponse publish(@CurrentUser UserPrincipal p, @PathVariable UUID id) {
+        return listingService.publish(p.profileId(), id);
+    }
+
     @GetMapping("/api/business/listings")
     @PreAuthorize("hasRole('BUSINESS')")
     public List<ListingCardResponse> getMyListings(@CurrentUser UserPrincipal p) {

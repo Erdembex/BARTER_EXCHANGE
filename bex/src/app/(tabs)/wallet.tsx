@@ -13,7 +13,8 @@ import { couponsRepository, businessesRepository } from '@/features/data';
 import { fetchRestCoupons, hasRestAuthSession } from '@/features/coupon/couponsApi';
 import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
-import { getCouponDisplayStatus, COUPON_STATUS_LABELS, isCouponExpiringSoon } from '@/lib/couponUtils';
+import { getCouponDisplayStatus, useCouponStatusLabels, isCouponExpiringSoon } from '@/lib/couponUtils';
+import { useTranslation } from '@/i18n';
 import { Coupon } from '@/types';
 import { router, Href } from 'expo-router';
 import { CouponCard, CouponQrModal } from '@/components/wallet';
@@ -23,6 +24,8 @@ import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function WalletScreen() {
+  const { t } = useTranslation();
+  const COUPON_STATUS_LABELS = useCouponStatusLabels();
   const { firebaseUser } = useAuthStore();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [businessNames, setBusinessNames] = useState<Record<string, string>>({});
@@ -45,7 +48,7 @@ export default function WalletScreen() {
         list = await fetchRestCoupons();
         usedRest = true;
       } catch (err) {
-        setLoadError(err instanceof Error ? err.message : 'Kuponlar yüklenemedi.');
+        setLoadError(err instanceof Error ? err.message : t('walletScreen.loadFailed'));
         list = [];
       }
     }
@@ -64,7 +67,7 @@ export default function WalletScreen() {
       if (c.businessName) names[c.businessId] = c.businessName;
       if (!names[c.businessId]) {
         const biz = await businessesRepository.getById(c.businessId);
-        names[c.businessId] = biz?.name ?? c.businessName ?? 'İşletme';
+        names[c.businessId] = biz?.name ?? c.businessName ?? t('walletScreen.defaultBusiness');
       }
     }
     setBusinessNames(names);
@@ -96,7 +99,7 @@ export default function WalletScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <AppHeader title="Cüzdan" />
+        <AppHeader title={t('walletScreen.title')} />
         <WalletSkeleton />
       </SafeAreaView>
     );
@@ -104,7 +107,7 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Cüzdan" />
+      <AppHeader title={t('walletScreen.title')} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -114,15 +117,15 @@ export default function WalletScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            {active.length} aktif · {historyCount} geçmiş
-            {expiringSoon.length > 0 ? ` · ${expiringSoon.length} yakında bitiyor` : ''}
+            {t('walletScreen.summary', { active: active.length, history: historyCount })}
+            {expiringSoon.length > 0 ? t('walletScreen.expiringSuffix', { count: expiringSoon.length }) : ''}
           </Text>
         </View>
 
         {expiringSoon.length > 0 && (
           <View style={styles.expiringBanner}>
             <Text style={styles.expiringText}>
-              {expiringSoon.length} kuponun süresi 3 gün içinde dolacak. Kullanmayı unutma.
+              {t('walletScreen.expiringBanner', { count: expiringSoon.length })}
             </Text>
           </View>
         )}
@@ -130,19 +133,19 @@ export default function WalletScreen() {
         {loadError ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{loadError}</Text>
-            <Button title="Tekrar dene" variant="outline" onPress={load} />
+            <Button title={t('walletScreen.retry')} variant="outline" onPress={load} />
           </View>
         ) : null}
 
         {coupons.length === 0 && !loadError ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>▣</Text>
-            <Text style={styles.emptyTitle}>Henüz kupon yok</Text>
+            <Text style={styles.emptyTitle}>{t('walletScreen.emptyTitle')}</Text>
             <Text style={styles.emptyText}>
-              Görev tamamlayıp işletme onayı aldığında kuponlar burada görünür.
+              {t('walletScreen.emptyText')}
             </Text>
             <Button
-              title="Görevlere Göz At"
+              title={t('walletScreen.browseTasks')}
               onPress={() => router.push('/(tabs)/tasks' as Href)}
               style={{ marginTop: Spacing[5], alignSelf: 'stretch' }}
             />
@@ -151,7 +154,7 @@ export default function WalletScreen() {
           <>
             {active.length > 0 && (
               <>
-                <Text style={styles.section}>Aktif Kuponlar</Text>
+                <Text style={styles.section}>{t('walletScreen.activeCoupons')}</Text>
                 {active.map((coupon, index) => (
                   <CouponCard
                     key={coupon.id}
@@ -167,11 +170,11 @@ export default function WalletScreen() {
 
             {historyCount > 0 && (
               <>
-                <Text style={[styles.section, styles.sectionArchive]}>Geçmiş</Text>
+                <Text style={[styles.section, styles.sectionArchive]}>{t('walletScreen.history')}</Text>
 
                 {used.length > 0 && (
                   <>
-                    <Text style={styles.historyGroup}>Kullanılan</Text>
+                    <Text style={styles.historyGroup}>{t('walletScreen.used')}</Text>
                     {used.map((coupon) => (
                       <CouponCard
                         key={coupon.id}
@@ -185,7 +188,7 @@ export default function WalletScreen() {
 
                 {swapped.length > 0 && (
                   <>
-                    <Text style={styles.historyGroup}>Takas edilen</Text>
+                    <Text style={styles.historyGroup}>{t('walletScreen.traded')}</Text>
                     {swapped.map((coupon) => (
                       <CouponCard
                         key={coupon.id}

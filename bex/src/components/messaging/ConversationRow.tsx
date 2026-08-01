@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ConversationPreview } from '@/features/messages/inboxService';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface ConversationRowProps {
   item: ConversationPreview;
@@ -10,7 +11,8 @@ interface ConversationRowProps {
 }
 
 export function ConversationRow({ item, onPress }: ConversationRowProps) {
-  const preview = item.lastMessage?.trim() || 'Henüz mesaj yok — sohbeti başlat';
+  const { t } = useTranslation();
+  const preview = item.lastMessage?.trim() || t('conversationRow.noMessageYet');
   const hasUnread = item.unreadCount > 0;
 
   return (

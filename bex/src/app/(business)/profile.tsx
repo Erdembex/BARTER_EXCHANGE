@@ -21,12 +21,16 @@ import { AccountSettings } from '@/components/profile/AccountSettings';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import {
-  BUSINESS_CATEGORY_LABELS,
-  VERIFICATION_STATUS_LABELS,
+  useBusinessCategoryLabels,
+  useVerificationStatusLabels,
 } from '@/constants/businessLabels';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessProfileScreen() {
+  const { t } = useTranslation();
+  const BUSINESS_CATEGORY_LABELS = useBusinessCategoryLabels();
+  const VERIFICATION_STATUS_LABELS = useVerificationStatusLabels();
   const { bexUser, firebaseUser, setBexUser, signOut } = useAuthStore();
   const { business, loading, reload } = useBusiness();
   const [city, setCity] = useState('İstanbul');
@@ -57,10 +61,10 @@ export default function BusinessProfileScreen() {
     setLocationMessage('');
     try {
       await authService.updateBusinessLocation(city, district);
-      setLocationMessage('Konum güncellendi. Yeni ilanların bu konumda listelenir.');
+      setLocationMessage(t('businessProfileScreen.locationUpdated'));
       reload();
     } catch {
-      setLocationMessage('Konum kaydedilemedi. Şehir ve ilçe seç.');
+      setLocationMessage(t('businessProfileScreen.locationSaveFailed'));
     } finally {
       setSavingLocation(false);
     }
@@ -77,15 +81,15 @@ export default function BusinessProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Profil" />
+      <AppHeader title={t('businessProfileScreen.headerTitle')} />
       <ScrollView contentContainerStyle={styles.scroll}>
         {loading && !business ? (
           <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing[8] }} />
         ) : (
           <>
             <View style={styles.businessCard}>
-              <Text style={styles.businessCardTitle}>İşletme bilgileri</Text>
-              <Text style={styles.businessName}>{business?.name ?? bexUser?.displayName ?? 'İşletme'}</Text>
+              <Text style={styles.businessCardTitle}>{t('businessProfileScreen.businessInfoTitle')}</Text>
+              <Text style={styles.businessName}>{business?.name ?? bexUser?.displayName ?? t('businessProfileScreen.defaultBusinessName')}</Text>
               {business?.category ? (
                 <Text style={styles.businessMeta}>
                   {BUSINESS_CATEGORY_LABELS[business.category]}
@@ -112,15 +116,15 @@ export default function BusinessProfileScreen() {
                   onPress={() => router.push(`/business/${business.id}` as Href)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.link}>Herkese açık işletme sayfası →</Text>
+                  <Text style={styles.link}>{t('businessProfileScreen.publicPageLink')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
 
             <View style={styles.locationCard}>
-              <Text style={styles.businessCardTitle}>İşletme konumu</Text>
+              <Text style={styles.businessCardTitle}>{t('businessProfileScreen.locationTitle')}</Text>
               <Text style={styles.locationHint}>
-                İlanların keşfet ekranında bu il ve ilçede görünür. Listeden seç veya konumunu kullan.
+                {t('businessProfileScreen.locationHint')}
               </Text>
               <LocationPicker
                 city={city}
@@ -129,7 +133,7 @@ export default function BusinessProfileScreen() {
                 onDistrictChange={setDistrict}
               />
               <Button
-                title="Konumu Kaydet"
+                title={t('businessProfileScreen.saveLocation')}
                 onPress={handleSaveLocation}
                 loading={savingLocation}
                 variant="secondary"
@@ -142,20 +146,20 @@ export default function BusinessProfileScreen() {
             <View style={styles.quickLinks}>
               {verificationStatus !== 'verified' ? (
                 <Button
-                  title="İşletme Doğrulama (KYC)"
+                  title={t('businessProfileScreen.kycButton')}
                   variant="secondary"
                   onPress={() => router.push('/(business)/verification' as Href)}
                 />
               ) : null}
               {!bexUser?.phoneVerified ? (
                 <Button
-                  title="Telefon Doğrula"
+                  title={t('businessProfileScreen.verifyPhoneButton')}
                   variant="outline"
                   onPress={() => router.push('/(auth)/phone-verification' as Href)}
                 />
               ) : null}
               <Button
-                title="Abonelik & Faturalar"
+                title={t('businessProfileScreen.subscriptionButton')}
                 variant="outline"
                 onPress={() => router.push('/(business)/subscription' as Href)}
               />
@@ -170,18 +174,18 @@ export default function BusinessProfileScreen() {
         />
 
         <Button
-          title="Yayın Checklist"
+          title={t('businessProfileScreen.publishChecklist')}
           variant="outline"
           onPress={() => router.push('/setup-guide' as Href)}
         />
 
-        <Button title="Çıkış Yap" variant="outline" onPress={handleLogout} />
+        <Button title={t('businessProfileScreen.logout')} variant="outline" onPress={handleLogout} />
 
         <View style={styles.meta}>
           <Text style={styles.metaText}>BEX v{appVersion}</Text>
           {__DEV__ && (
             <Text style={styles.metaText}>
-              {isAuthEmulatorActive() ? 'Emulator · demo veri' : 'Canlı backend'}
+              {isAuthEmulatorActive() ? t('businessProfileScreen.emulatorDemo') : t('businessProfileScreen.liveBackend')}
             </Text>
           )}
         </View>

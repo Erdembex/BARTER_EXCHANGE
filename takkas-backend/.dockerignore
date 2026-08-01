@@ -1,0 +1,7 @@
+target/
+uploads/
+.env
+*.jar
+.git
+.idea
+*.iml

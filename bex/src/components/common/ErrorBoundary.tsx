@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/theme';
+import { t } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -33,11 +34,11 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.wrap}>
           <Text style={styles.emoji}>⚠️</Text>
-          <Text style={styles.title}>Bir şeyler ters gitti</Text>
+          <Text style={styles.title}>{t('errorBoundary.title')}</Text>
           <Text style={styles.body}>
-            Beklenmeyen bir hata oluştu. Tekrar deneyebilir veya uygulamayı yenileyebilirsin.
+            {t('errorBoundary.body')}
           </Text>
-          <Button title="Tekrar Dene" onPress={this.handleRetry} style={styles.btn} />
+          <Button title={t('errorBoundary.retry')} onPress={this.handleRetry} style={styles.btn} />
         </View>
       );
     }

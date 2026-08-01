@@ -1,4 +1,5 @@
 import { notifyUser } from '@/features/notifications/notificationsRepository';
+import { t } from '@/i18n';
 
 type TradeNotifyData = {
   listingId: string;
@@ -21,8 +22,8 @@ export async function notifyTradeOfferReceived(params: {
 
   await notifyUser({
     userId: params.ownerId,
-    title: 'Yeni takas teklifi',
-    body: `${params.fromUserName}, "${params.listingTitle}" ilanına teklif gönderdi.`,
+    title: t('tradeNotifications.offerReceivedTitle'),
+    body: t('tradeNotifications.offerReceivedBody', { name: params.fromUserName, title: params.listingTitle }),
     type: 'trade_offer_received',
     data,
     showLocalForUserId: params.ownerId,
@@ -43,8 +44,8 @@ export async function notifyTradeOfferAccepted(params: {
 
   await notifyUser({
     userId: params.fromUserId,
-    title: 'Teklifin kabul edildi',
-    body: `"${params.listingTitle}" takası onaylandı. Eski kodun iptal edildi — yeni kuponun Kuponlarım sekmesinde.`,
+    title: t('tradeNotifications.offerAcceptedTitle'),
+    body: t('tradeNotifications.offerAcceptedBody', { title: params.listingTitle }),
     type: 'trade_offer_accepted',
     data,
     showLocalForUserId: params.fromUserId,
@@ -66,12 +67,12 @@ export async function notifyTradeOfferRejected(params: {
 
   const body =
     params.reason === 'other_accepted'
-      ? `"${params.listingTitle}" ilanında başka bir teklif kabul edildi.`
-      : `"${params.listingTitle}" ilanındaki teklifin reddedildi.`;
+      ? t('tradeNotifications.offerRejectedOtherAccepted', { title: params.listingTitle })
+      : t('tradeNotifications.offerRejectedDeclined', { title: params.listingTitle });
 
   await notifyUser({
     userId: params.fromUserId,
-    title: 'Teklif güncellendi',
+    title: t('tradeNotifications.offerUpdatedTitle'),
     body,
     type: 'trade_offer_rejected',
     data,

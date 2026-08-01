@@ -17,6 +17,7 @@ type ListingCardDto = {
   businessDistrict?: string | null;
   businessComplaintListed?: boolean;
   businessIsDangerous?: boolean;
+  businessVerified?: boolean;
   title?: string;
   skills?: string[];
   rewardType?: string;
@@ -25,6 +26,7 @@ type ListingCardDto = {
   rewardDescription?: string | null;
   status?: string;
   applicantCount?: number;
+  acceptedApplicantCount?: number;
   createdAt?: string;
   expiresAt?: string;
 };
@@ -63,6 +65,7 @@ type ListingResponseDto = ListingDetailDto & {
   rewardUnit?: string | null;
   validityDays?: number | null;
   viewCount?: number;
+  businessVerified?: boolean;
 };
 
 const CATEGORY_TO_SKILL: Record<TaskCategory, string> = {
@@ -116,8 +119,10 @@ function mapListingStatus(status?: string): Task['status'] {
   }
 }
 
+/** Backend ACTIVE/CLOSED/EXPIRED — keşfette veya işletme listesinde yayınlanmış sayılır */
 function isListingPublished(status?: string): boolean {
-  return status?.toUpperCase() === 'ACTIVE';
+  const upper = status?.toUpperCase();
+  return upper === 'ACTIVE' || upper === 'CLOSED' || upper === 'EXPIRED';
 }
 
 function formatRewardLabel(dto: {
@@ -166,14 +171,15 @@ function mapCardToTask(dto: ListingCardDto, businessId = ''): EnrichedTask {
     rewardQuantity: dto.rewardQuantity ?? 1,
     maxApplicants: 50,
     currentApplicantCount: dto.applicantCount ?? 0,
+    acceptedApplicantCount: dto.acceptedApplicantCount ?? 0,
     status,
     location: new GeoPoint(41.0082, 28.9784),
     deadline,
     createdAt: toTimestamp(dto.createdAt),
-    approvedByAdmin: isListingPublished(dto.status) && status === 'active',
+    approvedByAdmin: isListingPublished(dto.status),
     featured: false,
     businessName: dto.businessName?.trim() || 'İşletme',
-    businessVerified: false,
+    businessVerified: dto.businessVerified ?? false,
     businessIsDangerous: dto.businessIsDangerous ?? false,
     businessComplaintListed: dto.businessComplaintListed ?? false,
     locationLabel: formatLocationLabel(dto.businessCity, dto.businessDistrict),
@@ -202,10 +208,10 @@ function mapResponseToTask(dto: ListingResponseDto): EnrichedTask {
     location: new GeoPoint(41.0082, 28.9784),
     deadline,
     createdAt: toTimestamp(dto.createdAt),
-    approvedByAdmin: isListingPublished(dto.status) && status === 'active',
+    approvedByAdmin: isListingPublished(dto.status),
     featured: false,
     businessName: dto.businessName?.trim() || 'İşletme',
-    businessVerified: false,
+    businessVerified: dto.businessVerified ?? false,
   };
 }
 
@@ -281,6 +287,7 @@ export async function discoverListings(options?: {
   city?: string;
   district?: string;
   skills?: string[];
+  q?: string;
 }): Promise<DiscoverListingsResult> {
   try {
     const { data } = await apiClient.get<ListingsPageDto>('/api/listings', {
@@ -290,6 +297,7 @@ export async function discoverListings(options?: {
         city: options?.city || undefined,
         district: options?.district || undefined,
         skills: options?.skills?.length ? options.skills : undefined,
+        q: options?.q?.trim() || undefined,
       },
       paramsSerializer: {
         indexes: null,
@@ -387,6 +395,18 @@ export async function updateListing(listingId: string, data: CreateTask): Promis
     return mapResponseToTask(response);
   } catch (error) {
     throw mapListingsError(error, 'Görev güncellenemedi.');
+  }
+}
+
+/** PATCH /api/business/listings/{id}/publish */
+export async function publishBusinessListing(listingId: string): Promise<EnrichedTask> {
+  try {
+    const { data } = await apiClient.patch<ListingResponseDto>(
+      `/api/business/listings/${listingId}/publish`
+    );
+    return mapResponseToTask(data);
+  } catch (error) {
+    throw mapListingsError(error, 'Görev yayınlanamadı.');
   }
 }
 

@@ -25,6 +25,7 @@ import {
 import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 const QR_SIZE = 240;
 const QR_QUIET_ZONE = 12;
@@ -49,6 +50,7 @@ export function CouponQrModal({
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [useRestMode, setUseRestMode] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +71,7 @@ export function CouponQrModal({
         if (!cancelled) setRestQrToken(token);
       } catch {
         if (!cancelled) {
-          setQrError('QR kodu alınamadı. Tekrar deneyin.');
+          setQrError(t('couponQrModal.qrFetchFailed'));
         }
       } finally {
         if (!cancelled) setQrLoading(false);
@@ -89,7 +91,7 @@ export function CouponQrModal({
       const token = await fetchCouponQrToken(coupon.id);
       setRestQrToken(token);
     } catch {
-      setQrError('QR kodu alınamadı. Tekrar deneyin.');
+      setQrError(t('couponQrModal.qrFetchFailed'));
     } finally {
       setQrLoading(false);
     }
@@ -109,9 +111,9 @@ export function CouponQrModal({
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.close}>← Geri</Text>
+            <Text style={styles.close}>{t('couponQrModal.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Kupon Detayı</Text>
+          <Text style={styles.title}>{t('couponQrModal.title')}</Text>
           <View style={{ width: 56 }} />
         </View>
 
@@ -139,12 +141,12 @@ export function CouponQrModal({
               <Text style={styles.statValue}>
                 {coupon.usedCount}/{coupon.totalUses}
               </Text>
-              <Text style={styles.statLabel}>Kullanım</Text>
+              <Text style={styles.statLabel}>{t('couponQrModal.used')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{remaining}</Text>
-              <Text style={styles.statLabel}>Kalan</Text>
+              <Text style={styles.statLabel}>{t('couponQrModal.remaining')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
@@ -153,20 +155,20 @@ export function CouponQrModal({
                   ? formatShortDate(coupon.expiresAt)
                   : formatDaysUntil(coupon.expiresAt)}
               </Text>
-              <Text style={styles.statLabel}>Geçerlilik</Text>
+              <Text style={styles.statLabel}>{t('couponQrModal.validity')}</Text>
             </View>
           </View>
 
           {isActive ? (
             <View style={styles.qrSection}>
-              <Text style={styles.qrTitle}>Doğrulama Kodu</Text>
+              <Text style={styles.qrTitle}>{t('couponQrModal.verificationCode')}</Text>
               {qrLoading ? (
                 <ActivityIndicator size="large" color={Colors.primary} />
               ) : qrError ? (
                 <View style={styles.qrErrorBox}>
                   <Text style={styles.qrErrorText}>{qrError}</Text>
                   <TouchableOpacity style={styles.retryBtn} onPress={retryQr}>
-                    <Text style={styles.retryText}>Tekrar dene</Text>
+                    <Text style={styles.retryText}>{t('couponQrModal.retry')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : qrValue ? (
@@ -182,29 +184,29 @@ export function CouponQrModal({
                     />
                   </View>
                   <Text style={styles.hint}>
-                    İşletme bu kodu okutarak kuponunu doğrular.
+                    {t('couponQrModal.scanHint')}
                   </Text>
                 </>
               ) : useRestMode ? (
-                <Text style={styles.hint}>QR kodu hazırlanıyor…</Text>
+                <Text style={styles.hint}>{t('couponQrModal.preparingQr')}</Text>
               ) : null}
             </View>
           ) : (
             <View style={styles.qrMuted}>
               <Text style={styles.qrMutedText}>
                 {displayStatus === 'pending'
-                  ? 'İşletme kuponu henüz aktifleştirmedi.'
+                  ? t('couponQrModal.pendingActivation')
                   : displayStatus === 'exhausted'
-                    ? 'Tüm haklar kullanıldı.'
+                    ? t('couponQrModal.exhausted')
                     : displayStatus === 'traded'
-                      ? 'Bu kupon takas edildi.'
-                      : 'Kuponun süresi doldu.'}
+                      ? t('couponQrModal.traded')
+                      : t('couponQrModal.expired')}
               </Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.9}>
-            <Text style={styles.doneText}>Kapat</Text>
+            <Text style={styles.doneText}>{t('couponQrModal.close')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>

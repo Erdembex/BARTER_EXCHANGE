@@ -2,14 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Application, ApplicationStatus } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-const STEPS = [
-  { label: 'Başvuru', threshold: 0 },
-  { label: 'Onay', threshold: 1 },
-  { label: 'Teslim', threshold: 2 },
-  { label: 'Admin', threshold: 3 },
-  { label: 'Kupon', threshold: 4 },
-] as const;
+import { useTranslation } from '@/i18n';
 
 const STATUS_INDEX: Record<ApplicationStatus, number> = {
   pending: 0,
@@ -26,10 +19,19 @@ interface ApplicationProgressProps {
 }
 
 export function ApplicationProgress({ status }: ApplicationProgressProps) {
+  const { t } = useTranslation();
+  const STEPS = [
+    { label: t('applicationProgress.stepApplication'), threshold: 0 },
+    { label: t('applicationProgress.stepApproval'), threshold: 1 },
+    { label: t('applicationProgress.stepSubmission'), threshold: 2 },
+    { label: t('applicationProgress.stepAdmin'), threshold: 3 },
+    { label: t('applicationProgress.stepCoupon'), threshold: 4 },
+  ] as const;
+
   if (status === 'cancelled') {
     return (
       <View style={styles.bannerMuted}>
-        <Text style={styles.bannerText}>Bu başvuru iptal edildi.</Text>
+        <Text style={styles.bannerText}>{t('applicationProgress.cancelled')}</Text>
       </View>
     );
   }
@@ -37,7 +39,7 @@ export function ApplicationProgress({ status }: ApplicationProgressProps) {
   if (status === 'rejected') {
     return (
       <View style={styles.bannerError}>
-        <Text style={styles.bannerText}>Başvuru reddedildi.</Text>
+        <Text style={styles.bannerText}>{t('applicationProgress.rejected')}</Text>
       </View>
     );
   }

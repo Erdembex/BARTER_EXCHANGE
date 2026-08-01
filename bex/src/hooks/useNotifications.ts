@@ -5,6 +5,7 @@ import {
   notificationsRepository,
 } from '@/features/notifications';
 import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
+import { registerNotificationRefresh } from '@/store/notificationRefreshBridge';
 
 export function useNotifications() {
   const { firebaseUser } = useAuthStore();
@@ -22,6 +23,10 @@ export function useNotifications() {
   }, [userId]);
 
   useNotificationNavigation(refreshUnread);
+
+  useEffect(() => {
+    return registerNotificationRefresh(refreshUnread);
+  }, [refreshUnread]);
 
   useEffect(() => {
     if (!userId) {

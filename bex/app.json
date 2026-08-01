@@ -8,18 +8,19 @@
     "userInterfaceStyle": "dark",
     "scheme": "bex",
     "description": "Görev yap, ödül kazan. BEX ile işletmelerden görev al, tamamla ve kupon kazan.",
-    "primaryColor": "#FACC15",
-    "backgroundColor": "#000000",
+    "primaryColor": "#EAB308",
+    "backgroundColor": "#071209",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#071209"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bex.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "BEX, görev teslimi için fotoğraf seçmeni sağlar.",
+        "NSPhotoLibraryAddUsageDescription": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
         "NSCameraUsageDescription": "BEX, görev teslimi ve kupon QR okuma için kamerayı kullanır.",
         "NSLocationWhenInUseUsageDescription": "BEX, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır.",
         "ITSAppUsesNonExemptEncryption": false
@@ -28,7 +29,7 @@
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
+        "backgroundColor": "#071209",
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.bex.app",
@@ -36,7 +37,8 @@
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -50,7 +52,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#FACC15"
+          "color": "#EAB308"
         }
       ],
       [
@@ -63,6 +65,14 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "BEX, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
+          "savePhotosPermission": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
+          "isAccessMediaLocationEnabled": false
         }
       ],
       "expo-secure-store"

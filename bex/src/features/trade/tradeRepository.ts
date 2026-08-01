@@ -36,6 +36,7 @@ import {
   TradeHistoryEntry,
 } from './types';
 import { Coupon } from '@/types';
+import { t, getLocale } from '@/i18n';
 
 function avatarInitial(name: string): string {
   const trimmed = name.trim();
@@ -50,11 +51,11 @@ function toPublicOffer(record: TradeOfferRecord): TradeOffer {
     fromUserId: record.fromUserId,
     fromUserName: record.fromUserName,
     counterCouponId: record.counterCouponId,
-    counterRewardLabel: record.counterRewardLabel ?? 'Kupon',
+    counterRewardLabel: record.counterRewardLabel ?? t('tradeRepository.defaultReward'),
     message: record.message ?? '',
     counterListingId: record.counterListingId,
     status: record.status,
-    createdAtLabel: formatRelativeTime(record.createdAt) || 'Az önce',
+    createdAtLabel: formatRelativeTime(record.createdAt) || t('tradeRepository.justNow'),
   };
 }
 
@@ -114,12 +115,12 @@ async function validateTradeCoupon(
 ): Promise<Coupon> {
   const coupon = await couponsRepository.getById(couponId);
   if (!coupon || coupon.userId !== userId || coupon.status !== 'active') {
-    throw Object.assign(new Error('Geçersiz veya kullanılamayan kupon.'), {
+    throw Object.assign(new Error(t('tradeRepository.invalidCoupon')), {
       code: 'invalid-coupon',
     });
   }
   if (locked.has(couponId)) {
-    throw Object.assign(new Error('Bu kupon zaten aktif bir takasta.'), {
+    throw Object.assign(new Error(t('tradeRepository.couponLocked')), {
       code: 'coupon-locked',
     });
   }
@@ -134,10 +135,10 @@ function ensureDemoMarketSeed() {
       ownerId: 'demo-trade-owner-1',
       ownerName: 'Elif K.',
       ownerAvatarInitial: 'E',
-      title: '5x Ücretsiz Kahve Kuponu',
-      description: 'Merkez şubede geçerli, son kullanım 30 gün içinde.',
-      suggestedTrade: 'Berber / kuaför kuponu veya spor salonu hakkı',
-      rewardLabel: '5 kullanım hakkı',
+      title: t('tradeRepository.sampleTitle1'),
+      description: t('tradeRepository.sampleDescription1'),
+      suggestedTrade: t('tradeRepository.sampleSuggestedTrade1'),
+      rewardLabel: t('tradeRepository.sampleReward1'),
       couponId: 'coupon-demo-seed-1',
       status: 'active',
       offerCount: 0,
@@ -147,10 +148,10 @@ function ensureDemoMarketSeed() {
       ownerId: 'demo-trade-owner-2',
       ownerName: 'Mert A.',
       ownerAvatarInitial: 'M',
-      title: 'Aylık Spor Salonu Üyeliği',
-      description: 'Peak Fitness — 1 aylık tam erişim, sabah seansları dahil.',
-      suggestedTrade: 'Tasarım / sosyal medya içeriği karşılığı',
-      rewardLabel: '1 ay üyelik',
+      title: t('tradeRepository.sampleTitle2'),
+      description: t('tradeRepository.sampleDescription2'),
+      suggestedTrade: t('tradeRepository.sampleSuggestedTrade2'),
+      rewardLabel: t('tradeRepository.sampleReward2'),
       couponId: 'coupon-demo-seed-2',
       status: 'active',
       offerCount: 0,
@@ -179,7 +180,7 @@ function toPublicListing(record: TradeListingRecord): TradeListing {
     couponId: record.couponId,
     status: record.status,
     offerCount: record.offerCount,
-    createdAtLabel: formatRelativeTime(record.createdAt) || 'Az önce',
+    createdAtLabel: formatRelativeTime(record.createdAt) || t('tradeRepository.justNow'),
   };
 }
 
@@ -278,7 +279,7 @@ export const tradeRepository = {
       return;
     }
 
-    throw new Error('İlan iptal edilemedi.');
+    throw new Error(t('tradeRepository.listingCancelFailed'));
   },
 
   /** Tek ilan — couponCode asla dönmez */
@@ -343,10 +344,10 @@ export const tradeRepository = {
     }
 
     if (await useSwapRestBackend()) {
-      throw new Error('Takas ilanı yalnızca backend kuponları ile oluşturulabilir.');
+      throw new Error(t('tradeRepository.backendOnlyListing'));
     }
 
-    throw new Error('Takas ilanı REST modunda desteklenmiyor.');
+    throw new Error(t('tradeRepository.listingNotSupportedInRest'));
   },
 
   /**
@@ -358,7 +359,7 @@ export const tradeRepository = {
     input: CreateTradeOfferInput
   ): Promise<string> {
     if (!input.counterCouponId?.trim()) {
-      throw Object.assign(new Error('Takasa katılmak için kupon seçmelisin.'), {
+      throw Object.assign(new Error(t('tradeRepository.mustSelectCouponToJoin')), {
         code: 'missing-counter-coupon',
       });
     }
@@ -369,24 +370,24 @@ export const tradeRepository = {
 
     if (await useSwapRestBackend()) {
       throw Object.assign(
-        new Error('Takas için cüzdanındaki geçerli bir kupon seçmelisin.'),
+        new Error(t('tradeRepository.mustSelectValidWalletCoupon')),
         { code: 'invalid-coupon' }
       );
     }
 
     const listing = await this.getListingById(listingId);
     if (!listing || listing.status !== 'active') {
-      throw Object.assign(new Error('İlan bulunamadı veya artık aktif değil.'), {
+      throw Object.assign(new Error(t('tradeRepository.listingNotFoundOrInactive')), {
         code: 'listing-unavailable',
       });
     }
     if (listing.ownerId === fromUserId) {
-      throw Object.assign(new Error('Kendi ilanına teklif veremezsin.'), {
+      throw Object.assign(new Error(t('tradeRepository.cannotOfferOwnListing')), {
         code: 'self-offer',
       });
     }
     if (listing.couponId === input.counterCouponId) {
-      throw Object.assign(new Error('Aynı kuponu takas edemezsin.'), {
+      throw Object.assign(new Error(t('tradeRepository.cannotSwapSameCoupon')), {
         code: 'same-coupon',
       });
     }
@@ -434,7 +435,7 @@ export const tradeRepository = {
     }
 
     throw Object.assign(
-      new Error('Takas teklifi gönderilemedi. Geçerli bir kupon seç ve tekrar dene.'),
+      new Error(t('tradeRepository.offerSubmitFailed')),
       { code: 'offer-failed' }
     );
   },
@@ -479,7 +480,7 @@ export const tradeRepository = {
     if (await useSwapRestBackend()) {
       try {
         const listing = await this.getListingById(listingId);
-        return await fetchSwapOffersForListing(listingId, listing?.title ?? 'Takas ilanı');
+        return await fetchSwapOffersForListing(listingId, listing?.title ?? t('tradeRepository.defaultListingTitle'));
       } catch {
         return [];
       }
@@ -531,14 +532,14 @@ export const tradeRepository = {
     if (shouldUseDemoData()) {
       const offer = demoStore.getTradeOffers().find((item) => item.id === offerId);
       if (!offer) {
-        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+        throw Object.assign(new Error(t('tradeRepository.offerNotFound')), { code: 'offer-not-found' });
       }
       const listing = demoStore.getTradeListings().find((item) => item.id === offer.listingId);
       if (!listing || listing.ownerId !== ownerId) {
-        throw Object.assign(new Error('Bu teklifi yönetemezsin.'), { code: 'forbidden' });
+        throw Object.assign(new Error(t('tradeRepository.cannotManageOffer')), { code: 'forbidden' });
       }
       if (offer.status !== 'pending') {
-        throw Object.assign(new Error('Teklif artık beklemede değil.'), { code: 'offer-closed' });
+        throw Object.assign(new Error(t('tradeRepository.offerNoLongerPending')), { code: 'offer-closed' });
       }
 
       demoStore.setTradeOffers(
@@ -561,13 +562,13 @@ export const tradeRepository = {
     if (await useSwapRestBackend()) {
       const listing = await this.findListingForOffer(offerId, ownerId);
       if (!listing) {
-        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+        throw Object.assign(new Error(t('tradeRepository.offerNotFound')), { code: 'offer-not-found' });
       }
       await rejectSwapOffer(listing.id, offerId);
       return;
     }
 
-    throw Object.assign(new Error('Teklif reddedilemedi.'), { code: 'offer-failed' });
+    throw Object.assign(new Error(t('tradeRepository.offerRejectFailed')), { code: 'offer-failed' });
   },
   async findListingForOffer(offerId: string, ownerId: string): Promise<TradeListing | null> {
     const myListings = await this.getMyListings(ownerId);
@@ -586,22 +587,22 @@ export const tradeRepository = {
     if (shouldUseDemoData()) {
       const offer = demoStore.getTradeOffers().find((item) => item.id === offerId);
       if (!offer) {
-        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+        throw Object.assign(new Error(t('tradeRepository.offerNotFound')), { code: 'offer-not-found' });
       }
 
       const listingIndex = demoStore.getTradeListings().findIndex(
         (item) => item.id === offer.listingId
       );
       if (listingIndex < 0) {
-        throw Object.assign(new Error('İlan bulunamadı.'), { code: 'listing-not-found' });
+        throw Object.assign(new Error(t('tradeRepository.listingNotFound')), { code: 'listing-not-found' });
       }
 
       const listing = demoStore.getTradeListings()[listingIndex];
       if (listing.ownerId !== ownerId) {
-        throw Object.assign(new Error('Bu teklifi yönetemezsin.'), { code: 'forbidden' });
+        throw Object.assign(new Error(t('tradeRepository.cannotManageOffer')), { code: 'forbidden' });
       }
       if (offer.status !== 'pending' || listing.status !== 'active') {
-        throw Object.assign(new Error('Teklif artık beklemede değil.'), { code: 'offer-closed' });
+        throw Object.assign(new Error(t('tradeRepository.offerNoLongerPending')), { code: 'offer-closed' });
       }
 
       const autoRejected = demoStore.getTradeOffers().filter(
@@ -659,14 +660,14 @@ export const tradeRepository = {
     if (await useSwapRestBackend()) {
       const listing = await this.findListingForOffer(offerId, ownerId);
       if (!listing) {
-        throw Object.assign(new Error('Teklif bulunamadı.'), { code: 'offer-not-found' });
+        throw Object.assign(new Error(t('tradeRepository.offerNotFound')), { code: 'offer-not-found' });
       }
       await acceptSwapOffer(listing.id, offerId);
       // Backend takası tamamlar ve yeni kuponları oluşturur; kodları burada dönmüyoruz.
       return { ownerNewCouponId: '', offererNewCouponId: '' };
     }
 
-    throw Object.assign(new Error('Teklif kabul edilemedi.'), { code: 'offer-failed' });
+    throw Object.assign(new Error(t('tradeRepository.offerAcceptFailed')), { code: 'offer-failed' });
   },
   async getTradeHistory(userId: string): Promise<TradeHistoryEntry[]> {
     if (await useSwapRestBackend()) {
@@ -676,16 +677,16 @@ export const tradeRepository = {
         const completed: TradeHistoryEntry[] = trades.map((trade) => ({
           id: `trade-${trade.id}`,
           kind: 'listing' as const,
-          title: 'Takas tamamlandı',
-          subtitle: 'Kupon takası',
-          detail: 'Yeni kupon cüzdanında görünür.',
+          title: t('tradeRepository.tradeCompletedTitle'),
+          subtitle: t('tradeRepository.tradeCompletedSubtitle'),
+          detail: t('tradeRepository.tradeCompletedDetail'),
           status: 'completed' as const,
           createdAtLabel: trade.completedAt
-            ? new Date(trade.completedAt).toLocaleDateString('tr-TR', {
+            ? new Date(trade.completedAt).toLocaleDateString(getLocale() === 'en' ? 'en-US' : 'tr-TR', {
                 day: 'numeric',
                 month: 'short',
               })
-            : 'Az önce',
+            : t('tradeRepository.justNow'),
           referenceId: String(trade.swapListingId ?? trade.id),
         }));
 
@@ -700,8 +701,8 @@ export const tradeRepository = {
             id: `offer-${offer.id}`,
             kind: 'offer' as const,
             title: offer.listingTitle,
-            subtitle: `Teklif · ${offer.counterRewardLabel}`,
-            detail: 'İlan sahibi teklifi reddetti.',
+            subtitle: t('tradeRepository.offerSubtitle', { reward: offer.counterRewardLabel }),
+            detail: t('tradeRepository.offerRejectedDetail'),
             status: 'rejected' as const,
             createdAtLabel: offer.createdAtLabel,
             referenceId: offer.id,
@@ -726,13 +727,13 @@ export const tradeRepository = {
         id: `offer-${offer.id}`,
         kind: 'offer' as const,
         title: offer.listingTitle,
-        subtitle: `Teklif · ${offer.counterRewardLabel}`,
+        subtitle: t('tradeRepository.offerSubtitle', { reward: offer.counterRewardLabel }),
         detail:
           offer.status === 'accepted'
-            ? 'Takas tamamlandı — yeni kupon cüzdanında.'
+            ? t('tradeRepository.tradeCompletedHistory')
             : offer.status === 'rejected'
-              ? 'İlan sahibi teklifi reddetti.'
-              : 'Teklif iptal edildi.',
+              ? t('tradeRepository.offerRejectedDetail')
+              : t('tradeRepository.offerCancelledDetail'),
         status:
           offer.status === 'accepted'
             ? 'accepted'
@@ -749,8 +750,8 @@ export const tradeRepository = {
         id: `listing-${listing.id}`,
         kind: 'listing' as const,
         title: listing.title,
-        subtitle: `İlan · ${listing.rewardLabel}`,
-        detail: 'İlan üzerinden takas tamamlandı.',
+        subtitle: t('tradeRepository.listingSubtitle', { reward: listing.rewardLabel }),
+        detail: t('tradeRepository.listingCompletedDetail'),
         status: 'completed' as const,
         createdAtLabel: listing.createdAtLabel,
         referenceId: listing.id,

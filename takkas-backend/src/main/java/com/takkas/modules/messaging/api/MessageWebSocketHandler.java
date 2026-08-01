@@ -27,7 +27,7 @@ public class MessageWebSocketHandler {
     public void sendMessage(@DestinationVariable UUID cid,
                              @Payload SendMessageRequest req,
                              SimpMessageHeaderAccessor acc) {
-        messageService.sendText(cid, getSenderId(acc), req.content());
+        messageService.send(cid, getSenderId(acc), req.content(), req.mediaUrl());
     }
 
     @MessageMapping("/conversation/{cid}/typing")

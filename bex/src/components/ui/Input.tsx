@@ -30,6 +30,7 @@ export function Input({
   onRightIconPress,
   containerStyle,
   isPassword = false,
+  style: inputStyle,
   ...props
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -53,8 +54,14 @@ export function Input({
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
 
         <TextInput
-          style={[styles.input, leftIcon ? styles.inputWithLeft : null]}
+          style={[
+            styles.input,
+            props.multiline && styles.inputMultiline,
+            leftIcon ? styles.inputWithLeft : null,
+            inputStyle,
+          ]}
           placeholderTextColor={Colors.textMuted}
+          selectionColor={Colors.primary}
           secureTextEntry={isPassword && !showPassword}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
@@ -126,6 +133,12 @@ const styles = StyleSheet.create({
     ...Typography.bodyLarge,
     color: Colors.textPrimary,
     paddingVertical: 0,
+  },
+  inputMultiline: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+    paddingTop: 2,
+    lineHeight: 22,
   },
   inputWithLeft: {
     marginLeft: 10,

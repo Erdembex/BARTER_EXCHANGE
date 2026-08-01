@@ -427,22 +427,15 @@ export const couponsRepository = {
 export async function approveApplication(
   applicationId: string,
   reviewNote?: string
-): Promise<boolean> {
+): Promise<Application | null> {
   const application = await applicationsRepository.getById(applicationId);
-  if (!application || application.status !== 'pending') return false;
+  if (!application || application.status !== 'pending') return null;
 
   if (isBackendId(applicationId) && (await useApplicationsRestBackend())) {
     await reviewApplication(applicationId);
     await acceptApplication(applicationId);
-    await notifyUser({
-      userId: application.userId,
-      title: 'Başvurun onaylandı',
-      body: 'Görevi tamamlayıp teslim edebilirsin. Başvurularım sekmesinden devam et.',
-      type: 'application_approved',
-      data: { applicationId },
-      showLocalForUserId: application.userId,
-    });
-    return true;
+    // Bildirim backend ApplicationAcceptedEvent ile gider.
+    return applicationsRepository.getById(applicationId);
   }
 
   if (shouldUseDemoData()) {
@@ -455,7 +448,7 @@ export async function approveApplication(
       data: { applicationId },
       showLocalForUserId: application.userId,
     });
-    return true;
+    return applicationsRepository.getById(applicationId);
   }
 
   throw new Error('Başvuru onayı REST backend\'de işletme panelinden yapılır.');

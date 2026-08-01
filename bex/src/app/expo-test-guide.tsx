@@ -97,17 +97,28 @@ const TEST_STEPS: TestStep[] = [
   },
   {
     id: 'messages',
-    title: '7 — Mesajlaşma',
+    title: '7 — Sohbet sekmesi',
     needsBackend: true,
     steps: [
-      'Onaylanmış bir başvurun varsa Başvurular → detay → mesajlar.',
-      'Mesaj gönder; karşı taraf veya ikinci cihazdan yanıt gelmeli.',
+      'Alt menüde 💬 Sohbet sekmesine git.',
+      'Onaylı başvurun yoksa kilit ekranı görünür; onay sonrası sohbet listesi açılır.',
+      'Bir sohbete gir, mesajları oku, geri dön — sekme rozeti ve «okunmamış mesaj» kartı sıfırlanmalı.',
+      'Mesaj bildirimine dokununca doğrudan ilgili sohbet açılmalı.',
+    ],
+  },
+  {
+    id: 'messages-ws',
+    title: '8 — Mesajlaşma (canlı)',
+    needsBackend: true,
+    steps: [
+      'Onaylanmış bir başvuruda mesaj gönder.',
+      'Karşı taraf veya ikinci cihazdan yanıt gelmeli.',
       'WebSocket kapalıysa uygulama otomatik polling ile yeniler.',
     ],
   },
   {
     id: 'trade',
-    title: '8 — Takas',
+    title: '9 — Takas',
     needsBackend: true,
     steps: [
       'Takas sekmesine git; aktif teklifler listelenmeli.',

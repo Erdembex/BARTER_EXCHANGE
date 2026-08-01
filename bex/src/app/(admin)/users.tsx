@@ -16,14 +16,15 @@ import { BexUser } from '@/types';
 import { Input, Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-const ROLE_LABELS: Record<BexUser['role'], string> = {
-  user: 'Kullanıcı',
-  business: 'İşletme',
-  admin: 'Admin',
-};
+import { useTranslation } from '@/i18n';
 
 export default function AdminUsersScreen() {
+  const { t } = useTranslation();
+  const ROLE_LABELS: Record<BexUser['role'], string> = {
+    user: t('adminUsersScreen.roleUser'),
+    business: t('adminUsersScreen.roleBusiness'),
+    admin: t('adminUsersScreen.roleAdmin'),
+  };
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<BexUser[]>([]);
@@ -46,23 +47,23 @@ export default function AdminUsersScreen() {
   const toggleBan = (user: BexUser) => {
     const next = !user.isBanned;
     Alert.alert(
-      next ? 'Hesabı Askıya Al' : 'Askıyı Kaldır',
+      next ? t('adminUsersScreen.suspendTitle') : t('adminUsersScreen.unsuspendTitle'),
       next
-        ? `${user.displayName} hesabını askıya almak istediğine emin misin?`
-        : `${user.displayName} hesabının askısını kaldırmak istediğine emin misin?`,
+        ? t('adminUsersScreen.suspendBody', { name: user.displayName })
+        : t('adminUsersScreen.unsuspendBody', { name: user.displayName }),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('adminUsersScreen.dismiss'), style: 'cancel' },
         {
-          text: next ? 'Askıya Al' : 'Kaldır',
+          text: next ? t('adminUsersScreen.suspend') : t('adminUsersScreen.remove'),
           style: next ? 'destructive' : 'default',
           onPress: async () => {
             setActionUid(user.uid);
             try {
               await adminRepository.setUserBanned(user.uid, next);
-              showToast(next ? 'Hesap askıya alındı.' : 'Askı kaldırıldı.');
+              showToast(next ? t('adminUsersScreen.suspendedToast') : t('adminUsersScreen.unsuspendedToast'));
               await load();
             } catch {
-              showToast('İşlem başarısız.');
+              showToast(t('adminUsersScreen.actionFailedToast'));
             } finally {
               setActionUid(null);
             }
@@ -76,19 +77,19 @@ export default function AdminUsersScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Geri</Text>
+          <Text style={styles.back}>{t('adminUsersScreen.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Kullanıcı Yönetimi</Text>
+        <Text style={styles.title}>{t('adminUsersScreen.title')}</Text>
       </View>
 
       <View style={styles.searchRow}>
         <Input
-          placeholder="Ad, e-posta veya uid ara..."
+          placeholder={t('adminUsersScreen.searchPlaceholder')}
           value={search}
           onChangeText={setSearch}
           containerStyle={{ flex: 1 }}
         />
-        <Button title="Ara" size="md" fullWidth={false} onPress={load} />
+        <Button title={t('adminUsersScreen.search')} size="md" fullWidth={false} onPress={load} />
       </View>
 
       {loading ? (
@@ -101,7 +102,7 @@ export default function AdminUsersScreen() {
           keyExtractor={(item) => item.uid}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.empty}>Kullanıcı bulunamadı.</Text>
+            <Text style={styles.empty}>{t('adminUsersScreen.empty')}</Text>
           }
           renderItem={({ item }) => (
             <View style={[styles.card, item.isBanned && styles.cardBanned]}>
@@ -113,14 +114,14 @@ export default function AdminUsersScreen() {
               </View>
               <Text style={styles.email}>{item.email || item.uid}</Text>
               <Text style={styles.meta}>
-                Görev: {item.completedTaskCount ?? 0} · İtibar: {item.reputationScore ?? 0}
+                {t('adminUsersScreen.taskCountLabel', { count: item.completedTaskCount ?? 0, score: item.reputationScore ?? 0 })}
               </Text>
               {item.isBanned ? (
-                <Text style={styles.bannedLabel}>⛔ Askıda</Text>
+                <Text style={styles.bannedLabel}>{t('adminUsersScreen.banned')}</Text>
               ) : null}
               {item.role !== 'admin' ? (
                 <Button
-                  title={item.isBanned ? 'Askıyı Kaldır' : 'Askıya Al'}
+                  title={item.isBanned ? t('adminUsersScreen.unsuspend') : t('adminUsersScreen.suspendAction')}
                   variant={item.isBanned ? 'outline' : 'danger'}
                   size="sm"
                   loading={actionUid === item.uid}

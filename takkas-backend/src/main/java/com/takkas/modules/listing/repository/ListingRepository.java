@@ -31,6 +31,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         WHERE l.status = 'ACTIVE'
           AND b.businessName NOT LIKE 'Test Cafe%'
           AND u.email NOT LIKE '%@test.dev'
+          AND (l.visibility IS NULL OR l.visibility = com.takkas.modules.listing.domain.enums.ListingVisibility.PUBLIC)
           AND (l.expiresAt IS NULL OR l.expiresAt > :now)
           AND (:city IS NULL OR b.city = :city)
           AND (:district IS NULL OR b.district = :district)
@@ -42,6 +43,33 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         @Param("city") String city,
         @Param("district") String district,
         @Param("skills") List<Skill> skills,
+        @Param("now") Instant now,
+        @Param("cursor") Instant cursor,
+        Pageable pageable);
+
+    @Query("""
+        SELECT DISTINCT l FROM Listing l
+        JOIN l.business b
+        JOIN b.user u
+        LEFT JOIN l.skills s
+        WHERE l.status = 'ACTIVE'
+          AND b.businessName NOT LIKE 'Test Cafe%'
+          AND u.email NOT LIKE '%@test.dev'
+          AND (l.visibility IS NULL OR l.visibility = com.takkas.modules.listing.domain.enums.ListingVisibility.PUBLIC)
+          AND (l.expiresAt IS NULL OR l.expiresAt > :now)
+          AND (:city IS NULL OR b.city = :city)
+          AND (:district IS NULL OR b.district = :district)
+          AND (:#{#skills == null || #skills.isEmpty()} = true OR s.skill IN :skills)
+          AND (LOWER(l.title) LIKE LOWER(CONCAT('%', :q, '%'))
+               OR LOWER(b.businessName) LIKE LOWER(CONCAT('%', :q, '%')))
+          AND l.createdAt < :cursor
+        ORDER BY l.createdAt DESC
+        """)
+    List<Listing> searchActiveListingsForDiscover(
+        @Param("city") String city,
+        @Param("district") String district,
+        @Param("skills") List<Skill> skills,
+        @Param("q") String q,
         @Param("now") Instant now,
         @Param("cursor") Instant cursor,
         Pageable pageable);

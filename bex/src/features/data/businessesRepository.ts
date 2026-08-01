@@ -15,7 +15,7 @@ import {
   discoverListings,
   fetchBusinessListings,
   fetchListingDetail,
-  publishListing,
+  publishBusinessListing,
   shouldUseListingsRest,
   updateListing,
 } from '../listing/listingsApi';
@@ -26,6 +26,31 @@ import {
   fetchOwnBusinessProfile,
   fetchPublicBusinessProfile,
 } from '../business/businessProfileApi';
+
+const ACCEPTED_APPLICATION_STATUSES = new Set([
+  'approved',
+  'submitted',
+  'submission_approved',
+  'rewarded',
+]);
+
+const INACTIVE_APPLICATION_STATUSES = new Set(['rejected', 'cancelled']);
+
+function enrichTasksWithApplicationCounts(tasks: Task[], businessId: string): Task[] {
+  const apps = demoStore.getApplicationsByBusiness(businessId);
+  return tasks.map((task) => {
+    const taskApps = apps.filter((app) => app.taskId === task.id);
+    return {
+      ...task,
+      currentApplicantCount: taskApps.filter(
+        (app) => !INACTIVE_APPLICATION_STATUSES.has(app.status)
+      ).length,
+      acceptedApplicantCount: taskApps.filter((app) =>
+        ACCEPTED_APPLICATION_STATUSES.has(app.status)
+      ).length,
+    };
+  });
+}
 
 export type EnrichedTask = Task & {
   businessName: string;
@@ -84,7 +109,7 @@ export const tasksRepository = {
   async getActive(
     pageSize = 10,
     cursor?: QueryDocumentSnapshot<DocumentData> | string | null,
-    filters?: { city?: string; district?: string; category?: TaskCategory | null }
+    filters?: { city?: string; district?: string; category?: TaskCategory | null; q?: string }
   ): Promise<{
     tasks: EnrichedTask[];
     lastDoc: QueryDocumentSnapshot<DocumentData> | null;
@@ -105,6 +130,7 @@ export const tasksRepository = {
           city: toApiCityFilter(filters?.city),
           district: toApiDistrictFilter(filters?.city, filters?.district),
           skills,
+          q: filters?.q,
         });
         return {
           tasks: asEnriched(page.tasks),
@@ -141,11 +167,28 @@ export const tasksRepository = {
     category: TaskCategory | null,
     difficulty: TaskDifficulty | null
   ): Promise<EnrichedTask[]> {
+    const trimmed = searchTerm.trim();
+    if (await shouldUseListingsRest()) {
+      try {
+        const { mapCategoryToBackendSkill } = await import('../listing/listingsApi');
+        const skills =
+          category != null ? [mapCategoryToBackendSkill(category)] : undefined;
+        const page = await discoverListings({
+          pageSize: 30,
+          skills,
+          q: trimmed || undefined,
+        });
+        return page.tasks.filter((t) => !difficulty || t.difficulty === difficulty);
+      } catch {
+        // client fallback below
+      }
+    }
+
     const { tasks } = await this.getActive(50);
     return tasks.filter((t) => {
       if (category && t.category !== category) return false;
       if (difficulty && t.difficulty !== difficulty) return false;
-      if (!matchesSearch(t.title, t.description, searchTerm)) return false;
+      if (trimmed && !matchesSearch(t.title, t.description, trimmed)) return false;
       return true;
     });
   },
@@ -179,14 +222,20 @@ export const tasksRepository = {
         );
       } catch {
         if (shouldUseDemoData()) {
-          return demoStore.getTasksByBusiness(businessId);
+          return enrichTasksWithApplicationCounts(
+            demoStore.getTasksByBusiness(businessId),
+            businessId
+          );
         }
         return [];
       }
     }
 
     if (shouldUseDemoData()) {
-      return demoStore.getTasksByBusiness(businessId);
+      return enrichTasksWithApplicationCounts(
+        demoStore.getTasksByBusiness(businessId),
+        businessId
+      );
     }
 
     return [];
@@ -199,18 +248,19 @@ export const tasksRepository = {
     );
   },
 
-  async create(businessId: string, data: CreateTask): Promise<string> {
+  async create(businessId: string, data: CreateTask): Promise<EnrichedTask> {
     if (shouldUseDemoData()) {
       const task = demoStore.createTask(businessId, data);
-      return task.id;
+      demoStore.setTaskAdminApproval(task.id, true);
+      demoStore.updateTask(task.id, { status: 'active' });
+      return enrichTasksWithApplicationCounts([task], businessId)[0] as EnrichedTask;
     }
 
     if (!(await hasRestAuthSession())) {
       throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
     }
 
-    const listing = await createListing(data);
-    return listing.id;
+    return createListing(data);
   },
 
   async publish(taskId: string): Promise<void> {
@@ -220,15 +270,19 @@ export const tasksRepository = {
       return;
     }
 
-    throw new Error('Görev yayınlama yalnızca admin onayı ile yapılır.');
+    if (!(await hasRestAuthSession())) {
+      throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+    }
+
+    await publishBusinessListing(taskId);
   },
 
   async createAndPublish(businessId: string, data: CreateTask): Promise<string> {
-    const id = await this.create(businessId, data);
-    if (shouldUseDemoData()) {
-      demoStore.setTaskAdminApproval(id, true);
+    const task = await this.create(businessId, data);
+    if (!task.approvedByAdmin && !shouldUseDemoData()) {
+      await this.publish(task.id);
     }
-    return id;
+    return task.id;
   },
 
   async update(
@@ -294,14 +348,8 @@ export const tasksRepository = {
       return;
     }
 
-    const task = await this.getById(taskId);
-    if (!task || task.businessId !== businessId) {
-      throw new Error('Görev bulunamadı');
-    }
-
-    if (task.status === 'draft' && status === 'active') {
-      await publishListing(taskId);
-      return;
+    if (!(await hasRestAuthSession())) {
+      throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
     }
 
     if (status === 'paused' || status === 'completed') {
@@ -309,7 +357,19 @@ export const tasksRepository = {
       return;
     }
 
+    if (status === 'active') {
+      await publishBusinessListing(taskId);
+      return;
+    }
+
     throw new Error('Bu durum değişikliği desteklenmiyor.');
+  },
+
+  async cancel(taskId: string): Promise<void> {
+    if (!(await hasRestAuthSession())) {
+      throw new Error('Oturum bulunamadı. Tekrar giriş yap.');
+    }
+    await closeListing(taskId);
   },
 };
 
@@ -336,6 +396,23 @@ export const businessesRepository = {
         .sort((a, b) => b.reputationScore - a.reputationScore)
         .slice(0, limitCount);
     }
+
+    if (await usesRestBackend()) {
+      try {
+        const { searchBusinessProfiles, fetchPublicBusinessProfile } = await import(
+          '../business/businessProfileApi'
+        );
+        const hits = await searchBusinessProfiles('');
+        const sorted = [...hits].sort((a, b) => Number(b.verified) - Number(a.verified));
+        const profiles = await Promise.all(
+          sorted.slice(0, limitCount).map((hit) => fetchPublicBusinessProfile(hit.profileId))
+        );
+        return profiles.filter((b): b is Business => b != null);
+      } catch {
+        return [];
+      }
+    }
+
     return [];
   },
 

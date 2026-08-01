@@ -14,13 +14,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useBusiness } from '@/features/business/useBusiness';
 import { tasksRepository } from '@/features/data';
 import { Task } from '@/types';
-import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
+import { useCategoryLabels, useDifficultyLabels } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessTasksScreen() {
+  const { t } = useTranslation();
+  const CATEGORY_LABELS = useCategoryLabels();
+  const DIFFICULTY_LABELS = useDifficultyLabels();
   const { business, loading: bizLoading } = useBusiness();
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -43,18 +47,18 @@ export default function BusinessTasksScreen() {
 
   const handlePublish = (task: Task) => {
     if (!business) return;
-    Alert.alert('Görevi Yayınla', `"${task.title}" kullanıcılara görünür olacak.`, [
-      { text: 'Vazgeç', style: 'cancel' },
+    Alert.alert(t('businessTasksScreen.publishTitle'), t('businessTasksScreen.publishBody', { title: task.title }), [
+      { text: t('businessTasksScreen.cancelDismiss'), style: 'cancel' },
       {
-        text: 'Yayınla',
+        text: t('businessTasksScreen.publish'),
         onPress: async () => {
           setActionId(task.id);
           try {
             await tasksRepository.publish(task.id);
-            showToast('Görev yayınlandı.');
+            showToast(t('businessTasksScreen.publishedToast'));
             await load();
           } catch (err: unknown) {
-            showToast(err instanceof Error ? err.message : 'Yayınlama başarısız.');
+            showToast(err instanceof Error ? err.message : t('businessTasksScreen.publishFailedToast'));
           } finally {
             setActionId(null);
           }
@@ -63,27 +67,70 @@ export default function BusinessTasksScreen() {
     ]);
   };
 
-  const activeCount = tasks.filter((t) => t.status === 'active').length;
+  const visibleTasks = tasks.filter(
+    (t) => t.status === 'active' || t.status === 'draft'
+  );
+
+  const activeCount = visibleTasks.filter((t) => t.status === 'active').length;
+
+  const handleCancel = async (task: Task) => {
+    if (!business) return;
+    if ((task.acceptedApplicantCount ?? 0) > 0) {
+      showToast(t('businessTasksScreen.cannotCancelAccepted'));
+      return;
+    }
+    if (task.status !== 'active') {
+      showToast(t('businessTasksScreen.alreadyNotActive'));
+      return;
+    }
+
+    setActionId(task.id);
+    try {
+      if (shouldUseDemoData()) {
+        await tasksRepository.setStatus(task.id, business.id, 'paused');
+      } else {
+        await tasksRepository.cancel(task.id);
+      }
+      setTasks((prev) => prev.filter((tk) => tk.id !== task.id));
+      showToast(t('businessTasksScreen.cancelledToast'));
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : t('businessTasksScreen.cancelFailedToast'));
+      await load();
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const canCancelTask = (task: Task) =>
+    task.status === 'active' && (task.acceptedApplicantCount ?? 0) === 0;
 
   const handlePauseToggle = (task: Task) => {
     if (!business) return;
     const pausing = task.status === 'active';
     if (!task.approvedByAdmin && pausing) {
-      showToast('Onay bekleyen görev kapatılamaz.');
+      showToast(t('businessTasksScreen.pendingCannotClose'));
       return;
     }
     const restMode = !shouldUseDemoData();
     Alert.alert(
-      pausing ? (restMode ? 'Görevi Kapat' : 'Görevi Duraklat') : 'Görevi Yeniden Başlat',
       pausing
         ? restMode
-          ? 'Görev kapatılır ve yeni görev yayınlama limitinden düşer. Bu işlem geri alınamaz.'
-          : 'Görev kullanıcılara geçici olarak görünmez olur.'
-        : 'Görev tekrar kullanıcılara görünür olur.',
+          ? t('businessTasksScreen.closeTaskTitle')
+          : t('businessTasksScreen.pauseTaskTitle')
+        : t('businessTasksScreen.restartTaskTitle'),
+      pausing
+        ? restMode
+          ? t('businessTasksScreen.closeBody')
+          : t('businessTasksScreen.pauseBody')
+        : t('businessTasksScreen.restartBody'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('businessTasksScreen.cancelDismiss'), style: 'cancel' },
         {
-          text: pausing ? (restMode ? 'Kapat' : 'Duraklat') : 'Başlat',
+          text: pausing
+            ? restMode
+              ? t('businessTasksScreen.close')
+              : t('businessTasksScreen.pause')
+            : t('businessTasksScreen.start'),
           onPress: async () => {
             setActionId(task.id);
             try {
@@ -95,13 +142,13 @@ export default function BusinessTasksScreen() {
               showToast(
                 pausing
                   ? restMode
-                    ? 'Görev kapatıldı. Yeni görev oluşturabilirsin.'
-                    : 'Görev duraklatıldı.'
-                  : 'Görev yeniden aktif.'
+                    ? t('businessTasksScreen.closedToast')
+                    : t('businessTasksScreen.pausedToast')
+                  : t('businessTasksScreen.reactivatedToast')
               );
               await load();
             } catch (err: unknown) {
-              showToast(err instanceof Error ? err.message : 'İşlem başarısız.');
+              showToast(err instanceof Error ? err.message : t('businessTasksScreen.actionFailedToast'));
             } finally {
               setActionId(null);
             }
@@ -123,15 +170,15 @@ export default function BusinessTasksScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Görevlerim</Text>
+          <Text style={styles.title}>{t('businessTasksScreen.title')}</Text>
           {!shouldUseDemoData() ? (
             <Text style={styles.limitHint}>
-              Aktif görev: {activeCount} (ücretsiz planda en fazla 2)
+              {t('businessTasksScreen.limitHint', { count: activeCount })}
             </Text>
           ) : null}
         </View>
         <Button
-          title="+ Yeni"
+          title={t('businessTasksScreen.newTask')}
           size="sm"
           fullWidth={false}
           onPress={() => router.push('/(business)/create-task')}
@@ -140,67 +187,72 @@ export default function BusinessTasksScreen() {
       </View>
 
       <FlatList
-        data={tasks}
+        data={visibleTasks}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyTitle}>Henüz görev yok</Text>
-            <Text style={styles.emptyText}>İlk görevini oluşturarak başla.</Text>
+            <Text style={styles.emptyTitle}>{t('businessTasksScreen.emptyTitle')}</Text>
+            <Text style={styles.emptyText}>{t('businessTasksScreen.emptyText')}</Text>
             <Button
-              title="Görev Oluştur"
+              title={t('businessTasksScreen.createTask')}
               onPress={() => router.push('/(business)/create-task')}
               style={{ marginTop: Spacing[4] }}
             />
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            activeOpacity={0.85}
-            onPress={() =>
-              router.navigate(`/(business)/applications/index?taskId=${item.id}` as Href)
-            }
-          >
-            <View style={styles.cardTop}>
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: item.approvedByAdmin
-                      ? Colors.successLight
-                      : Colors.warningLight,
-                  },
-                ]}
-              >
-                <Text
+          <View style={styles.card}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() =>
+                router.navigate(`/(business)/applications/index?taskId=${item.id}` as Href)
+              }
+            >
+              <View style={styles.cardTop}>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <View
                   style={[
-                    styles.statusText,
-                    { color: item.approvedByAdmin ? Colors.success : Colors.warning },
+                    styles.statusBadge,
+                    {
+                      backgroundColor: item.approvedByAdmin
+                        ? Colors.successLight
+                        : Colors.warningLight,
+                    },
                   ]}
                 >
-                  {item.approvedByAdmin
-                    ? 'Yayında'
-                    : item.status === 'draft'
-                      ? 'Taslak'
-                      : 'Onay bekliyor'}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: item.approvedByAdmin ? Colors.success : Colors.warning },
+                    ]}
+                  >
+                    {item.approvedByAdmin
+                      ? item.status === 'paused'
+                        ? t('businessTasksScreen.statusClosed')
+                        : t('businessTasksScreen.statusLive')
+                      : item.status === 'draft'
+                        ? t('businessTasksScreen.statusDraft')
+                        : t('businessTasksScreen.statusPendingApproval')}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.meta}>
-              {CATEGORY_LABELS[item.category]} · {DIFFICULTY_LABELS[item.difficulty]}
-            </Text>
-            <Text style={styles.reward}>{item.rewardDescription}</Text>
-            <Text style={styles.applicants}>
-              {item.currentApplicantCount}/{item.maxApplicants} başvuru
-            </Text>
-            {item.status === 'paused' ? (
-              <Text style={styles.pausedLabel}>⏸ Duraklatıldı</Text>
-            ) : null}
+              <Text style={styles.meta}>
+                {CATEGORY_LABELS[item.category]} · {DIFFICULTY_LABELS[item.difficulty]}
+              </Text>
+              <Text style={styles.reward}>{item.rewardDescription}</Text>
+              <Text style={styles.applicants}>
+                {item.currentApplicantCount}/{item.maxApplicants}{t('businessTasksScreen.applicantsSuffix')}
+              </Text>
+              {item.status === 'paused' ? (
+                <Text style={styles.pausedLabel}>{t('businessTasksScreen.pausedBadge')}</Text>
+              ) : null}
+              <Text style={styles.tapHint}>{t('businessTasksScreen.viewApplications')}</Text>
+            </TouchableOpacity>
+
             <View style={styles.actions}>
               {!item.approvedByAdmin ? (
                 <>
@@ -208,39 +260,44 @@ export default function BusinessTasksScreen() {
                     style={styles.actionBtn}
                     onPress={() => router.push(`/(business)/edit-task/${item.id}` as Href)}
                   >
-                    <Text style={styles.actionText}>Düzenle</Text>
+                    <Text style={styles.actionText}>{t('businessTasksScreen.edit')}</Text>
                   </TouchableOpacity>
-                  {item.status === 'draft' && shouldUseDemoData() ? (
+                  {item.status === 'draft' ? (
                     <TouchableOpacity
                       style={styles.actionBtn}
                       onPress={() => handlePublish(item)}
                       disabled={actionId === item.id}
                     >
-                      <Text style={styles.actionText}>Yayınla</Text>
+                      <Text style={styles.actionText}>{t('businessTasksScreen.publish')}</Text>
                     </TouchableOpacity>
-                  ) : item.status === 'draft' ? (
-                    <Text style={styles.adminWait}>Admin onayı bekleniyor</Text>
                   ) : null}
                 </>
               ) : null}
-              {item.approvedByAdmin ? (
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => handlePauseToggle(item)}
-                  disabled={actionId === item.id}
-                >
-                  <Text style={styles.actionText}>
-                    {item.status === 'paused'
-                      ? 'Yeniden Başlat'
-                      : shouldUseDemoData()
-                        ? 'Duraklat'
-                        : 'Kapat'}
-                  </Text>
-                </TouchableOpacity>
+              {item.status === 'active' ? (
+                canCancelTask(item) ? (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.cancelBtn]}
+                    onPress={() => void handleCancel(item)}
+                    disabled={actionId === item.id}
+                  >
+                    <Text style={[styles.actionText, styles.cancelText]}>
+                      {actionId === item.id ? t('businessTasksScreen.cancelling') : t('businessTasksScreen.cancel')}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => handlePauseToggle(item)}
+                    disabled={actionId === item.id}
+                  >
+                    <Text style={styles.actionText}>
+                      {shouldUseDemoData() ? t('businessTasksScreen.pause') : t('businessTasksScreen.close')}
+                    </Text>
+                  </TouchableOpacity>
+                )
               ) : null}
             </View>
-            <Text style={styles.tapHint}>Başvuruları gör →</Text>
-          </TouchableOpacity>
+          </View>
         )}
       />
     </SafeAreaView>
@@ -305,6 +362,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   actionText: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
+  cancelBtn: { borderColor: Colors.error },
+  cancelText: { color: Colors.error },
   adminWait: {
     ...Typography.caption,
     color: Colors.warning,

@@ -1,0 +1,20 @@
+[Unit]
+Description=Takkas Backend (BEX)
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/takkas
+EnvironmentFile=/opt/takkas/.env
+Environment=SPRING_PROFILES_ACTIVE=prod
+ExecStart=/usr/bin/java -jar /opt/takkas/takkas-backend.jar
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=takkas
+
+[Install]
+WantedBy=multi-user.target

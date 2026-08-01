@@ -17,23 +17,24 @@ import { UserRole } from '@/types';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input, BexLogo } from '@/components/ui';
 import { LocationPicker } from '@/components/common/LocationPicker';
-
-const ROLES: { id: UserRole; label: string; desc: string; emoji: string }[] = [
-  {
-    id: 'user',
-    label: 'Kullanıcı',
-    desc: 'Görev al, ödül kazan',
-    emoji: '🎯',
-  },
-  {
-    id: 'business',
-    label: 'İşletme',
-    desc: 'Görev yayınla, yetenek bul',
-    emoji: '🏢',
-  },
-];
+import { useTranslation } from '@/i18n';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
+  const ROLES: { id: UserRole; label: string; desc: string; emoji: string }[] = [
+    {
+      id: 'user',
+      label: t('registerScreen.roleUser'),
+      desc: t('registerScreen.roleUserDesc'),
+      emoji: '🎯',
+    },
+    {
+      id: 'business',
+      label: t('registerScreen.roleBusiness'),
+      desc: t('registerScreen.roleBusinessDesc'),
+      emoji: '🏢',
+    },
+  ];
   const { setBexUser, setFirebaseUser } = useAuthStore();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,22 +50,22 @@ export default function RegisterScreen() {
     const newErrors: Record<string, string> = {};
 
     if (!displayName.trim() || displayName.trim().length < 2) {
-      newErrors.displayName = 'Ad en az 2 karakter olmalıdır.';
+      newErrors.displayName = t('registerScreen.errorName');
     }
     if (!email.trim() || !email.includes('@')) {
-      newErrors.email = 'Geçerli bir e-posta girin.';
+      newErrors.email = t('registerScreen.errorEmail');
     }
     if (password.length < 8) {
-      newErrors.password = 'Şifre en az 8 karakter olmalıdır.';
+      newErrors.password = t('registerScreen.errorPassword');
     }
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Şifreler eşleşmiyor.';
+      newErrors.confirmPassword = t('registerScreen.errorConfirmPassword');
     }
     if (!city.trim()) {
-      newErrors.location = 'Şehir seçmelisin.';
+      newErrors.location = t('registerScreen.errorCity');
     }
     if (!district.trim()) {
-      newErrors.location = 'İlçe seçmelisin.';
+      newErrors.location = t('registerScreen.errorDistrict');
     }
 
     setErrors(newErrors);
@@ -127,21 +128,21 @@ export default function RegisterScreen() {
         >
           {/* Geri butonu */}
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Geri</Text>
+            <Text style={styles.backText}>{t('registerScreen.back')}</Text>
           </TouchableOpacity>
 
           {/* Başlık */}
           <View style={styles.header}>
             <BexLogo size="sm" />
-            <Text style={styles.title}>Hesap Oluştur</Text>
+            <Text style={styles.title}>{t('registerScreen.title')}</Text>
             <Text style={styles.subtitle}>
-              Platformumuza katıl. Ücretsiz, hızlı ve güvenli.
+              {t('registerScreen.subtitle')}
             </Text>
           </View>
 
           {/* Rol seçimi */}
           <View style={styles.roleSection}>
-            <Text style={styles.sectionLabel}>Hesap Türü</Text>
+            <Text style={styles.sectionLabel}>{t('registerScreen.accountType')}</Text>
             <View style={styles.roleRow}>
               {ROLES.map((r) => (
                 <TouchableOpacity
@@ -182,7 +183,7 @@ export default function RegisterScreen() {
           />
           {role === 'business' ? (
             <Text style={styles.locationNote}>
-              İl ve ilçeyi listeden seç veya konumunu kullan. İşletme ilanların bu konumda listelenir.
+              {t('registerScreen.locationNote')}
             </Text>
           ) : null}
 
@@ -195,8 +196,8 @@ export default function RegisterScreen() {
             )}
 
             <Input
-              label={role === 'business' ? 'İşletme Adı' : 'Ad Soyad'}
-              placeholder={role === 'business' ? 'Kafe Adı, Kuaför...' : 'Adın Soyadın'}
+              label={role === 'business' ? t('registerScreen.businessNameLabel') : t('registerScreen.fullNameLabel')}
+              placeholder={role === 'business' ? t('registerScreen.businessNamePlaceholder') : t('registerScreen.fullNamePlaceholder')}
               value={displayName}
               onChangeText={setDisplayName}
               error={errors.displayName}
@@ -205,8 +206,8 @@ export default function RegisterScreen() {
             />
 
             <Input
-              label="E-posta"
-              placeholder="ornek@email.com"
+              label={t('registerScreen.emailLabel')}
+              placeholder={t('registerScreen.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               error={errors.email}
@@ -217,23 +218,23 @@ export default function RegisterScreen() {
 
             {__DEV__ ? (
               <Text style={styles.devHint}>
-                Admin paneli testi: admin@bex.dev ile kayıt ol
+                {t('registerScreen.devHint')}
               </Text>
             ) : null}
 
             <Input
-              label="Şifre"
-              placeholder="En az 8 karakter"
+              label={t('registerScreen.passwordLabel')}
+              placeholder={t('registerScreen.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
               error={errors.password}
               isPassword
-              hint="Büyük harf, küçük harf ve rakam içersin."
+              hint={t('registerScreen.passwordHint')}
             />
 
             <Input
-              label="Şifre Tekrar"
-              placeholder="Şifreni tekrar gir"
+              label={t('registerScreen.confirmPasswordLabel')}
+              placeholder={t('registerScreen.confirmPasswordPlaceholder')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               error={errors.confirmPassword}
@@ -242,15 +243,15 @@ export default function RegisterScreen() {
 
             {/* Gizlilik notu */}
             <Text style={styles.termsText}>
-              Kayıt olarak{' '}
-              <Text style={styles.termsLink}>Kullanım Koşulları</Text>
-              {' '}ve{' '}
-              <Text style={styles.termsLink}>Gizlilik Politikası</Text>
-              'nı kabul etmiş olursun.
+              {t('registerScreen.termsPrefix')}
+              <Text style={styles.termsLink}>{t('registerScreen.termsOfService')}</Text>
+              {t('registerScreen.termsMiddle')}
+              <Text style={styles.termsLink}>{t('registerScreen.privacyPolicy')}</Text>
+              {t('registerScreen.termsSuffix')}
             </Text>
 
             <Button
-              title="Kayıt Ol"
+              title={t('registerScreen.submit')}
               onPress={handleRegister}
               loading={loading}
             />
@@ -258,9 +259,9 @@ export default function RegisterScreen() {
 
           {/* Giriş yap linki */}
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Zaten hesabın var mı? </Text>
+            <Text style={styles.loginText}>{t('registerScreen.haveAccount')}</Text>
             <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-              <Text style={styles.loginLink}>Giriş Yap</Text>
+              <Text style={styles.loginLink}>{t('registerScreen.login')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

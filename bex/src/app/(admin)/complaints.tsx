@@ -21,8 +21,10 @@ import {
   type ComplaintModerationDto,
 } from '@/features/complaint/complaintsApi';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function AdminComplaintsScreen() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [items, setItems] = useState<ComplaintModerationDto[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -50,19 +52,19 @@ export default function AdminComplaintsScreen() {
     setLoadingId(item.id);
     try {
       await approveComplaintAdmin(item.id, item.targetType, notes[item.id]?.trim() || undefined);
-      showToast('Şikayet onaylandı.');
+      showToast(t('adminComplaintsScreen.approvedToast'));
       await load();
     } catch {
-      showToast('Onaylama başarısız.');
+      showToast(t('adminComplaintsScreen.approveFailedToast'));
     }
     setLoadingId(null);
   };
 
   const handleReject = (item: ComplaintModerationDto) => {
-    Alert.alert('Şikayeti Reddet', 'Bu şikayet yayınlanmayacak.', [
-      { text: 'Vazgeç', style: 'cancel' },
+    Alert.alert(t('adminComplaintsScreen.rejectTitle'), t('adminComplaintsScreen.rejectBody'), [
+      { text: t('adminComplaintsScreen.dismiss'), style: 'cancel' },
       {
-        text: 'Reddet',
+        text: t('adminComplaintsScreen.reject'),
         style: 'destructive',
         onPress: async () => {
           setLoadingId(item.id);
@@ -70,12 +72,12 @@ export default function AdminComplaintsScreen() {
             await rejectComplaintAdmin(
               item.id,
               item.targetType,
-              notes[item.id]?.trim() || 'Şikayet incelendi, yayına alınmadı.'
+              notes[item.id]?.trim() || t('adminComplaintsScreen.defaultRejectReason')
             );
-            showToast('Şikayet reddedildi.');
+            showToast(t('adminComplaintsScreen.rejectedToast'));
             await load();
           } catch {
-            showToast('Reddetme başarısız.');
+            showToast(t('adminComplaintsScreen.rejectFailedToast'));
           }
           setLoadingId(null);
         },
@@ -95,17 +97,16 @@ export default function AdminComplaintsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.back} onPress={() => router.back()}>
-              ← Geri
+              {t('adminComplaintsScreen.back')}
             </Text>
-            <Text style={styles.title}>Şikayet Moderasyonu</Text>
+            <Text style={styles.title}>{t('adminComplaintsScreen.title')}</Text>
             <Text style={styles.subtitle}>
-              İşletme ve kullanıcı şikayetleri. Onaylanan şikayetler %30 eşiğini aşınca Tehlikeli
-              rozeti görünür.
+              {t('adminComplaintsScreen.subtitle')}
             </Text>
           </View>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>Bekleyen şikayet yok.</Text>
+          <Text style={styles.empty}>{t('adminComplaintsScreen.empty')}</Text>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -116,21 +117,21 @@ export default function AdminComplaintsScreen() {
             </Text>
             <Text style={styles.body}>{item.description}</Text>
             <Input
-              label="Admin notu (isteğe bağlı)"
+              label={t('adminComplaintsScreen.adminNoteLabel')}
               value={notes[item.id] ?? ''}
               onChangeText={(text) => setNotes((prev) => ({ ...prev, [item.id]: text }))}
-              placeholder="Onay/red gerekçesi"
+              placeholder={t('adminComplaintsScreen.adminNotePlaceholder')}
             />
             <View style={styles.actions}>
               <Button
-                title="Onayla"
+                title={t('adminComplaintsScreen.approve')}
                 size="sm"
                 onPress={() => handleApprove(item)}
                 loading={loadingId === item.id}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Reddet"
+                title={t('adminComplaintsScreen.reject')}
                 variant="outline"
                 size="sm"
                 onPress={() => handleReject(item)}

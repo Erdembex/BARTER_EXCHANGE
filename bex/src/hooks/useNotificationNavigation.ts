@@ -1,29 +1,31 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
-import { router } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import { useAuthStore } from '@/store/authStore';
-import { getNotificationTarget, getNotificationsListHref } from '@/features/notifications/notificationNavigation';
+import { openNotificationTarget } from '@/features/notifications/notificationNavigation';
 import { mapBackendNotificationType } from '@/features/notifications/notificationTypes';
 import { BexNotification } from '@/types';
-
 function buildNotificationFromPushData(
   data: Record<string, unknown>,
   userId: string
 ): BexNotification {
   const typeRaw = typeof data.type === 'string' ? data.type : '';
+  const refType = typeof data.referenceType === 'string' ? data.referenceType.toUpperCase() : '';
   const applicationId =
     typeof data.applicationId === 'string'
       ? data.applicationId
-      : typeof data.referenceId === 'string' &&
-          typeof data.referenceType === 'string' &&
-          data.referenceType.toUpperCase().includes('APPLICATION')
+      : typeof data.referenceId === 'string' && refType.includes('APPLICATION')
         ? data.referenceId
         : undefined;
 
   const mappedData: Record<string, string> = {};
   if (applicationId) mappedData.applicationId = applicationId;
-  if (typeof data.referenceId === 'string') mappedData.referenceId = data.referenceId;
+  if (typeof data.referenceId === 'string') {
+    mappedData.referenceId = data.referenceId;
+    if (refType.includes('CONVERSATION')) {
+      mappedData.conversationId = data.referenceId;
+    }
+  }
   if (typeof data.taskId === 'string') mappedData.taskId = data.taskId;
   if (typeof data.businessId === 'string') mappedData.businessId = data.businessId;
 
@@ -51,14 +53,11 @@ export function useNotificationNavigation(onReceived?: () => void) {
     });
 
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
-      const item = buildNotificationFromPushData(data, firebaseUser.uid);
-      const target = getNotificationTarget(item, bexUser?.role);
-      if (target) {
-        router.push(target);
-      } else {
-        router.push(getNotificationsListHref(bexUser?.role));
-      }
+      void (async () => {
+        const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+        const item = buildNotificationFromPushData(data, firebaseUser.uid);
+        await openNotificationTarget(item, bexUser?.role);
+      })();
     });
 
     return () => {

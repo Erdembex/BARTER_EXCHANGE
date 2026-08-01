@@ -16,6 +16,7 @@ import { Coupon } from '@/types';
 import { tradeRepository } from './tradeRepository';
 import { tradeTheme, TradeTheme } from './tradeTheme';
 import { CreateTradeListingInput } from './types';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
 
@@ -25,6 +26,7 @@ interface TradeNewSwapPanelProps {
 }
 
 export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps) {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
@@ -46,34 +48,34 @@ export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps
 
   const handleSubmit = async () => {
     if (!selectedCouponId) {
-      showToast('Takasa koymak için aktif bir kupon seç.');
+      showToast(t('tradeNewSwapPanel.selectCouponError'));
       return;
     }
 
     const selected = coupons.find((coupon) => coupon.id === selectedCouponId);
     const input: CreateTradeListingInput = {
-      title: title.trim() || selected?.rewardDescription || 'Takas ilanı',
+      title: title.trim() || selected?.rewardDescription || t('tradeNewSwapPanel.defaultListingTitle'),
       description: description.trim() || selected?.rewardDescription || '',
       suggestedTrade: suggestedTrade.trim(),
-      rewardLabel: selected?.rewardDescription || 'Kupon',
+      rewardLabel: selected?.rewardDescription || t('tradeNewSwapPanel.defaultCoupon'),
       couponId: selectedCouponId,
     };
 
     if (input.suggestedTrade.length < 5) {
-      showToast('Önerilen takas en az 5 karakter olmalı.');
+      showToast(t('tradeNewSwapPanel.suggestedTradeMinError'));
       return;
     }
 
     setSubmitting(true);
     try {
       await tradeRepository.createListing(ownerId, input);
-      showToast('Takas ilanın yayınlandı.');
+      showToast(t('tradeNewSwapPanel.publishedToast'));
       setTitle('');
       setDescription('');
       setSuggestedTrade('');
       await onCreated();
     } catch (err) {
-      showToast((err as Error).message || 'İlan oluşturulamadı.');
+      showToast((err as Error).message || t('tradeNewSwapPanel.createFailedToast'));
     } finally {
       setSubmitting(false);
     }
@@ -98,15 +100,15 @@ export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps
         borderColor="tradeAccentBorder"
       >
         <Text variant="caption" style={{ color: tradeTheme.colors.tradeAccent, fontWeight: '700' }}>
-          YENİ TAKAS
+          {t('tradeNewSwapPanel.headerTitle')}
         </Text>
         <Text variant="bodyMuted" marginTop="xs">
-          Aktif kuponunu pazara koy. Kupon kodun ilanda asla görünmez.
+          {t('tradeNewSwapPanel.headerSubtitle')}
         </Text>
       </Box>
 
       <Text variant="label" marginBottom="xs">
-        Kupon Seçimi
+        {t('tradeNewSwapPanel.couponSelectionLabel')}
       </Text>
       {coupons.length === 0 ? (
         <Box
@@ -118,7 +120,7 @@ export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps
           marginBottom="md"
         >
           <Text variant="bodyMuted">
-            Aktif kuponun yok. Önce bir görev tamamlayıp kupon kazan.
+            {t('tradeNewSwapPanel.noCouponText')}
           </Text>
         </Box>
       ) : (
@@ -141,7 +143,7 @@ export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps
               >
                 <Text variant="label">{coupon.rewardDescription}</Text>
                 <Text variant="caption">
-                  {coupon.totalUses - coupon.usedCount} kullanım hakkı
+                  {t('tradeNewSwapPanel.usesLeft', { count: coupon.totalUses - coupon.usedCount })}
                 </Text>
               </Box>
             </TouchableOpacity>
@@ -150,41 +152,41 @@ export function TradeNewSwapPanel({ ownerId, onCreated }: TradeNewSwapPanelProps
       )}
 
       <Text variant="label" marginTop="md" marginBottom="xs">
-        İlan Başlığı
+        {t('tradeNewSwapPanel.listingTitleLabel')}
       </Text>
       <TextInput
         value={title}
         onChangeText={setTitle}
-        placeholder="Örn. 3x Kahve Kuponu"
+        placeholder={t('tradeNewSwapPanel.listingTitlePlaceholder')}
         placeholderTextColor={tradeTheme.colors.textMuted}
         style={inputStyle}
       />
 
       <Text variant="label" marginTop="md" marginBottom="xs">
-        Açıklama
+        {t('tradeNewSwapPanel.descriptionLabel')}
       </Text>
       <TextInput
         value={description}
         onChangeText={setDescription}
-        placeholder="Kupon detayları..."
+        placeholder={t('tradeNewSwapPanel.descriptionPlaceholder')}
         placeholderTextColor={tradeTheme.colors.textMuted}
         multiline
         style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]}
       />
 
       <Text variant="label" marginTop="md" marginBottom="xs">
-        Önerilen Takas
+        {t('tradeNewSwapPanel.suggestedTradeLabel')}
       </Text>
       <TextInput
         value={suggestedTrade}
         onChangeText={setSuggestedTrade}
-        placeholder="Ne karşılığında takas edersin?"
+        placeholder={t('tradeNewSwapPanel.suggestedTradePlaceholder')}
         placeholderTextColor={tradeTheme.colors.textMuted}
         style={inputStyle}
       />
 
       <Button
-        title={submitting ? 'Yayınlanıyor...' : 'Takas İlanını Yayınla'}
+        title={submitting ? t('tradeNewSwapPanel.publishing') : t('tradeNewSwapPanel.publish')}
         onPress={handleSubmit}
         loading={submitting}
         disabled={submitting || coupons.length === 0}

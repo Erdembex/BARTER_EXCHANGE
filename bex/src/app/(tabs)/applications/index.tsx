@@ -15,7 +15,8 @@ import { applicationsRepository, tasksRepository } from '@/features/data';
 import { demoStore } from '@/lib/demoStore';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Application, ApplicationStatus } from '@/types';
-import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { useApplicationStatusLabels } from '@/constants/taskLabels';
+import { useTranslation } from '@/i18n';
 import { getApplicationQuickAction, getApplicationTarget } from '@/lib/applicationNavigation';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
@@ -37,6 +38,8 @@ interface EnrichedApplication extends Application {
 }
 
 export default function MyApplicationsScreen() {
+  const { t } = useTranslation();
+  const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const { firebaseUser } = useAuthStore();
   const [applications, setApplications] = useState<EnrichedApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +60,7 @@ export default function MyApplicationsScreen() {
       const task = await tasksRepository.getById(app.taskId);
       enriched.push({
         ...app,
-        taskTitle: task?.title ?? 'Görev',
+        taskTitle: task?.title ?? t('common.task'),
       });
     }
 
@@ -84,7 +87,7 @@ export default function MyApplicationsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <AppHeader title="Başvurular" />
+        <AppHeader title={t('applicationsScreen.title')} />
         <TaskListSkeleton count={3} />
       </SafeAreaView>
     );
@@ -92,7 +95,7 @@ export default function MyApplicationsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Başvurular" />
+      <AppHeader title={t('applicationsScreen.title')} />
       <FlatList
         data={applications}
         keyExtractor={(item) => item.id}
@@ -107,22 +110,22 @@ export default function MyApplicationsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.subtitle}>
-              {activeCount} aktif · {applications.length} toplam
+              {t('applicationsScreen.summary', { active: activeCount, total: applications.length })}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyTitle}>Henüz başvuru yok</Text>
+            <Text style={styles.emptyTitle}>{t('applicationsScreen.emptyTitle')}</Text>
             <Text style={styles.emptyText}>
-              Görevler sekmesinden ilgilendiğin ilanlara başvurabilirsin.
+              {t('applicationsScreen.emptyText')}
             </Text>
             <TouchableOpacity
               style={styles.emptyBtn}
               onPress={() => router.push('/(tabs)/tasks' as Href)}
             >
-              <Text style={styles.emptyBtnText}>Görevlere Git</Text>
+              <Text style={styles.emptyBtnText}>{t('applicationsScreen.goToTasks')}</Text>
             </TouchableOpacity>
           </View>
         }
@@ -155,7 +158,7 @@ export default function MyApplicationsScreen() {
                   {formatRelativeTime(item.createdAt) || '—'}
                 </Text>
                 <Text style={styles.tapHint}>
-                  {quickAction ? quickAction.label : 'Detay →'}
+                  {quickAction ? t(quickAction.labelKey) : t('applicationsScreen.detail')}
                 </Text>
               </View>
             </TouchableOpacity>

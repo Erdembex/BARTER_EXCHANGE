@@ -16,9 +16,10 @@ import { Timestamp } from 'firebase/firestore';
 import { useBusiness } from '@/features/business/useBusiness';
 import { tasksRepository } from '@/features/data';
 import { Task, TaskCategory, TaskDifficulty } from '@/types';
-import { ALL_CATEGORIES, CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
+import { ALL_CATEGORIES, useCategoryLabels } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 const DIFFICULTIES: TaskDifficulty[] = ['easy', 'medium', 'hard'];
 
@@ -53,6 +54,8 @@ function taskToForm(task: Task): FormState {
 }
 
 export default function EditTaskScreen() {
+  const { t } = useTranslation();
+  const CATEGORY_LABELS = useCategoryLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { business } = useBusiness();
   const [form, setForm] = useState<FormState | null>(null);
@@ -64,12 +67,12 @@ export default function EditTaskScreen() {
     if (!id) return;
     tasksRepository.getById(id).then((task) => {
       if (!task) {
-        setError('Görev bulunamadı.');
+        setError(t('editTaskScreen.notFound'));
         setLoading(false);
         return;
       }
       if (task.approvedByAdmin) {
-        setError('Onaylanmış görevler düzenlenemez. Duraklatmayı deneyebilirsin.');
+        setError(t('editTaskScreen.cannotEditApproved'));
       }
       setForm(taskToForm(task));
       setLoading(false);
@@ -82,15 +85,15 @@ export default function EditTaskScreen() {
   const handleSave = async () => {
     if (!business || !id || !form) return;
     if (form.title.trim().length < 5) {
-      setError('Başlık en az 5 karakter olmalı.');
+      setError(t('editTaskScreen.titleMinError'));
       return;
     }
     if (form.description.trim().length < 20) {
-      setError('Açıklama en az 20 karakter olmalı.');
+      setError(t('editTaskScreen.descMinError'));
       return;
     }
     if (!form.rewardDescription.trim()) {
-      setError('Ödül açıklaması gerekli.');
+      setError(t('editTaskScreen.rewardRequiredError'));
       return;
     }
 
@@ -110,11 +113,11 @@ export default function EditTaskScreen() {
           new Date(Date.now() + parseInt(form.deadlineDays, 10) * 86400000)
         ),
       });
-      Alert.alert('Kaydedildi', 'Görev güncellendi.', [
-        { text: 'Tamam', onPress: () => router.back() },
+      Alert.alert(t('editTaskScreen.savedTitle'), t('editTaskScreen.savedText'), [
+        { text: t('editTaskScreen.ok'), onPress: () => router.back() },
       ]);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Kaydedilemedi.');
+      setError(err instanceof Error ? err.message : t('editTaskScreen.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -131,9 +134,9 @@ export default function EditTaskScreen() {
   if (!form) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{error || 'Görev yüklenemedi.'}</Text>
+        <Text style={styles.error}>{error || t('editTaskScreen.loadFailed')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backLink}>← Geri</Text>
+          <Text style={styles.backLink}>{t('editTaskScreen.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -147,22 +150,22 @@ export default function EditTaskScreen() {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.back}>← Geri</Text>
+            <Text style={styles.back}>{t('editTaskScreen.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Görevi Düzenle</Text>
-          <Text style={styles.subtitle}>Yalnızca admin onayı bekleyen görevler düzenlenebilir.</Text>
+          <Text style={styles.title}>{t('editTaskScreen.title')}</Text>
+          <Text style={styles.subtitle}>{t('editTaskScreen.subtitle')}</Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <Input label="Görev başlığı" value={form.title} onChangeText={(t) => update({ title: t })} />
+          <Input label={t('editTaskScreen.titleLabel')} value={form.title} onChangeText={(val) => update({ title: val })} />
           <Input
-            label="Açıklama"
+            label={t('editTaskScreen.descriptionLabel')}
             value={form.description}
-            onChangeText={(t) => update({ description: t })}
+            onChangeText={(val) => update({ description: val })}
             multiline
             numberOfLines={5}
           />
-          <Text style={styles.fieldLabel}>Kategori</Text>
+          <Text style={styles.fieldLabel}>{t('editTaskScreen.categoryLabel')}</Text>
           <View style={styles.chips}>
             {ALL_CATEGORIES.map((cat) => (
               <TouchableOpacity
@@ -177,24 +180,24 @@ export default function EditTaskScreen() {
             ))}
           </View>
           <Input
-            label="Ödül açıklaması"
+            label={t('editTaskScreen.rewardDescriptionLabel')}
             value={form.rewardDescription}
-            onChangeText={(t) => update({ rewardDescription: t })}
+            onChangeText={(val) => update({ rewardDescription: val })}
           />
           <Input
-            label="Maksimum başvuru"
+            label={t('editTaskScreen.maxApplicantsLabel')}
             value={form.maxApplicants}
-            onChangeText={(t) => update({ maxApplicants: t })}
+            onChangeText={(val) => update({ maxApplicants: val })}
             keyboardType="number-pad"
           />
           <Input
-            label="Son başvuru (gün)"
+            label={t('editTaskScreen.deadlineDaysLabel')}
             value={form.deadlineDays}
-            onChangeText={(t) => update({ deadlineDays: t })}
+            onChangeText={(val) => update({ deadlineDays: val })}
             keyboardType="number-pad"
           />
 
-          <Button title="Kaydet" onPress={handleSave} loading={saving} />
+          <Button title={t('editTaskScreen.save')} onPress={handleSave} loading={saving} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

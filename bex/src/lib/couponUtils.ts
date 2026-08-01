@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { Coupon } from '@/types';
+import { useTranslation } from '@/i18n';
 
 export interface CouponQrPayload {
   couponId: string;
@@ -119,6 +121,7 @@ export function isCouponExpiringSoon(coupon: Coupon): boolean {
   return remaining > 0 && remaining <= EXPIRING_SOON_MS;
 }
 
+/** @deprecated Yerine useCouponStatusLabels kullan */
 export const COUPON_STATUS_LABELS = {
   active: 'Aktif',
   pending: 'Aktivasyon bekliyor',
@@ -126,3 +129,17 @@ export const COUPON_STATUS_LABELS = {
   expired: 'Süresi doldu',
   traded: 'Takas edildi',
 } as const;
+
+export function useCouponStatusLabels() {
+  const { t } = useTranslation();
+  return useMemo(
+    () => ({
+      active: t('coupon.statusActive'),
+      pending: t('coupon.statusPending'),
+      exhausted: t('coupon.statusExhausted'),
+      expired: t('coupon.statusExpired'),
+      traded: t('coupon.statusTraded'),
+    }),
+    [t]
+  );
+}

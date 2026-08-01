@@ -8,6 +8,7 @@ import { DangerBadge } from '@/components/profile/DangerBadge';
 import { fetchProfileFeedback } from '@/features/feedback/feedbackApi';
 import { PORTFOLIO_GALLERY_LIMIT } from '@/features/portfolio/profileLimits';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface PublicProfileSectionsProps {
   profileId?: string;
@@ -32,6 +33,7 @@ export function PublicProfileSections({
   approvedComplaintCount = 0,
   complaintRate = 0,
 }: PublicProfileSectionsProps) {
+  const { t } = useTranslation();
   const [feedbackItems, setFeedbackItems] = useState<
     Awaited<ReturnType<typeof fetchProfileFeedback>>['recent']
   >([]);
@@ -55,8 +57,11 @@ export function PublicProfileSections({
         <View style={styles.dangerWrap}>
           <DangerBadge />
           <Text style={styles.dangerHint}>
-            {completedCount} tamamlanan iş · {approvedComplaintCount} onaylı şikayet (
-            %{Math.round(complaintRate * 100)})
+            {t('publicProfile.dangerHint', {
+              completed: completedCount,
+              approved: approvedComplaintCount,
+              rate: Math.round(complaintRate * 100),
+            })}
           </Text>
         </View>
       ) : null}
@@ -68,7 +73,7 @@ export function PublicProfileSections({
           totalCount={completedCount}
         />
         <Text style={styles.statsDivider}>·</Text>
-        <Text style={styles.statsMuted}>{portfolio.length} onaylı görsel</Text>
+        <Text style={styles.statsMuted}>{t('publicProfile.approvedPhotos', { count: portfolio.length })}</Text>
         {feedbackTotal > 0 ? (
           <>
             <Text style={styles.statsDivider}>·</Text>
@@ -86,16 +91,16 @@ export function PublicProfileSections({
           averageStars={feedbackAvg}
           totalCount={feedbackTotal}
           items={feedbackItems}
-          title="Görev geri bildirimleri"
+          title={t('publicProfile.feedbackTitle')}
         />
       ) : null}
 
       <UserPortfolioGallery
         items={portfolio}
         maxItems={PORTFOLIO_GALLERY_LIMIT}
-        title="Portföy görselleri"
-        subtitle="Admin moderasyonundan geçmiş teslim görselleri."
-        emptyText="Bu kullanıcının henüz onaylı portföy görseli yok."
+        title={t('publicProfile.portfolioTitle')}
+        subtitle={t('publicProfile.portfolioSubtitle')}
+        emptyText={t('publicProfile.portfolioEmpty')}
       />
     </>
   );

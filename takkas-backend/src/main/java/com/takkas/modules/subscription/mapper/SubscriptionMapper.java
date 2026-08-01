@@ -9,7 +9,7 @@ public class SubscriptionMapper {
 
     public static PlanResponse toPlanResponse(SubscriptionPlan p) {
         return new PlanResponse(p.getId(), p.getName(), p.getDisplayName(),
-            p.getPriceMonthly(), p.getPriceYearly(),
+            p.getPriceMonthly(), p.getPriceSemiAnnual(), p.getPriceYearly(),
             p.getFeatures().stream()
                 .collect(Collectors.toMap(PlanFeature::getFeatureKey, PlanFeature::getFeatureValue)));
     }
@@ -17,7 +17,17 @@ public class SubscriptionMapper {
     public static SubscriptionResponse toResponse(BusinessSubscription s) {
         return new SubscriptionResponse(s.getId(), s.getPlan().getName(),
             s.getPlan().getDisplayName(), s.getStatus(), s.isCancelAtPeriodEnd(),
-            s.getCurrentPeriodStart(), s.getCurrentPeriodEnd());
+            s.getCurrentPeriodStart(), s.getCurrentPeriodEnd(),
+            s.hasPendingUpgrade() ? s.getPendingPlan().getName() : null,
+            s.hasPendingUpgrade() ? s.getPendingPlan().getDisplayName() : null,
+            s.getPendingBillingPeriod(), s.getPendingReference(), s.getPendingRequestedAt());
+    }
+
+    public static PendingUpgradeResponse toPendingUpgradeResponse(BusinessSubscription s, String businessName) {
+        return new PendingUpgradeResponse(s.getBusinessId(), businessName,
+            s.getPlan().getDisplayName(),
+            s.getPendingPlan().getName(), s.getPendingPlan().getDisplayName(),
+            s.getPendingBillingPeriod(), s.getPendingReference(), s.getPendingRequestedAt());
     }
 
     public static InvoiceResponse toInvoiceResponse(SubscriptionInvoice i) {

@@ -10,10 +10,16 @@ import {
 } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useMessagingInbox, MessagingAudience } from '@/hooks/useMessagingInbox';
+import { useMessagingInboxStore } from '@/store/messagingInboxStore';
+import { markConversationRead } from '@/features/messages/conversationsApi';
+import { markConversationNotificationsRead } from '@/features/notifications/notificationsApi';
+import { notifyMessagingInboxRead } from '@/store/messagingInboxStore';
+import { triggerNotificationRefresh } from '@/store/notificationRefreshBridge';
 import { ConversationRow } from '@/components/messaging/ConversationRow';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type MessagesInboxViewProps = {
   audience: MessagingAudience;
@@ -21,35 +27,40 @@ type MessagesInboxViewProps = {
   showMenu?: boolean;
 };
 
-const LOCKED_COPY: Record<
-  MessagingAudience,
-  { title: string; text: string; primary: { label: string; route: Href }; secondary?: { label: string; route: Href } }
-> = {
-  user: {
-    title: 'Sohbet henüz kapalı',
-    text: 'Bir göreve başvurup işletme tarafından onaylandığında buradan işletme ile yazışabilirsin.',
-    primary: { label: 'Görevlere Göz At', route: '/(tabs)/tasks' as Href },
-    secondary: { label: 'Başvurularım', route: '/(tabs)/applications' as Href },
-  },
-  business: {
-    title: 'Sohbet henüz kapalı',
-    text: 'Onayladığın en az bir başvuru olduğunda adaylarla buradan yazışabilirsin.',
-    primary: { label: 'Başvurulara Git', route: '/(business)/applications' as Href },
-    secondary: { label: 'Panele Dön', route: '/(business)/panel' as Href },
-  },
-};
-
-const SUBTITLE: Record<MessagingAudience, string> = {
-  user: 'Onaylanmış başvuruların için işletmelerle güvenli sohbet.',
-  business: 'Onayladığın başvurular için adaylarla güvenli sohbet.',
-};
-
 export function MessagesInboxView({
   audience,
   chatRoute,
   showMenu = audience === 'user',
 }: MessagesInboxViewProps) {
+  const { t } = useTranslation();
+
+  const LOCKED_COPY: Record<
+    MessagingAudience,
+    { title: string; text: string; primary: { label: string; route: Href }; secondary?: { label: string; route: Href } }
+  > = {
+    user: {
+      title: t('messagesInboxView.lockedTitleUser'),
+      text: t('messagesInboxView.lockedTextUser'),
+      primary: { label: t('messagesInboxView.browseTasks'), route: '/(tabs)/tasks' as Href },
+      secondary: { label: t('messagesInboxView.myApplications'), route: '/(tabs)/applications' as Href },
+    },
+    business: {
+      title: t('messagesInboxView.lockedTitleBusiness'),
+      text: t('messagesInboxView.lockedTextBusiness'),
+      primary: { label: t('messagesInboxView.goToApplications'), route: '/(business)/applications' as Href },
+      secondary: { label: t('messagesInboxView.backToPanel'), route: '/(business)/panel' as Href },
+    },
+  };
+
+  const SUBTITLE: Record<MessagingAudience, string> = {
+    user: t('messagesInboxView.subtitleUser'),
+    business: t('messagesInboxView.subtitleBusiness'),
+  };
+
   const { conversations, isUnlocked, loading, refresh } = useMessagingInbox(audience);
+  const totalUnread = useMessagingInboxStore((s) =>
+    audience === 'business' ? s.businessTotalUnread : s.userTotalUnread
+  );
   const [refreshing, setRefreshing] = React.useState(false);
   const locked = LOCKED_COPY[audience];
 
@@ -62,10 +73,10 @@ export function MessagesInboxView({
   return (
     <SafeAreaView style={styles.safe}>
       {showMenu ? (
-        <AppHeader title="Sohbet" showMenu />
+        <AppHeader title={t('messagesInboxView.headerTitle')} showMenu />
       ) : (
         <View style={styles.bizHeader}>
-          <Text style={styles.bizTitle}>Sohbet</Text>
+          <Text style={styles.bizTitle}>{t('messagesInboxView.headerTitle')}</Text>
         </View>
       )}
 
@@ -103,17 +114,37 @@ export function MessagesInboxView({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
           }
           ListHeaderComponent={
-            <Text style={styles.subtitle}>{SUBTITLE[audience]}</Text>
+            <View style={styles.listHeader}>
+              <Text style={styles.subtitle}>{SUBTITLE[audience]}</Text>
+              {totalUnread > 0 ? (
+                <Text style={styles.unreadHint}>{t('messagesInboxView.unreadHint', { count: totalUnread })}</Text>
+              ) : null}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>Henüz aktif sohbet yok.</Text>
+              <Text style={styles.emptyText}>{t('messagesInboxView.empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (
             <ConversationRow
               item={item}
-              onPress={() => router.push(chatRoute(item.applicationId))}
+              onPress={() => {
+                void (async () => {
+                  const unread = item.unreadCount;
+                  if (item.conversationId) {
+                    try {
+                      await markConversationRead(item.conversationId);
+                      notifyMessagingInboxRead(unread, audience);
+                      await markConversationNotificationsRead(item.conversationId);
+                      triggerNotificationRefresh();
+                    } catch {
+                      // sohbet ekranında tekrar denenecek
+                    }
+                  }
+                  router.push(chatRoute(item.applicationId));
+                })();
+              }}
             />
           )}
         />
@@ -136,8 +167,16 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
-    marginBottom: Spacing[4],
     lineHeight: 20,
+  },
+  listHeader: {
+    marginBottom: Spacing[4],
+    gap: Spacing[1],
+  },
+  unreadHint: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '700',
   },
   list: {
     padding: Spacing[5],

@@ -15,8 +15,10 @@ import { CompletedTask, PortfolioItem } from '@/types';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function PublicUserProfileByUsernameScreen() {
+  const { t } = useTranslation();
   const { username } = useLocalSearchParams<{ username: string }>();
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -76,10 +78,10 @@ export default function PublicUserProfileByUsernameScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.notFoundTitle}>Profil bulunamadı</Text>
-          <Text style={styles.notFoundText}>@{username} kullanıcı adına ait profil yok.</Text>
+          <Text style={styles.notFoundTitle}>{t('userProfileScreen.notFoundTitle')}</Text>
+          <Text style={styles.notFoundText}>{t('userProfileScreen.notFoundText', { username: String(username) })}</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backText}>← Geri dön</Text>
+            <Text style={styles.backText}>{t('userProfileScreen.backLink')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -90,7 +92,7 @@ export default function PublicUserProfileByUsernameScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Geri</Text>
+          <Text style={styles.backText}>{t('userProfileScreen.back')}</Text>
         </TouchableOpacity>
 
         <View style={styles.hero}>

@@ -41,6 +41,10 @@ app:
     sync-password-on-startup: ${ADMIN_SYNC_PASSWORD:true}
   upload:
     dir: ${UPLOAD_DIR:uploads}
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+  payment:
+    provider: ${APP_PAYMENT_PROVIDER:manual}
   expo:
     access-token: ${EXPO_ACCESS_TOKEN:}
   listings:
@@ -50,6 +54,17 @@ app:
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:}
+    region: ${AWS_S3_REGION:eu-central-1}
+
+iyzico:
+  api-key: ${IYZICO_API_KEY:}
+  secret-key: ${IYZICO_SECRET_KEY:}
+  base-url: ${IYZICO_BASE_URL:https://sandbox-api.iyzipay.com}
+
 management:
   endpoints:
     web:

@@ -13,20 +13,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import {
-  COMPLAINT_REASON_LABELS,
+  useComplaintReasonLabels,
   fetchMyIndividualComplaintsBusiness,
   type IndividualComplaintDto,
 } from '@/features/complaint/complaintsApi';
-import { formatShortDate } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'İnceleniyor',
-  APPROVED: 'Onaylandı',
-  REJECTED: 'Reddedildi',
-};
+import { useTranslation, getLocale } from '@/i18n';
 
 export default function BusinessComplaintsScreen() {
+  const { t } = useTranslation();
+  const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
+  const STATUS_LABELS: Record<string, string> = {
+    PENDING: t('businessComplaintsScreen.statusPending'),
+    APPROVED: t('businessComplaintsScreen.statusApproved'),
+    REJECTED: t('businessComplaintsScreen.statusRejected'),
+  };
   const [items, setItems] = useState<IndividualComplaintDto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export default function BusinessComplaintsScreen() {
       const list = await fetchMyIndividualComplaintsBusiness();
       setItems(list);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Şikayetler yüklenemedi.');
+      setLoadError(err instanceof Error ? err.message : t('businessComplaintsScreen.loadFailed'));
     }
   }, []);
 
@@ -55,7 +56,7 @@ export default function BusinessComplaintsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Şikayetlerim" showMenu={false} onBack={() => router.back()} />
+      <AppHeader title={t('businessComplaintsScreen.headerTitle')} showMenu={false} onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -63,25 +64,25 @@ export default function BusinessComplaintsScreen() {
         }
       >
         <Text style={styles.lead}>
-          Tehlikeli veya uygunsuz adaylara yönelik gönderdiğin şikayetlerin durumu.
+          {t('businessComplaintsScreen.lead')}
         </Text>
 
         <Button
-          title="Yeni Kullanıcı Şikayeti"
+          title={t('businessComplaintsScreen.newComplaint')}
           onPress={() => router.push('/complaint/submit-user' as Href)}
         />
 
         {loadError ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{loadError}</Text>
-            <Button title="Tekrar dene" variant="outline" onPress={load} />
+            <Button title={t('businessComplaintsScreen.retry')} variant="outline" onPress={load} />
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Gönderilen şikayetler ({items.length})</Text>
+        <Text style={styles.sectionTitle}>{t('businessComplaintsScreen.sentComplaints', { count: items.length })}</Text>
 
         {items.length === 0 && !loadError ? (
-          <Text style={styles.empty}>Henüz şikayet göndermedin.</Text>
+          <Text style={styles.empty}>{t('businessComplaintsScreen.empty')}</Text>
         ) : (
           items.map((item) => (
             <View key={item.id} style={styles.card}>
@@ -96,7 +97,13 @@ export default function BusinessComplaintsScreen() {
                 {item.description}
               </Text>
               {item.createdAt ? (
-                <Text style={styles.date}>{formatShortDate(new Date(item.createdAt))}</Text>
+                <Text style={styles.date}>
+                  {new Date(item.createdAt).toLocaleDateString(getLocale() === 'en' ? 'en-US' : 'tr-TR', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </Text>
               ) : null}
             </View>
           ))

@@ -33,10 +33,14 @@ function mapNotification(dto: NotificationDto, userId: string): BexNotification 
     const refType = dto.referenceType?.toUpperCase() ?? '';
     if (refType.includes('APPLICATION')) {
       data.applicationId = String(dto.referenceId);
+    } else if (refType.includes('CONVERSATION')) {
+      data.conversationId = String(dto.referenceId);
     } else if (refType.includes('BUSINESS')) {
       data.businessId = String(dto.referenceId);
     } else if (refType.includes('LISTING')) {
       data.taskId = String(dto.referenceId);
+    } else if (refType.includes('COUPON')) {
+      data.couponId = String(dto.referenceId);
     } else {
       data.referenceId = String(dto.referenceId);
     }
@@ -96,4 +100,12 @@ export async function markNotificationRead(notificationId: string): Promise<void
 
 export async function markNotificationReadByReference(referenceId: string): Promise<void> {
   await apiClient.patch(`/api/notifications/read-by-reference/${referenceId}`);
+}
+
+export async function markConversationNotificationsRead(conversationId: string): Promise<void> {
+  try {
+    await markNotificationReadByReference(conversationId);
+  } catch {
+    // sessiz — mesaj rozeti ana düzeltme
+  }
 }

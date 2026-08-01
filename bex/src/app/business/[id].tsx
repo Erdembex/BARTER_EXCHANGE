@@ -12,7 +12,8 @@ import { router, useLocalSearchParams, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { businessesRepository, tasksRepository, EnrichedTask } from '@/features/data';
 import { Business } from '@/types';
-import { BUSINESS_CATEGORY_LABELS } from '@/constants/businessLabels';
+import { useBusinessCategoryLabels } from '@/constants/businessLabels';
+import { useTranslation } from '@/i18n';
 import { TaskCard } from '@/components/tasks';
 import { ProfileFeedbackList } from '@/components/profile/ProfileFeedbackList';
 import { DangerBadge } from '@/components/profile/DangerBadge';
@@ -21,6 +22,8 @@ import { fetchProfileFeedback, FeedbackDto } from '@/features/feedback/feedbackA
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 
 export default function BusinessDetailScreen() {
+  const { t } = useTranslation();
+  const BUSINESS_CATEGORY_LABELS = useBusinessCategoryLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
@@ -70,9 +73,9 @@ export default function BusinessDetailScreen() {
   if (!business) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>İşletme bulunamadı.</Text>
+        <Text style={styles.error}>{t('businessDetailScreen.notFound')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backLink}>← Geri dön</Text>
+          <Text style={styles.backLink}>{t('businessDetailScreen.backLink')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -82,7 +85,7 @@ export default function BusinessDetailScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Geri</Text>
+          <Text style={styles.backText}>{t('businessDetailScreen.back')}</Text>
         </TouchableOpacity>
 
         <View style={styles.hero}>
@@ -97,12 +100,12 @@ export default function BusinessDetailScreen() {
           </View>
           {business.isVerified ? (
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓ Doğrulanmış</Text>
+              <Text style={styles.verifiedText}>{t('businessDetailScreen.verified')}</Text>
             </View>
           ) : null}
           {business.complaintListed && !business.isDangerous ? (
             <View style={styles.complaintBadge}>
-              <Text style={styles.complaintText}>⚠ Şikayet BEX</Text>
+              <Text style={styles.complaintText}>{t('businessDetailScreen.complaintTag')}</Text>
             </View>
           ) : null}
           {business.isDangerous ? <DangerBadge /> : null}
@@ -111,20 +114,24 @@ export default function BusinessDetailScreen() {
         <Text style={styles.address}>📍 {business.address}</Text>
         {(business.completedTaskCount ?? 0) > 0 ? (
           <Text style={styles.trustMeta}>
-            {business.completedTaskCount} tamamlanan iş · {business.approvedComplaintCount ?? 0}{' '}
-            onaylı şikayet
-            {(business.complaintRate ?? 0) > 0
-              ? ` · %${Math.round((business.complaintRate ?? 0) * 100)}`
-              : ''}
+            {t('businessDetailScreen.trustMeta', {
+              completed: business.completedTaskCount ?? 0,
+              approved: business.approvedComplaintCount ?? 0,
+              rate:
+                (business.complaintRate ?? 0) > 0
+                  ? ` · %${Math.round((business.complaintRate ?? 0) * 100)}`
+                  : '',
+            })}
           </Text>
         ) : null}
         <Text style={styles.score}>
           ⭐ {(feedbackAvg || business.averageRating || 0).toFixed(1)} ·{' '}
-          {feedbackCount || business.feedbackCount || 0} değerlendirme
+          {feedbackCount || business.feedbackCount || 0}
+          {t('businessDetailScreen.reviewsSuffix')}
         </Text>
 
         <Button
-          title="Bu İşletmeyi Şikayet Et"
+          title={t('businessDetailScreen.reportBusiness')}
           variant="outline"
           onPress={() =>
             router.push({
@@ -140,9 +147,9 @@ export default function BusinessDetailScreen() {
           items={feedback}
         />
 
-        <Text style={styles.sectionTitle}>Aktif Görevler</Text>
+        <Text style={styles.sectionTitle}>{t('businessDetailScreen.activeTasks')}</Text>
         {tasks.length === 0 ? (
-          <Text style={styles.empty}>Şu an açık görev yok.</Text>
+          <Text style={styles.empty}>{t('businessDetailScreen.noActiveTasks')}</Text>
         ) : (
           tasks.map((task) => (
             <View key={task.id} style={styles.taskWrap}>

@@ -8,6 +8,7 @@ import java.util.List;
 public record ListingFilterRequest(
     String city, String district,
     List<Skill> skills,
+    String q,
     Instant cursor,
     @Min(1) @Max(50) Integer pageSize
 ) {}

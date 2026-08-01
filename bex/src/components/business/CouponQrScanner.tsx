@@ -10,6 +10,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Button } from '@/components/ui';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface CouponQrScannerProps {
   visible: boolean;
@@ -18,6 +19,7 @@ interface CouponQrScannerProps {
 }
 
 export function CouponQrScanner({ visible, onClose, onScan }: CouponQrScannerProps) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
   const [error, setError] = useState('');
@@ -45,27 +47,27 @@ export function CouponQrScanner({ visible, onClose, onScan }: CouponQrScannerPro
     <Modal visible animationType="slide" presentationStyle="fullScreen">
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <Text style={styles.title}>QR Kod Okut</Text>
+          <Text style={styles.title}>{t('couponQrScanner.title')}</Text>
           <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.close}>Kapat</Text>
+            <Text style={styles.close}>{t('couponQrScanner.close')}</Text>
           </TouchableOpacity>
         </View>
 
         {!permission ? (
           <View style={styles.center}>
-            <Text style={styles.message}>Kamera izni kontrol ediliyor...</Text>
+            <Text style={styles.message}>{t('couponQrScanner.checkingPermission')}</Text>
           </View>
         ) : !permission.granted ? (
           <View style={styles.center}>
             <Text style={styles.message}>
-              Kupon QR kodunu okutmak için kamera izni gerekli.
+              {t('couponQrScanner.permissionNeeded')}
             </Text>
             <Button
-              title="İzin Ver"
+              title={t('couponQrScanner.grantPermission')}
               onPress={async () => {
                 const result = await requestPermission();
                 if (!result.granted) {
-                  setError('Kamera izni reddedildi.');
+                  setError(t('couponQrScanner.permissionDenied'));
                 }
               }}
               style={{ marginTop: Spacing[4], width: 240 }}
@@ -81,7 +83,7 @@ export function CouponQrScanner({ visible, onClose, onScan }: CouponQrScannerPro
               onBarcodeScanned={handleBarcode}
             />
             <View style={styles.frame} pointerEvents="none" />
-            <Text style={styles.hint}>Kupon QR kodunu çerçeve içine hizala</Text>
+            <Text style={styles.hint}>{t('couponQrScanner.scanHint')}</Text>
           </View>
         )}
       </SafeAreaView>

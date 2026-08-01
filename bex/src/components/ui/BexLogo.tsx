@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../../theme';
+import { useTranslation } from '@/i18n';
 
 interface BexLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -8,6 +9,7 @@ interface BexLogoProps {
 }
 
 export function BexLogo({ size = 'md', showTagline = false }: BexLogoProps) {
+  const { t } = useTranslation();
   const logoSize = size === 'sm' ? 40 : size === 'md' ? 56 : 72;
   const fontSize = size === 'sm' ? 20 : size === 'md' ? 28 : 36;
 
@@ -17,7 +19,7 @@ export function BexLogo({ size = 'md', showTagline = false }: BexLogoProps) {
         <Text style={[styles.badgeText, { fontSize }]}>B</Text>
       </View>
       {showTagline && (
-        <Text style={styles.tagline}>Görev Tamamla, Ödül Kazan</Text>
+        <Text style={styles.tagline}>{t('bexLogo.tagline')}</Text>
       )}
     </View>
   );

@@ -15,12 +15,7 @@ import { usersRepository } from '@/features/data';
 import { CompletedTask } from '@/types';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
-
-const ROLE_LABELS = {
-  user: 'Kullanıcı',
-  business: 'İşletme',
-  admin: 'Yönetici',
-} as const;
+import { useTranslation } from '@/i18n';
 
 interface AccountSettingsProps {
   bexUser: BexUser | null;
@@ -33,6 +28,12 @@ export function AccountSettings({
   onUserUpdated,
   showAdminLink = true,
 }: AccountSettingsProps) {
+  const { t } = useTranslation();
+  const ROLE_LABELS = {
+    user: t('accountSettings.roleUser'),
+    business: t('accountSettings.roleBusiness'),
+    admin: t('accountSettings.roleAdmin'),
+  } as const;
   const { firebaseUser } = useAuthStore();
   const { showToast } = useToast();
   const [editingName, setEditingName] = useState(false);
@@ -69,7 +70,7 @@ export function AccountSettings({
 
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('İzin gerekli', 'Profil fotoğrafı için galeri erişimine izin ver.');
+      Alert.alert(t('accountSettings.permissionRequiredTitle'), t('accountSettings.permissionRequiredBody'));
       return;
     }
 
@@ -92,12 +93,12 @@ export function AccountSettings({
         asset.fileName ?? 'avatar.jpg'
       );
       onUserUpdated(updated);
-      showToast('Profil fotoğrafın güncellendi.');
+      showToast(t('accountSettings.avatarUpdated'));
     } catch (error) {
       const message =
         error instanceof Error && error.message
           ? error.message
-          : 'Profil fotoğrafı yüklenemedi.';
+          : t('accountSettings.avatarUploadFailed');
       showToast(message);
     } finally {
       setUploadingAvatar(false);
@@ -111,9 +112,9 @@ export function AccountSettings({
       const updated = await authService.updateDisplayName(firebaseUser.uid, nameDraft);
       onUserUpdated(updated);
       setEditingName(false);
-      showToast('Adın güncellendi.');
+      showToast(t('accountSettings.nameUpdated'));
     } catch {
-      showToast('Ad güncellenemedi.');
+      showToast(t('accountSettings.nameUpdateFailed'));
     } finally {
       setSavingName(false);
     }
@@ -126,14 +127,14 @@ export function AccountSettings({
       const updated = await authService.updateUsername(firebaseUser.uid, usernameDraft);
       onUserUpdated(updated);
       setEditingUsername(false);
-      showToast('Kullanıcı adın güncellendi.');
+      showToast(t('accountSettings.usernameUpdated'));
     } catch (error) {
       const code = (error as { code?: string }).code;
       const message = code
         ? getAuthErrorMessage(code)
         : error instanceof Error && error.message
           ? error.message
-          : 'Kullanıcı adı güncellenemedi.';
+          : t('accountSettings.usernameUpdateFailed');
       showToast(message);
     } finally {
       setSavingUsername(false);
@@ -146,14 +147,14 @@ export function AccountSettings({
       const updated = await authService.updateIndividualLocation(locationCity, locationDistrict);
       onUserUpdated(updated);
       setEditingLocation(false);
-      showToast('Konumun güncellendi.');
+      showToast(t('accountSettings.locationUpdated'));
     } catch (error) {
       const code = (error as { code?: string }).code;
       const message = code
         ? getAuthErrorMessage(code)
         : error instanceof Error && error.message
           ? error.message
-          : 'Konum kaydedilemedi.';
+          : t('accountSettings.locationUpdateFailed');
       showToast(message);
     } finally {
       setSavingLocation(false);
@@ -162,11 +163,11 @@ export function AccountSettings({
 
   const handleSavePassword = async () => {
     if (newPassword.length < 8) {
-      showToast('Yeni şifre en az 8 karakter olmalı.');
+      showToast(t('accountSettings.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast('Yeni şifreler eşleşmiyor.');
+      showToast(t('accountSettings.passwordMismatch'));
       return;
     }
 
@@ -177,12 +178,12 @@ export function AccountSettings({
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      showToast('Şifren güncellendi.');
+      showToast(t('accountSettings.passwordUpdated'));
     } catch (error) {
       const message =
         error instanceof Error && error.message
           ? error.message
-          : 'Şifre güncellenemedi.';
+          : t('accountSettings.passwordUpdateFailed');
       showToast(message);
     } finally {
       setSavingPassword(false);
@@ -210,9 +211,9 @@ export function AccountSettings({
         loading={uploadingAvatar}
         onPress={handlePickAvatar}
       />
-      <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokun</Text>
+      <Text style={styles.avatarHint}>{t('accountSettings.avatarHint')}</Text>
 
-      <Text style={styles.name}>{bexUser?.displayName ?? 'Kullanıcı'}</Text>
+      <Text style={styles.name}>{bexUser?.displayName ?? t('accountSettings.roleUser')}</Text>
       {bexUser?.role === 'user' && bexUser.username ? (
         <Text style={styles.username}>@{bexUser.username}</Text>
       ) : null}
@@ -227,7 +228,7 @@ export function AccountSettings({
         {bexUser?.phoneVerified ? (
           <View style={[styles.badge, styles.badgeSuccess]}>
             <Text style={[styles.badgeText, styles.badgeSuccessText]}>
-              ✓ Telefon doğrulandı
+              {t('accountSettings.phoneVerified')}
             </Text>
           </View>
         ) : null}
@@ -237,12 +238,12 @@ export function AccountSettings({
         <View style={styles.statsRow}>
           <TouchableOpacity style={styles.statBox} onPress={handleOpenCompletedTasks}>
             <Text style={styles.statValue}>{bexUser.completedTaskCount ?? 0}</Text>
-            <Text style={styles.statLabel}>Tamamlanan görev</Text>
+            <Text style={styles.statLabel}>{t('accountSettings.completedTasks')}</Text>
           </TouchableOpacity>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{bexUser.reputationScore ?? 0}</Text>
-            <Text style={styles.statLabel}>İtibar puanı</Text>
+            <Text style={styles.statLabel}>{t('accountSettings.reputationScore')}</Text>
           </View>
         </View>
       ) : null}
@@ -258,21 +259,21 @@ export function AccountSettings({
         {editingName ? (
           <View style={styles.editBlock}>
             <Input
-              label="Görünen ad"
+              label={t('accountSettings.displayName')}
               value={nameDraft}
               onChangeText={setNameDraft}
               autoCapitalize="words"
             />
             <View style={styles.editActions}>
               <Button
-                title="Kaydet"
+                title={t('accountSettings.save')}
                 size="sm"
                 onPress={handleSaveName}
                 loading={savingName}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Vazgeç"
+                title={t('accountSettings.cancel')}
                 variant="ghost"
                 size="sm"
                 onPress={() => {
@@ -286,26 +287,26 @@ export function AccountSettings({
         ) : editingUsername && bexUser?.role === 'user' ? (
           <View style={styles.editBlock}>
             <Input
-              label="Kullanıcı adı"
+              label={t('accountSettings.username')}
               value={usernameDraft}
               onChangeText={(text) => setUsernameDraft(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholder="ornek_kullanici"
+              placeholder={t('accountSettings.usernamePlaceholder')}
             />
             <Text style={styles.usernameHint}>
-              İşletmeler seni bu adla arayabilir. 3-30 karakter, a-z, 0-9 ve _ kullanılabilir.
+              {t('accountSettings.usernameHint')}
             </Text>
             <View style={styles.editActions}>
               <Button
-                title="Kaydet"
+                title={t('accountSettings.save')}
                 size="sm"
                 onPress={handleSaveUsername}
                 loading={savingUsername}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Vazgeç"
+                title={t('accountSettings.cancel')}
                 variant="ghost"
                 size="sm"
                 onPress={() => {
@@ -319,21 +320,21 @@ export function AccountSettings({
         ) : editingPassword ? (
           <View style={styles.editBlock}>
             <Input
-              label="Mevcut şifre"
+              label={t('accountSettings.currentPassword')}
               value={currentPassword}
               onChangeText={setCurrentPassword}
               secureTextEntry
               autoCapitalize="none"
             />
             <Input
-              label="Yeni şifre"
+              label={t('accountSettings.newPassword')}
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
               autoCapitalize="none"
             />
             <Input
-              label="Yeni şifre (tekrar)"
+              label={t('accountSettings.confirmPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -341,14 +342,14 @@ export function AccountSettings({
             />
             <View style={styles.editActions}>
               <Button
-                title="Kaydet"
+                title={t('accountSettings.save')}
                 size="sm"
                 onPress={handleSavePassword}
                 loading={savingPassword}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Vazgeç"
+                title={t('accountSettings.cancel')}
                 variant="ghost"
                 size="sm"
                 onPress={() => {
@@ -363,17 +364,17 @@ export function AccountSettings({
           </View>
         ) : (
           <>
-            <Row label="Telefon" value={bexUser?.phone || 'Eklenmedi'} />
+            <Row label={t('accountSettings.phone')} value={bexUser?.phone || t('accountSettings.notAdded')} />
             {bexUser?.role === 'user' ? (
               <Row
-                label="Kullanıcı adı"
-                value={bexUser.username ? `@${bexUser.username}` : 'Belirlenmedi'}
+                label={t('accountSettings.username')}
+                value={bexUser.username ? `@${bexUser.username}` : t('accountSettings.notSet')}
               />
             ) : null}
-            <Row label="Tamamlanan görev" value={String(bexUser?.completedTaskCount ?? 0)} />
-            <Row label="İtibar puanı" value={String(bexUser?.reputationScore ?? 0)} />
+            <Row label={t('accountSettings.completedTasks')} value={String(bexUser?.completedTaskCount ?? 0)} />
+            <Row label={t('accountSettings.reputationScore')} value={String(bexUser?.reputationScore ?? 0)} />
             <Button
-              title="Adı Düzenle"
+              title={t('accountSettings.editName')}
               variant="outline"
               size="sm"
               onPress={() => {
@@ -383,7 +384,7 @@ export function AccountSettings({
             />
             {bexUser?.role === 'user' ? (
               <Button
-                title="Kullanıcı Adını Düzenle"
+                title={t('accountSettings.editUsername')}
                 variant="outline"
                 size="sm"
                 onPress={() => {
@@ -394,7 +395,7 @@ export function AccountSettings({
             ) : null}
             {restMode ? (
               <Button
-                title="Şifreyi Değiştir"
+                title={t('accountSettings.changePassword')}
                 variant="outline"
                 size="sm"
                 onPress={() => setEditingPassword(true)}
@@ -406,9 +407,9 @@ export function AccountSettings({
 
       {bexUser?.role === 'user' ? (
         <View style={styles.card}>
-          <Text style={styles.locationTitle}>Konum</Text>
+          <Text style={styles.locationTitle}>{t('accountSettings.locationTitle')}</Text>
           <Text style={styles.locationHint}>
-            Görevler ekranında varsayılan filtre olarak kullanılır.
+            {t('accountSettings.locationHint')}
           </Text>
           {editingLocation ? (
             <View style={styles.editBlock}>
@@ -420,14 +421,14 @@ export function AccountSettings({
               />
               <View style={styles.editActions}>
                 <Button
-                  title="Kaydet"
+                  title={t('accountSettings.save')}
                   size="sm"
                   onPress={handleSaveLocation}
                   loading={savingLocation}
                   style={{ flex: 1 }}
                 />
                 <Button
-                  title="Vazgeç"
+                  title={t('accountSettings.cancel')}
                   variant="ghost"
                   size="sm"
                   onPress={() => {
@@ -442,15 +443,15 @@ export function AccountSettings({
           ) : (
             <>
               <Row
-                label="İl / İlçe"
+                label={t('accountSettings.cityDistrict')}
                 value={
                   bexUser.city && bexUser.district
                     ? `${bexUser.city}, ${bexUser.district}`
-                    : 'Belirlenmedi'
+                    : t('accountSettings.notSet')
                 }
               />
               <Button
-                title="Konumu Düzenle"
+                title={t('accountSettings.editLocation')}
                 variant="outline"
                 size="sm"
                 onPress={() => {
@@ -466,13 +467,13 @@ export function AccountSettings({
 
       {publicProfileHref ? (
         <Button
-          title="Herkese Açık Profilim"
+          title={t('accountSettings.publicProfile')}
           variant="outline"
           onPress={() => router.push(publicProfileHref)}
         />
       ) : bexUser?.role === 'user' && firebaseUser ? (
         <Button
-          title="Herkese Açık Profilim"
+          title={t('accountSettings.publicProfile')}
           variant="outline"
           onPress={async () => {
             const profileId = (await getRestProfileId()) ?? firebaseUser.uid;
@@ -483,14 +484,14 @@ export function AccountSettings({
 
       {showAdminLink && bexUser?.role === 'admin' && (
         <Button
-          title="Admin Paneli"
+          title={t('accountSettings.adminPanel')}
           onPress={() => router.push('/(admin)/panel' as Href)}
         />
       )}
 
       {!bexUser?.phoneVerified && !restMode && (
         <Button
-          title="Telefonu Doğrula"
+          title={t('accountSettings.verifyPhone')}
           variant="secondary"
           onPress={() => router.push('/(auth)/phone-verification' as Href)}
         />

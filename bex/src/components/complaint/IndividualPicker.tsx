@@ -14,6 +14,7 @@ import {
 } from '@/features/business/businessProfileApi';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface IndividualPickerProps {
   selectedId: string;
@@ -32,6 +33,7 @@ export function IndividualPicker({
   const [results, setResults] = useState<IndividualSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const runSearch = useCallback(async (term: string) => {
     setLoading(true);
@@ -41,7 +43,7 @@ export function IndividualPicker({
       setResults(hits);
     } catch {
       setResults([]);
-      setError('Kullanıcılar yüklenemedi.');
+      setError(t('individualPicker.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -61,22 +63,22 @@ export function IndividualPicker({
       {selectedId ? (
         <View style={styles.selectedCard}>
           <View style={styles.selectedText}>
-            <Text style={styles.selectedLabel}>Seçilen kullanıcı</Text>
+            <Text style={styles.selectedLabel}>{t('individualPicker.selectedUser')}</Text>
             <Text style={styles.selectedName}>{selectedName}</Text>
           </View>
           {onClear ? (
             <TouchableOpacity onPress={onClear} hitSlop={8}>
-              <Text style={styles.changeLink}>Değiştir</Text>
+              <Text style={styles.changeLink}>{t('individualPicker.change')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ) : (
         <>
           <Input
-            label="Kullanıcı ara"
+            label={t('individualPicker.searchLabel')}
             value={query}
             onChangeText={setQuery}
-            placeholder="Kullanıcı adı yaz..."
+            placeholder={t('individualPicker.searchPlaceholder')}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -88,8 +90,8 @@ export function IndividualPicker({
               {results.length === 0 ? (
                 <Text style={styles.empty}>
                   {query.trim().length >= 2
-                    ? 'Eşleşen kullanıcı bulunamadı.'
-                    : 'Kayıtlı kullanıcılardan birini seç.'}
+                    ? t('individualPicker.noMatches')
+                    : t('individualPicker.pickRegistered')}
                 </Text>
               ) : (
                 results.map((item) => (
@@ -109,7 +111,7 @@ export function IndividualPicker({
                           {item.username ? `@${item.username}` : item.fullName}
                         </Text>
                         <Text style={styles.resultMeta}>
-                          {item.completedTaskCount} tamamlanan görev
+                          {t('individualPicker.completedTaskCount', { count: item.completedTaskCount })}
                         </Text>
                       </View>
                     </View>

@@ -23,6 +23,7 @@ import { Coupon } from '@/types';
 import { tradeRepository } from './tradeRepository';
 import { tradeTheme, TradeTheme } from './tradeTheme';
 import { TradeListing } from './types';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
 const SHEET_HEIGHT = Math.round(Dimensions.get('window').height * 0.88);
@@ -42,6 +43,7 @@ export function TradeSubmitOfferModal({
   onClose,
   onSubmitted,
 }: TradeSubmitOfferModalProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -84,7 +86,7 @@ export function TradeSubmitOfferModal({
 
   const handleSubmit = async () => {
     if (!listing || !selectedCouponId) {
-      showToast('Takasa katılmak için kupon seçmelisin.');
+      showToast(t('tradeSubmitOfferModal.selectCouponError'));
       return;
     }
 
@@ -94,12 +96,12 @@ export function TradeSubmitOfferModal({
         counterCouponId: selectedCouponId,
         message: note.trim() || undefined,
       });
-      showToast(`Teklifin gönderildi. Kuponun takas onayına kadar kilitlendi.`);
+      showToast(t('tradeSubmitOfferModal.submittedToast'));
       reset();
       onSubmitted();
       onClose();
     } catch (err) {
-      showToast((err as Error).message || 'Teklif gönderilemedi.');
+      showToast((err as Error).message || t('tradeSubmitOfferModal.submitFailedToast'));
       setSubmitting(false);
     }
   };
@@ -118,21 +120,20 @@ export function TradeSubmitOfferModal({
         >
           <View style={styles.handle} />
           <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-            <Text variant="headingSmall">Takasa Katıl</Text>
+            <Text variant="headingSmall">{t('tradeSubmitOfferModal.title')}</Text>
             {listing ? (
               <>
                 <Text variant="bodyMuted" marginTop="xs">
                   {listing.title}
                 </Text>
                 <Text variant="caption" marginTop="sm" marginBottom="md">
-                  Karşılık olarak kendi kuponlarından birini seç. Onaylanırsa eski kodlar imha edilir,
-                  yeni kodlar Kuponlarım sekmesinde oluşur.
+                  {t('tradeSubmitOfferModal.infoText')}
                 </Text>
               </>
             ) : null}
 
             <Text variant="label" marginBottom="xs">
-              Kuponlarım
+              {t('tradeSubmitOfferModal.myCouponsLabel')}
             </Text>
             {loadingCoupons ? (
               <Box alignItems="center" paddingVertical="lg">
@@ -140,8 +141,7 @@ export function TradeSubmitOfferModal({
               </Box>
             ) : coupons.length === 0 ? (
               <Text variant="bodyMuted" marginBottom="md">
-                Takasa uygun aktif kuponun yok. Kuponlarım sekmesinden kupon kazan veya başka bir
-                kuponu takasta kullanma.
+                {t('tradeSubmitOfferModal.noCouponText')}
               </Text>
             ) : (
               coupons.map((coupon) => {
@@ -162,7 +162,7 @@ export function TradeSubmitOfferModal({
                     >
                       <Text variant="label">{coupon.rewardDescription}</Text>
                       <Text variant="caption">
-                        {coupon.totalUses - coupon.usedCount} kullanım · Kod paylaşılmaz
+                        {t('tradeSubmitOfferModal.usesAndNoShare', { count: coupon.totalUses - coupon.usedCount })}
                       </Text>
                     </Box>
                   </TouchableOpacity>
@@ -171,12 +171,12 @@ export function TradeSubmitOfferModal({
             )}
 
             <Text variant="label" marginTop="md" marginBottom="xs">
-              Not (isteğe bağlı)
+              {t('tradeSubmitOfferModal.noteLabel')}
             </Text>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="Kısa bir mesaj..."
+              placeholder={t('tradeSubmitOfferModal.notePlaceholder')}
               placeholderTextColor={tradeTheme.colors.textMuted}
               maxLength={200}
               style={inputStyle}
@@ -184,13 +184,13 @@ export function TradeSubmitOfferModal({
           </ScrollView>
 
           <Button
-            title={submitting ? 'Gönderiliyor...' : 'Takas Teklifini Gönder'}
+            title={submitting ? t('tradeSubmitOfferModal.submitting') : t('tradeSubmitOfferModal.submit')}
             onPress={handleSubmit}
             loading={submitting}
             disabled={submitting || loadingCoupons || coupons.length === 0}
             style={{ marginTop: 8, marginBottom: 8 }}
           />
-          <Button title="Vazgeç" variant="ghost" onPress={handleClose} />
+          <Button title={t('tradeSubmitOfferModal.cancel')} variant="ghost" onPress={handleClose} />
         </View>
       </View>
     </Modal>

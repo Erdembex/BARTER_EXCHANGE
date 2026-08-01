@@ -17,8 +17,10 @@ import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function AdminSubmissionsScreen() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [submissions, setSubmissions] = useState<EnrichedSubmission[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -46,10 +48,10 @@ export default function AdminSubmissionsScreen() {
     setLoadingId(item.id);
     try {
       await adminRepository.approveSubmission(item.id);
-      showToast('Teslim onaylandı — işletme kupon verebilir.');
+      showToast(t('adminSubmissionsScreen.approvedToast'));
       await load();
     } catch {
-      showToast('Onaylama başarısız.');
+      showToast(t('adminSubmissionsScreen.approveFailedToast'));
     }
     setLoadingId(null);
   };
@@ -57,24 +59,24 @@ export default function AdminSubmissionsScreen() {
   const handleReject = (item: EnrichedSubmission) => {
     const note = rejectNote[item.id]?.trim();
     Alert.alert(
-      'Teslimi Reddet',
-      'Kullanıcı görevi yeniden teslim edebilir. Red gerekçesi ekle.',
+      t('adminSubmissionsScreen.rejectTitle'),
+      t('adminSubmissionsScreen.rejectBody'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('adminSubmissionsScreen.dismiss'), style: 'cancel' },
         {
-          text: 'Reddet',
+          text: t('adminSubmissionsScreen.reject'),
           style: 'destructive',
           onPress: async () => {
             setLoadingId(item.id);
             try {
               await adminRepository.rejectSubmission(
                 item.id,
-                note || 'İçerik uygunsuz. Lütfen düzeltip tekrar teslim et.'
+                note || t('adminSubmissionsScreen.defaultRejectReason')
               );
-              showToast('Teslim reddedildi.');
+              showToast(t('adminSubmissionsScreen.rejectedToast'));
               await load();
             } catch {
-              showToast('Reddetme başarısız.');
+              showToast(t('adminSubmissionsScreen.rejectFailedToast'));
             }
             setLoadingId(null);
           },
@@ -95,17 +97,17 @@ export default function AdminSubmissionsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.back}>← Geri</Text>
+              <Text style={styles.back}>{t('adminSubmissionsScreen.back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>Teslim Moderasyonu</Text>
+            <Text style={styles.title}>{t('adminSubmissionsScreen.title')}</Text>
             <Text style={styles.subtitle}>
-              {submissions.length} teslim incelenmeyi bekliyor
+              {t('adminSubmissionsScreen.subtitle', { count: submissions.length })}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>İncelenecek teslim yok.</Text>
+            <Text style={styles.emptyText}>{t('adminSubmissionsScreen.empty')}</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -113,7 +115,7 @@ export default function AdminSubmissionsScreen() {
             <Text style={styles.taskTitle}>{item.taskTitle}</Text>
             <Text style={styles.business}>{item.businessName}</Text>
             <Text style={styles.meta}>
-              Başvuran: {item.applicantName}
+              {t('adminSubmissionsScreen.applicantLabel', { name: item.applicantName })}
               {item.submittedAt
                 ? ` · ${formatRelativeTime(item.submittedAt)}`
                 : ''}
@@ -122,7 +124,7 @@ export default function AdminSubmissionsScreen() {
             {item.submissionText ? (
               <Text style={styles.desc}>{item.submissionText}</Text>
             ) : (
-              <Text style={styles.descMuted}>Açıklama yok</Text>
+              <Text style={styles.descMuted}>{t('adminSubmissionsScreen.noDescription')}</Text>
             )}
 
             {item.submissionFiles.length > 0 ? (
@@ -130,12 +132,12 @@ export default function AdminSubmissionsScreen() {
             ) : null}
 
             <Input
-              label="Red gerekçesi (opsiyonel)"
+              label={t('adminSubmissionsScreen.rejectReasonLabel')}
               value={rejectNote[item.id] ?? ''}
               onChangeText={(text) =>
                 setRejectNote((prev) => ({ ...prev, [item.id]: text }))
               }
-              placeholder="Uygunsuz içerik açıklaması..."
+              placeholder={t('adminSubmissionsScreen.rejectReasonPlaceholder')}
               multiline
               numberOfLines={2}
               style={{ minHeight: 56, textAlignVertical: 'top', marginBottom: Spacing[3] }}
@@ -143,14 +145,14 @@ export default function AdminSubmissionsScreen() {
 
             <View style={styles.actions}>
               <Button
-                title="Onayla"
+                title={t('adminSubmissionsScreen.approve')}
                 size="md"
                 onPress={() => handleApprove(item)}
                 loading={loadingId === item.id}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Reddet"
+                title={t('adminSubmissionsScreen.reject')}
                 variant="outline"
                 size="md"
                 onPress={() => handleReject(item)}

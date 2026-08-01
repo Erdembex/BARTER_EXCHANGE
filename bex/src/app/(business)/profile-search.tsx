@@ -13,8 +13,10 @@ import { Button, Input } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { BackHeader } from '@/components/navigation/BackHeader';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function BusinessProfileSearchScreen() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function BusinessProfileSearchScreen() {
   const handleSearch = async () => {
     const normalized = query.trim().toLowerCase().replace(/^@/, '');
     if (normalized.length < 3) {
-      setError('En az 3 karakter gir.');
+      setError(t('businessProfileSearchScreen.minCharsError'));
       setPreview(null);
       return;
     }
@@ -41,7 +43,7 @@ export default function BusinessProfileSearchScreen() {
       const profile = await usersRepository.getPublicProfileByUsername(normalized);
       if (!profile) {
         setPreview(null);
-        setError('Bu kullanıcı adına ait profil bulunamadı.');
+        setError(t('businessProfileSearchScreen.notFoundError'));
         return;
       }
       setPreview({
@@ -57,7 +59,7 @@ export default function BusinessProfileSearchScreen() {
       });
     } catch {
       setPreview(null);
-      setError('Profil aranırken bir hata oluştu.');
+      setError(t('businessProfileSearchScreen.searchError'));
     } finally {
       setLoading(false);
     }
@@ -65,24 +67,24 @@ export default function BusinessProfileSearchScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <BackHeader title="Profil Ara" />
+      <BackHeader title={t('businessProfileSearchScreen.title')} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>
-          Adayın kullanıcı adını girerek portföyünü ve tamamlanan görevlerini inceleyebilirsin.
+          {t('businessProfileSearchScreen.subtitle')}
         </Text>
 
         <Input
-          label="Kullanıcı adı"
+          label={t('businessProfileSearchScreen.usernameLabel')}
           value={query}
           onChangeText={setQuery}
-          placeholder="ornek_kullanici"
+          placeholder={t('businessProfileSearchScreen.usernamePlaceholder')}
           autoCapitalize="none"
           autoCorrect={false}
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Button title="Profili Bul" onPress={handleSearch} loading={loading} />
+        <Button title={t('businessProfileSearchScreen.findProfile')} onPress={handleSearch} loading={loading} />
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing[4] }} />
@@ -97,8 +99,7 @@ export default function BusinessProfileSearchScreen() {
             />
             <Text style={styles.previewName}>{preview.displayName}</Text>
             <Text style={styles.previewMeta}>
-              {preview.completedTaskCount} tamamlanan görev · {preview.portfolioCount} portföy
-              görseli
+              {t('businessProfileSearchScreen.completedTasksMeta', { count: preview.completedTaskCount, portfolio: preview.portfolioCount })}
             </Text>
             {preview.recentTasks.length > 0 ? (
               <View style={styles.recentTasks}>
@@ -110,7 +111,7 @@ export default function BusinessProfileSearchScreen() {
               </View>
             ) : null}
             <Button
-              title="Portföyü Gör"
+              title={t('businessProfileSearchScreen.viewPortfolio')}
               variant="secondary"
               onPress={() =>
                 router.push(`/user/u/${preview.username}` as Href)

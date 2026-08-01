@@ -8,6 +8,7 @@ import {
 import { TaskCategory } from '../../types';
 import { ALL_CATEGORIES, CATEGORY_ICONS, CATEGORY_LABELS } from '../../constants/taskLabels';
 import { Colors, Typography, Radius, Spacing } from '../../theme';
+import { useTranslation } from '@/i18n';
 
 interface CategoryFilterProps {
   selected: TaskCategory | null;
@@ -15,6 +16,7 @@ interface CategoryFilterProps {
 }
 
 export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
+  const { t } = useTranslation();
   return (
     <ScrollView
       horizontal
@@ -27,7 +29,7 @@ export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
         activeOpacity={0.75}
       >
         <Text style={[styles.chipText, !selected && styles.chipTextActive]}>
-          Tümü
+          {t('categoryFilter.all')}
         </Text>
       </TouchableOpacity>
 

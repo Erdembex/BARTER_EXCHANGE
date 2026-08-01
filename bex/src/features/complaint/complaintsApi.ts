@@ -1,5 +1,7 @@
 import axios from 'axios';
+import { useMemo } from 'react';
 import { apiClient, getApiErrorMessage } from '@/lib/api';
+import { useTranslation } from '@/i18n';
 
 export type ComplaintReason =
   | 'POOR_SERVICE'
@@ -59,6 +61,7 @@ export type PublicComplaintDto = {
   approvedAt?: string;
 };
 
+/** @deprecated Yerine useComplaintReasonLabels kullan */
 export const COMPLAINT_REASON_LABELS: Record<ComplaintReason, string> = {
   POOR_SERVICE: 'Kötü hizmet',
   FRAUD: 'Dolandırıcılık / sahtekârlık',
@@ -67,10 +70,36 @@ export const COMPLAINT_REASON_LABELS: Record<ComplaintReason, string> = {
   OTHER: 'Diğer',
 };
 
+/** @deprecated Yerine useComplaintTargetLabels kullan */
 export const COMPLAINT_TARGET_LABELS: Record<ComplaintTargetType, string> = {
   BUSINESS: 'İşletme şikayeti',
   INDIVIDUAL: 'Kullanıcı şikayeti',
 };
+
+export function useComplaintReasonLabels(): Record<ComplaintReason, string> {
+  const { t } = useTranslation();
+  return useMemo(
+    () => ({
+      POOR_SERVICE: t('complaint.reason.poorService'),
+      FRAUD: t('complaint.reason.fraud'),
+      HARASSMENT: t('complaint.reason.harassment'),
+      COUPON_ISSUE: t('complaint.reason.couponIssue'),
+      OTHER: t('complaint.reason.other'),
+    }),
+    [t]
+  );
+}
+
+export function useComplaintTargetLabels(): Record<ComplaintTargetType, string> {
+  const { t } = useTranslation();
+  return useMemo(
+    () => ({
+      BUSINESS: t('complaint.target.business'),
+      INDIVIDUAL: t('complaint.target.individual'),
+    }),
+    [t]
+  );
+}
 
 function mapError(error: unknown, fallback: string): Error {
   if (axios.isAxiosError(error)) {

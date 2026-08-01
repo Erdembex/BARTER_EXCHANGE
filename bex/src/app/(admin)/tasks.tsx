@@ -17,8 +17,10 @@ import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function AdminTasksScreen() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -45,10 +47,10 @@ export default function AdminTasksScreen() {
     setLoadingId(task.id);
     try {
       await adminRepository.approveTask(task.id);
-      showToast('Görev onaylandı — kullanıcılara görünür.');
+      showToast(t('adminTasksScreen.approvedToast'));
       await load();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Onaylama başarısız.';
+      const msg = err instanceof Error ? err.message : t('adminTasksScreen.approveFailedToast');
       showToast(msg);
       console.error('[AdminTasks] approveTask hatası:', msg);
     }
@@ -56,19 +58,19 @@ export default function AdminTasksScreen() {
   };
 
   const handleReject = (task: EnrichedTask) => {
-    Alert.alert('Görevi Reddet', `"${task.title}" yayından kaldırılsın mı?`, [
-      { text: 'Vazgeç', style: 'cancel' },
+    Alert.alert(t('adminTasksScreen.rejectTitle'), t('adminTasksScreen.rejectBody', { title: task.title }), [
+      { text: t('adminTasksScreen.dismiss'), style: 'cancel' },
       {
-        text: 'Reddet',
+        text: t('adminTasksScreen.reject'),
         style: 'destructive',
         onPress: async () => {
           setLoadingId(task.id);
           try {
             await adminRepository.rejectTask(task.id);
-            showToast('Görev reddedildi.');
+            showToast(t('adminTasksScreen.rejectedToast'));
             await load();
           } catch {
-            showToast('Reddetme başarısız.');
+            showToast(t('adminTasksScreen.rejectFailedToast'));
           }
           setLoadingId(null);
         },
@@ -88,18 +90,18 @@ export default function AdminTasksScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.back}>← Geri</Text>
+              <Text style={styles.back}>{t('adminTasksScreen.back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>Görev Moderasyonu</Text>
+            <Text style={styles.title}>{t('adminTasksScreen.title')}</Text>
             <Text style={styles.subtitle}>
-              Admin onayı bekleyen taslak görevler
+              {t('adminTasksScreen.subtitle')}
             </Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
-              Onay bekleyen görev yok.
+              {t('adminTasksScreen.empty')}
             </Text>
           </View>
         }
@@ -116,14 +118,14 @@ export default function AdminTasksScreen() {
             </Text>
             <View style={styles.actions}>
               <Button
-                title="Onayla"
+                title={t('adminTasksScreen.approve')}
                 size="md"
                 onPress={() => handleApprove(item)}
                 loading={loadingId === item.id}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Reddet"
+                title={t('adminTasksScreen.reject')}
                 variant="outline"
                 size="md"
                 onPress={() => handleReject(item)}

@@ -4,6 +4,7 @@ import { router, Href } from 'expo-router';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useOpenNotifications } from '@/hooks/useOpenNotifications';
 import { Colors, Typography, Spacing } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface AppHeaderProps {
   title?: string;
@@ -20,6 +21,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { unreadCount } = useNotifications();
   const openNotifications = useOpenNotifications();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -32,7 +34,7 @@ export function AppHeader({
           onPress={() => router.push('/(tabs)/more' as Href)}
           style={styles.iconBtn}
           accessibilityRole="button"
-          accessibilityLabel="Menüyü aç"
+          accessibilityLabel={t('header.openMenu')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <View style={styles.menuIcon}>
@@ -56,7 +58,7 @@ export function AppHeader({
           style={styles.iconBtn}
           onPress={openNotifications}
           accessibilityRole="button"
-          accessibilityLabel="Bildirimler"
+          accessibilityLabel={t('header.notifications')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={styles.bellIcon}>◉</Text>

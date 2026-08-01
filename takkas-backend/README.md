@@ -11,6 +11,17 @@ Hizmet karşılığı ayrıcalık platformu — paranın olmadığı iş takası
 - Stripe (abonelik / ödeme)
 - WebSocket (STOMP — gerçek zamanlı mesajlaşma)
 
+## Production Deployment
+
+Detaylı rehber: [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)
+
+```bash
+cp .env.example .env          # production değerleriyle doldur
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Oracle VM (JAR + systemd): [`../docs/ORACLE_DEPLOY.md`](../docs/ORACLE_DEPLOY.md)
+
 ## Kurulum
 
 ### 1. Gereksinimleri başlat

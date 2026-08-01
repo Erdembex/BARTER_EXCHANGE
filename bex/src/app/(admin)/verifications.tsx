@@ -18,8 +18,10 @@ import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function AdminVerificationsScreen() {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -46,28 +48,28 @@ export default function AdminVerificationsScreen() {
     setLoadingId(biz.id);
     try {
       await adminRepository.approveBusinessVerification(biz.id);
-      showToast(`${biz.name} doğrulandı.`);
+      showToast(t('adminVerificationsScreen.approvedToast', { name: biz.name }));
       await load();
     } catch {
-      showToast('Doğrulama başarısız.');
+      showToast(t('adminVerificationsScreen.approveFailedToast'));
     }
     setLoadingId(null);
   };
 
   const handleReject = (biz: Business) => {
-    Alert.alert('Evrakı Reddet', `${biz.name} doğrulaması reddedilsin mi?`, [
-      { text: 'Vazgeç', style: 'cancel' },
+    Alert.alert(t('adminVerificationsScreen.rejectTitle'), t('adminVerificationsScreen.rejectBody', { name: biz.name }), [
+      { text: t('adminVerificationsScreen.dismiss'), style: 'cancel' },
       {
-        text: 'Reddet',
+        text: t('adminVerificationsScreen.reject'),
         style: 'destructive',
         onPress: async () => {
           setLoadingId(biz.id);
           try {
             await adminRepository.rejectBusinessVerification(biz.id);
-            showToast('Doğrulama reddedildi.');
+            showToast(t('adminVerificationsScreen.rejectedToast'));
             await load();
           } catch {
-            showToast('İşlem başarısız.');
+            showToast(t('adminVerificationsScreen.rejectFailedToast'));
           }
           setLoadingId(null);
         },
@@ -87,15 +89,15 @@ export default function AdminVerificationsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.back}>← Geri</Text>
+              <Text style={styles.back}>{t('adminVerificationsScreen.back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>İşletme Doğrulama</Text>
-            <Text style={styles.subtitle}>{businesses.length} evrak incelemede</Text>
+            <Text style={styles.title}>{t('adminVerificationsScreen.title')}</Text>
+            <Text style={styles.subtitle}>{t('adminVerificationsScreen.subtitle', { count: businesses.length })}</Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Bekleyen evrak yok.</Text>
+            <Text style={styles.emptyText}>{t('adminVerificationsScreen.empty')}</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -115,14 +117,14 @@ export default function AdminVerificationsScreen() {
             ) : null}
             <View style={styles.actions}>
               <Button
-                title="Onayla"
+                title={t('adminVerificationsScreen.approve')}
                 size="md"
                 onPress={() => handleApprove(item)}
                 loading={loadingId === item.id}
                 style={{ flex: 1 }}
               />
               <Button
-                title="Reddet"
+                title={t('adminVerificationsScreen.reject')}
                 variant="outline"
                 size="md"
                 onPress={() => handleReject(item)}

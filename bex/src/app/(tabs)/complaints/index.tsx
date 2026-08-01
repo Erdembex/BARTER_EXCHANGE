@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
 import {
-  COMPLAINT_REASON_LABELS,
+  useComplaintReasonLabels,
   fetchMyComplaints,
   fetchPublicComplaints,
   type ComplaintDto,
@@ -22,8 +22,11 @@ import {
 import { formatShortDate } from '@/lib/dateUtils';
 import { Timestamp } from 'firebase/firestore';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function ComplaintBexScreen() {
+  const { t } = useTranslation();
+  const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
   const [publicItems, setPublicItems] = useState<PublicComplaintDto[]>([]);
   const [myItems, setMyItems] = useState<ComplaintDto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,7 +54,7 @@ export default function ComplaintBexScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Şikayet BEX" />
+      <AppHeader title={t('complaintsScreen.title')} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
@@ -59,18 +62,17 @@ export default function ComplaintBexScreen() {
         }
       >
         <Text style={styles.lead}>
-          Admin onayından geçen şikayetler burada listelenir. Haklı bulunan işletmeler etiketli
-          görünür.
+          {t('complaintsScreen.lead')}
         </Text>
 
         <Button
-          title="İşletme Şikayet Et"
+          title={t('complaintsScreen.reportBusiness')}
           onPress={() => router.push('/complaint/submit' as Href)}
         />
 
-        <Text style={styles.sectionTitle}>Onaylı şikayetler ({publicItems.length})</Text>
+        <Text style={styles.sectionTitle}>{t('complaintsScreen.approvedComplaints', { count: publicItems.length })}</Text>
         {publicItems.length === 0 ? (
-          <Text style={styles.empty}>Henüz yayınlanmış şikayet yok.</Text>
+          <Text style={styles.empty}>{t('complaintsScreen.noApproved')}</Text>
         ) : (
           publicItems.map((item) => (
             <TouchableOpacity
@@ -79,7 +81,7 @@ export default function ComplaintBexScreen() {
               onPress={() => router.push(`/business/${item.businessProfileId}` as Href)}
             >
               <View style={styles.tag}>
-                <Text style={styles.tagText}>⚠ Şikayet BEX</Text>
+                <Text style={styles.tagText}>{t('complaintsScreen.tag')}</Text>
               </View>
               <Text style={styles.cardTitle}>{item.businessName}</Text>
               <Text style={styles.cardMeta}>
@@ -97,7 +99,7 @@ export default function ComplaintBexScreen() {
 
         {myItems.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>Şikayetlerim</Text>
+            <Text style={styles.sectionTitle}>{t('complaintsScreen.myComplaints')}</Text>
             {myItems.map((item) => (
               <View key={item.id} style={styles.myCard}>
                 <Text style={styles.cardTitle}>{item.businessName}</Text>

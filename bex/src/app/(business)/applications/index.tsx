@@ -16,17 +16,18 @@ import { applicationsRepository, tasksRepository, usersRepository } from '@/feat
 import { Application, ApplicationStatus } from '@/types';
 import { ApplicationCard } from '@/components/business';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type FilterKey = 'all' | 'pending' | 'submitted' | 'coupon';
 
-const FILTERS: { key: FilterKey; label: string; statuses?: ApplicationStatus[] }[] = [
-  { key: 'all', label: 'Tümü' },
-  { key: 'pending', label: 'Bekleyen', statuses: ['pending'] },
-  { key: 'submitted', label: 'Teslimler', statuses: ['submitted'] },
-  { key: 'coupon', label: 'Kupon Bekleyen', statuses: ['submission_approved'] },
-];
-
 export default function BusinessApplicationsScreen() {
+  const { t } = useTranslation();
+  const FILTERS: { key: FilterKey; label: string; statuses?: ApplicationStatus[] }[] = [
+    { key: 'all', label: t('businessApplicationsScreen.filterAll') },
+    { key: 'pending', label: t('businessApplicationsScreen.filterPending'), statuses: ['pending'] },
+    { key: 'submitted', label: t('businessApplicationsScreen.filterSubmitted'), statuses: ['submitted'] },
+    { key: 'coupon', label: t('businessApplicationsScreen.filterCoupon'), statuses: ['submission_approved'] },
+  ];
   const { taskId } = useLocalSearchParams<{ taskId?: string }>();
   const { business, loading: bizLoading } = useBusiness();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -50,7 +51,7 @@ export default function BusinessApplicationsScreen() {
     for (const app of apps) {
       if (!titles[app.taskId]) {
         const task = await tasksRepository.getById(app.taskId);
-        titles[app.taskId] = task?.title ?? 'Görev';
+        titles[app.taskId] = task?.title ?? t('businessApplicationsScreen.defaultTask');
       }
     }
     setTaskTitles(titles);
@@ -108,8 +109,8 @@ export default function BusinessApplicationsScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>İşletme profili bulunamadı</Text>
-          <Text style={styles.emptyText}>Panel sekmesinden yenilemeyi dene.</Text>
+          <Text style={styles.emptyTitle}>{t('businessApplicationsScreen.businessProfileNotFound')}</Text>
+          <Text style={styles.emptyText}>{t('businessApplicationsScreen.businessProfileNotFoundHint')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -118,16 +119,16 @@ export default function BusinessApplicationsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>Başvurular</Text>
+        <Text style={styles.title}>{t('businessApplicationsScreen.title')}</Text>
         <Text style={styles.subtitle}>
-          {filtered.length} gösteriliyor · {applications.length} toplam
+          {t('businessApplicationsScreen.subtitle', { shown: filtered.length, total: applications.length })}
         </Text>
         {taskFilterTitle ? (
           <TouchableOpacity
             onPress={() => router.replace('/(business)/applications/index' as Href)}
           >
             <Text style={styles.taskFilter}>
-              Görev: {taskFilterTitle} · Filtreyi kaldır ✕
+              {t('businessApplicationsScreen.taskFilterLabel', { title: taskFilterTitle })}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -163,20 +164,20 @@ export default function BusinessApplicationsScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📥</Text>
             <Text style={styles.emptyTitle}>
-              {filter === 'all' ? 'Başvuru yok' : 'Bu filtrede başvuru yok'}
+              {filter === 'all' ? t('businessApplicationsScreen.emptyAll') : t('businessApplicationsScreen.emptyFiltered')}
             </Text>
             <Text style={styles.emptyText}>
               {filter === 'all'
-                ? 'Görevlerine başvuru geldiğinde burada görünür.'
-                : `${FILTERS.find((f) => f.key === filter)?.label} durumunda başvuru bulunmuyor.`}
+                ? t('businessApplicationsScreen.emptyAllText')
+                : t('businessApplicationsScreen.emptyFilteredText', { filter: FILTERS.find((f) => f.key === filter)?.label ?? '' })}
             </Text>
           </View>
         }
         renderItem={({ item }) => (
           <ApplicationCard
             application={item}
-            taskTitle={taskTitles[item.taskId] ?? 'Görev'}
-            applicantName={applicantNames[item.userId] ?? `Kullanıcı ${item.userId.slice(-4)}`}
+            taskTitle={taskTitles[item.taskId] ?? t('businessApplicationsScreen.defaultTask')}
+            applicantName={applicantNames[item.userId] ?? t('businessApplicationsScreen.defaultApplicantName', { suffix: item.userId.slice(-4) })}
             portfolioThumbs={portfolioThumbs[item.userId]}
             onPress={() =>
               router.push({

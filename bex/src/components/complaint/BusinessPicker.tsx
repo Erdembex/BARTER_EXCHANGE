@@ -14,6 +14,7 @@ import {
 } from '@/features/business/businessProfileApi';
 import { BUSINESS_CATEGORY_LABELS } from '@/constants/businessLabels';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface BusinessPickerProps {
   selectedId: string;
@@ -32,6 +33,7 @@ export function BusinessPicker({
   const [results, setResults] = useState<BusinessSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const runSearch = useCallback(async (term: string) => {
     setLoading(true);
@@ -41,7 +43,7 @@ export function BusinessPicker({
       setResults(hits);
     } catch {
       setResults([]);
-      setError('İşletmeler yüklenemedi.');
+      setError(t('businessPicker.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -63,22 +65,22 @@ export function BusinessPicker({
       {selectedId ? (
         <View style={styles.selectedCard}>
           <View style={styles.selectedText}>
-            <Text style={styles.selectedLabel}>Seçilen işletme</Text>
+            <Text style={styles.selectedLabel}>{t('businessPicker.selectedBusiness')}</Text>
             <Text style={styles.selectedName}>{selectedName}</Text>
           </View>
           {onClear ? (
             <TouchableOpacity onPress={onClear} hitSlop={8}>
-              <Text style={styles.changeLink}>Değiştir</Text>
+              <Text style={styles.changeLink}>{t('businessPicker.change')}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
       ) : (
         <>
           <Input
-            label="İşletme ara"
+            label={t('businessPicker.searchLabel')}
             value={query}
             onChangeText={setQuery}
-            placeholder="İşletme adı yaz..."
+            placeholder={t('businessPicker.searchPlaceholder')}
             autoCapitalize="words"
             autoCorrect={false}
           />
@@ -94,8 +96,8 @@ export function BusinessPicker({
               {results.length === 0 ? (
                 <Text style={styles.empty}>
                   {query.trim().length >= 2
-                    ? 'Eşleşen işletme bulunamadı.'
-                    : 'Kayıtlı işletmelerden birini seç.'}
+                    ? t('businessPicker.noMatches')
+                    : t('businessPicker.pickRegistered')}
                 </Text>
               ) : (
                 results.map((item) => (
@@ -108,7 +110,7 @@ export function BusinessPicker({
                     <Text style={styles.resultMeta}>
                       {BUSINESS_CATEGORY_LABELS[item.category]}
                       {item.locationLabel ? ` · ${item.locationLabel}` : ''}
-                      {item.verified ? ' · ✓ Doğrulanmış' : ''}
+                      {item.verified ? ` · ${t('businessPicker.verified')}` : ''}
                     </Text>
                   </TouchableOpacity>
                 ))

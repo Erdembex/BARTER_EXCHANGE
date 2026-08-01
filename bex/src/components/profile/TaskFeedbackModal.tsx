@@ -11,6 +11,7 @@ import {
 import { Button, Input } from '@/components/ui';
 import { StarRatingInput } from '@/components/profile/StarRating';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface TaskFeedbackModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export function TaskFeedbackModal({
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const reset = () => {
     setStep('stars');
@@ -46,7 +48,7 @@ export function TaskFeedbackModal({
 
   const handleContinue = () => {
     if (stars < 1) {
-      setError('Önce 1-5 arası yıldız ver.');
+      setError(t('taskFeedbackModal.starsRequired'));
       return;
     }
     setError(null);
@@ -55,7 +57,7 @@ export function TaskFeedbackModal({
 
   const handleSubmit = async () => {
     if (stars < 1) {
-      setError('Önce yıldız vermelisin.');
+      setError(t('taskFeedbackModal.starsRequiredSubmit'));
       setStep('stars');
       return;
     }
@@ -65,7 +67,7 @@ export function TaskFeedbackModal({
       await onSubmit(stars, comment.trim());
       handleClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Geri bildirim gönderilemedi.');
+      setError(e instanceof Error ? e.message : t('taskFeedbackModal.submitFailed'));
     } finally {
       setLoading(false);
     }
@@ -76,35 +78,35 @@ export function TaskFeedbackModal({
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.close}>Kapat</Text>
+            <Text style={styles.close}>{t('taskFeedbackModal.close')}</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>
             {step === 'stars'
-              ? 'Önce yıldız ver, ardından isteğe bağlı yorum yaz.'
-              : 'Deneyimini kısaca anlatabilirsin (isteğe bağlı).'}
+              ? t('taskFeedbackModal.subtitleStars')
+              : t('taskFeedbackModal.subtitleComment')}
           </Text>
 
           {step === 'stars' ? (
             <>
               <StarRatingInput value={stars} onChange={setStars} />
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Button title="Devam Et" onPress={handleContinue} disabled={stars < 1} />
+              <Button title={t('taskFeedbackModal.continue')} onPress={handleContinue} disabled={stars < 1} />
             </>
           ) : (
             <>
               <StarRatingInput value={stars} onChange={setStars} size={24} />
               <Input
-                label="Yorum (isteğe bağlı)"
+                label={t('taskFeedbackModal.commentLabel')}
                 value={comment}
                 onChangeText={setComment}
-                placeholder="Deneyimini paylaş..."
+                placeholder={t('taskFeedbackModal.commentPlaceholder')}
                 multiline
                 numberOfLines={4}
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Button title="Geri Bildirimi Gönder" onPress={handleSubmit} loading={loading} />
-              <Button title="Yıldıza Dön" variant="ghost" onPress={() => setStep('stars')} />
+              <Button title={t('taskFeedbackModal.submit')} onPress={handleSubmit} loading={loading} />
+              <Button title={t('taskFeedbackModal.backToStars')} variant="ghost" onPress={() => setStep('stars')} />
             </>
           )}
         </ScrollView>

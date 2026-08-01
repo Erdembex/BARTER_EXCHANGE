@@ -5,5 +5,5 @@ import { MessageThreadScreen } from '@/components/messaging/MessageThreadScreen'
 export default function BusinessMessageThreadRoute() {
   const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   if (!applicationId) return null;
-  return <MessageThreadScreen applicationId={applicationId} />;
+  return <MessageThreadScreen applicationId={applicationId} messagingAudience="business" />;
 }

@@ -11,7 +11,7 @@ import {
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import { notificationsRepository, getNotificationTarget } from '@/features/notifications';
+import { notificationsRepository, openNotificationTarget } from '@/features/notifications';
 import { useNotifications } from '@/hooks/useNotifications';
 import { BexNotification } from '@/types';
 import { Button } from '@/components/ui';
@@ -23,6 +23,7 @@ import {
   groupNotificationsByDay,
   type NotificationSection,
 } from './notificationDisplay';
+import { useTranslation } from '@/i18n';
 
 interface NotificationListScreenProps {
   showBack?: boolean;
@@ -35,6 +36,7 @@ function NotificationCard({
   item: BexNotification;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const visual = getNotificationVisual(item.type);
 
   return (
@@ -54,7 +56,7 @@ function NotificationCard({
               {item.title}
             </Text>
             <Text style={styles.cardTime}>
-              {formatRelativeTime(item.createdAt) || (item.read ? 'Okundu' : 'Yeni')}
+              {formatRelativeTime(item.createdAt) || (item.read ? t('notificationsScreen.read') : t('notificationsScreen.new'))}
             </Text>
           </View>
           <Text style={styles.cardBody} numberOfLines={2}>
@@ -67,6 +69,7 @@ function NotificationCard({
 }
 
 export function NotificationListScreen({ showBack = false }: NotificationListScreenProps) {
+  const { t } = useTranslation();
   const { firebaseUser, bexUser } = useAuthStore();
   const { refreshUnread, unreadCount } = useNotifications();
   const [items, setItems] = useState<BexNotification[]>([]);
@@ -108,11 +111,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
       await refreshUnread();
     }
 
-    const target = getNotificationTarget(item, bexUser?.role);
-    if (target) {
-      router.push(target);
-    }
-
+    await openNotificationTarget(item, bexUser?.role);
     await load();
   };
 
@@ -122,7 +121,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
 
   return (
     <SafeAreaView style={styles.safe}>
-      {!showBack ? <AppHeader title="Bildirimler" showNotifications={false} /> : null}
+      {!showBack ? <AppHeader title={t('notificationsScreen.title')} showNotifications={false} /> : null}
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -135,16 +134,16 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
           <View style={styles.header}>
             {showBack ? (
               <TouchableOpacity onPress={() => router.back()}>
-                <Text style={styles.back}>← Geri</Text>
+                <Text style={styles.back}>{t('notificationsScreen.back')}</Text>
               </TouchableOpacity>
             ) : null}
-            {showBack ? <Text style={styles.title}>Bildirimler</Text> : null}
+            {showBack ? <Text style={styles.title}>{t('notificationsScreen.title')}</Text> : null}
             {!showBack && unreadCount > 0 ? (
-              <Text style={styles.subtitle}>{unreadCount} okunmamış bildirim</Text>
+              <Text style={styles.subtitle}>{t('notificationsScreen.unreadCount', { count: unreadCount })}</Text>
             ) : null}
             {hasUnread ? (
               <Button
-                title="Tümünü okundu işaretle"
+                title={t('notificationsScreen.markAllRead')}
                 variant="ghost"
                 size="sm"
                 onPress={handleMarkAll}
@@ -156,9 +155,9 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🔔</Text>
-            <Text style={styles.emptyTitle}>Henüz bildirim yok</Text>
+            <Text style={styles.emptyTitle}>{t('notificationsScreen.emptyTitle')}</Text>
             <Text style={styles.emptyText}>
-              Başvuru, kupon, takas ve mesaj güncellemeleri burada görünür.
+              {t('notificationsScreen.emptyText')}
             </Text>
           </View>
         }

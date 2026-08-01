@@ -24,6 +24,23 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     boolean existsByListingIdAndIndividualId(UUID listingId, UUID individualId);
     long countByListingIdAndStatus(UUID listingId, ApplicationStatus status);
     long countByListingId(UUID listingId);
+
+    @Query("""
+        SELECT a.listingId, COUNT(a) FROM Application a
+        WHERE a.listingId IN :listingIds
+          AND a.status NOT IN ('WITHDRAWN', 'REJECTED')
+        GROUP BY a.listingId
+        """)
+    List<Object[]> countActiveApplicantsByListingIds(@Param("listingIds") Collection<UUID> listingIds);
+
+    @Query("""
+        SELECT a.listingId, COUNT(a) FROM Application a
+        WHERE a.listingId IN :listingIds
+          AND a.status IN ('ACCEPTED', 'SUBMITTED', 'SUBMISSION_APPROVED', 'REWARDED')
+        GROUP BY a.listingId
+        """)
+    List<Object[]> countAcceptedApplicantsByListingIds(@Param("listingIds") Collection<UUID> listingIds);
+
     long countByBusinessIdAndStatusIn(UUID businessId, Collection<ApplicationStatus> statuses);
     long countByIndividualIdAndStatusIn(UUID individualId, Collection<ApplicationStatus> statuses);
 

@@ -21,8 +21,10 @@ import { useAuthStore } from '@/store/authStore';
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 export default function SubmitTaskScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser } = useAuthStore();
   const { showToast } = useToast();
@@ -42,14 +44,14 @@ export default function SubmitTaskScreen() {
 
     const app = await applicationsRepository.getById(id);
     if (!app) {
-      setError('Başvuru bulunamadı.');
+      setError(t('submitTaskScreen.notFound'));
       setCanSubmit(false);
       setChecking(false);
       return;
     }
 
     if (!(await isCurrentApplicationOwner(app.userId, firebaseUser.uid))) {
-      setError('Bu başvuruyu teslim etme yetkin yok.');
+      setError(t('submitTaskScreen.notOwner'));
       setCanSubmit(false);
       setChecking(false);
       return;
@@ -58,8 +60,8 @@ export default function SubmitTaskScreen() {
     if (app.status !== 'approved') {
       setError(
         app.status === 'submitted'
-          ? 'Bu görev zaten teslim edildi.'
-          : 'Teslim için başvurunun onaylanmış olması gerekir.'
+          ? t('submitTaskScreen.alreadySubmitted')
+          : t('submitTaskScreen.notApproved')
       );
       setCanSubmit(false);
       setChecking(false);
@@ -67,7 +69,7 @@ export default function SubmitTaskScreen() {
     }
 
     const task = await tasksRepository.getById(app.taskId);
-    setTaskTitle(task?.title ?? 'Görev');
+    setTaskTitle(task?.title ?? t('submitTaskScreen.defaultTask'));
     setCanSubmit(true);
     setChecking(false);
   }, [id, firebaseUser]);
@@ -105,11 +107,11 @@ export default function SubmitTaskScreen() {
     if (!canSubmit) return;
 
     if (!submissionText.trim() || submissionText.trim().length < 10) {
-      setError('Lütfen çalışmanı en az 10 karakterle açıkla.');
+      setError(t('submitTaskScreen.errorDescMin'));
       return;
     }
     if (files.length === 0) {
-      setError('En az bir kanıt fotoğrafı eklemelisin.');
+      setError(t('submitTaskScreen.errorNoPhoto'));
       return;
     }
     if (!id || !firebaseUser) return;
@@ -120,10 +122,10 @@ export default function SubmitTaskScreen() {
     try {
       const fileUrls = await uploadSubmissionFiles(id, firebaseUser.uid, files);
       await applicationsRepository.submit(id, submissionText.trim(), fileUrls);
-      showToast('Görev teslim edildi — admin incelemesi bekleniyor.');
+      showToast(t('submitTaskScreen.successToast'));
       router.replace('/(tabs)/applications' as Href);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Teslim edilemedi.');
+      setError(err instanceof Error ? err.message : t('submitTaskScreen.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -145,13 +147,13 @@ export default function SubmitTaskScreen() {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Geri</Text>
+            <Text style={styles.backText}>{t('submitTaskScreen.back')}</Text>
           </TouchableOpacity>
 
-          <Text style={styles.title}>Görevi Teslim Et</Text>
+          <Text style={styles.title}>{t('submitTaskScreen.title')}</Text>
           {taskTitle ? <Text style={styles.taskTitle}>{taskTitle}</Text> : null}
           <Text style={styles.subtitle}>
-            Tamamladığın çalışmayı açıkla ve kanıt fotoğrafları ekle.
+            {t('submitTaskScreen.subtitle')}
           </Text>
 
           {error ? (
@@ -159,7 +161,7 @@ export default function SubmitTaskScreen() {
               <Text style={styles.errorText}>{error}</Text>
               {!canSubmit ? (
                 <TouchableOpacity onPress={() => router.back()} style={{ marginTop: Spacing[2] }}>
-                  <Text style={styles.backLink}>← Başvuruya dön</Text>
+                  <Text style={styles.backLink}>{t('submitTaskScreen.backToApplication')}</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -168,8 +170,8 @@ export default function SubmitTaskScreen() {
           {canSubmit ? (
             <>
               <Input
-                label="Çalışma açıklaması"
-                placeholder="Ne yaptın, nasıl teslim ediyorsun..."
+                label={t('submitTaskScreen.descriptionLabel')}
+                placeholder={t('submitTaskScreen.descriptionPlaceholder')}
                 value={submissionText}
                 onChangeText={setSubmissionText}
                 multiline
@@ -177,9 +179,9 @@ export default function SubmitTaskScreen() {
               />
 
               <View style={styles.uploadSection}>
-                <Text style={styles.uploadLabel}>Kanıt fotoğrafları (en fazla 5)</Text>
+                <Text style={styles.uploadLabel}>{t('submitTaskScreen.photosLabel')}</Text>
                 <Button
-                  title="Galeriden Seç"
+                  title={t('submitTaskScreen.pickFromGallery')}
                   variant="outline"
                   size="md"
                   onPress={pickImages}
@@ -193,16 +195,16 @@ export default function SubmitTaskScreen() {
                         onPress={() => removeFile(file.uri)}
                       >
                         <Image source={{ uri: file.uri }} style={styles.thumb} />
-                        <Text style={styles.removeHint}>Kaldır</Text>
+                        <Text style={styles.removeHint}>{t('submitTaskScreen.remove')}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 ) : (
-                  <Text style={styles.uploadHint}>Henüz fotoğraf eklenmedi.</Text>
+                  <Text style={styles.uploadHint}>{t('submitTaskScreen.noPhotos')}</Text>
                 )}
               </View>
 
-              <Button title="Görevi Teslim Et" onPress={handleSubmit} loading={loading} />
+              <Button title={t('submitTaskScreen.submit')} onPress={handleSubmit} loading={loading} />
             </>
           ) : null}
         </ScrollView>

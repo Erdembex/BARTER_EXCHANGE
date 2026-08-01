@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 interface AppDrawerContentProps extends DrawerContentComponentProps {
   unreadCount?: number;
@@ -15,37 +16,37 @@ interface AppDrawerContentProps extends DrawerContentComponentProps {
 
 type MenuItem = {
   route: string;
-  label: string;
+  labelKey: string;
   icon: string;
 };
 
 type MenuSection = {
-  title: string;
+  titleKey: string;
   items: MenuItem[];
 };
 
 const MENU_SECTIONS: MenuSection[] = [
   {
-    title: 'Keşfet',
+    titleKey: 'appDrawer.sectionDiscover',
     items: [
-      { route: 'home', label: 'Ana Sayfa', icon: '⌂' },
-      { route: 'tasks/index', label: 'Görevler', icon: '◎' },
-      { route: 'complaints/index', label: 'Şikayet BEX', icon: '⚠' },
+      { route: 'home', labelKey: 'appDrawer.home', icon: '⌂' },
+      { route: 'tasks/index', labelKey: 'appDrawer.tasks', icon: '◎' },
+      { route: 'complaints/index', labelKey: 'appDrawer.complaints', icon: '⚠' },
     ],
   },
   {
-    title: 'Aktivite',
+    titleKey: 'appDrawer.sectionActivity',
     items: [
-      { route: 'applications/index', label: 'Başvurular', icon: '☰' },
-      { route: 'trade', label: 'Takas', icon: '⇄' },
-      { route: 'wallet', label: 'Cüzdan', icon: '▣' },
+      { route: 'applications/index', labelKey: 'appDrawer.applications', icon: '☰' },
+      { route: 'trade', labelKey: 'appDrawer.trade', icon: '⇄' },
+      { route: 'wallet', labelKey: 'appDrawer.wallet', icon: '▣' },
     ],
   },
   {
-    title: 'Hesap',
+    titleKey: 'appDrawer.sectionAccount',
     items: [
-      { route: 'notifications/index', label: 'Bildirimler', icon: '◉' },
-      { route: 'profile', label: 'Profil', icon: '○' },
+      { route: 'notifications/index', labelKey: 'appDrawer.notifications', icon: '◉' },
+      { route: 'profile', labelKey: 'appDrawer.profile', icon: '○' },
     ],
   },
 ];
@@ -53,6 +54,7 @@ const MENU_SECTIONS: MenuSection[] = [
 export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDrawerContentProps) {
   const insets = useSafeAreaInsets();
   const { bexUser } = useAuthStore();
+  const { t } = useTranslation();
   const activeRoute = state.routes[state.index]?.name;
 
   return (
@@ -76,7 +78,7 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
           />
           <View style={styles.profileText}>
             <Text style={styles.profileName} numberOfLines={1}>
-              {bexUser?.displayName ?? 'Kullanıcı'}
+              {bexUser?.displayName ?? t('appDrawer.defaultUser')}
             </Text>
             <Text style={styles.profileEmail} numberOfLines={1}>
               {bexUser?.email ?? '—'}
@@ -87,8 +89,8 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
         <View style={styles.divider} />
 
         {MENU_SECTIONS.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View key={section.titleKey} style={styles.section}>
+            <Text style={styles.sectionTitle}>{t(section.titleKey)}</Text>
             {section.items.map((item) => {
               const active = activeRoute === item.route;
               const badge = item.route === 'notifications/index' && unreadCount > 0;
@@ -107,7 +109,7 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
                     {item.icon}
                   </Text>
                   <Text style={[styles.menuLabel, active && styles.menuLabelActive]}>
-                    {item.label}
+                    {t(item.labelKey)}
                   </Text>
                   {badge ? (
                     <View style={styles.badge}>
@@ -124,7 +126,7 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
       </DrawerContentScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing[3] }]}>
-        <Text style={styles.footerText}>BEX · Beceri Takas Platformu</Text>
+        <Text style={styles.footerText}>{t('appDrawer.footer')}</Text>
       </View>
     </View>
   );

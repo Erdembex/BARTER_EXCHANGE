@@ -24,18 +24,11 @@ import { TradeNewSwapPanel } from './TradeNewSwapPanel';
 import { TradeHistoryPanel } from './TradeHistoryPanel';
 import { TradeSubmitOfferModal } from './TradeSubmitOfferModal';
 import { AppHeader } from '@/components/navigation/AppHeader';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
 
 type TradeTab = 'market' | 'new' | 'history' | 'mine' | 'offers';
-
-const TAB_ITEMS: { id: TradeTab; label: string; short: string }[] = [
-  { id: 'market', label: 'Pazar', short: 'Pazar' },
-  { id: 'new', label: 'Yeni Takas', short: 'Yeni' },
-  { id: 'history', label: 'Geçmiş', short: 'Geçmiş' },
-  { id: 'mine', label: 'İlanlarım', short: 'İlan' },
-  { id: 'offers', label: 'Teklifler', short: 'Teklif' },
-];
 
 interface TradeListingCardProps {
   item: TradeListing;
@@ -44,6 +37,7 @@ interface TradeListingCardProps {
 }
 
 function TradeListingCard({ item, currentUserId, onOfferPress }: TradeListingCardProps) {
+  const { t } = useTranslation();
   const isOwnListing = currentUserId != null && item.ownerId === currentUserId;
 
   return (
@@ -74,7 +68,7 @@ function TradeListingCard({ item, currentUserId, onOfferPress }: TradeListingCar
             borderColor="tradePrimaryBorder"
           >
             <Text variant="caption" style={{ color: tradeTheme.colors.tradePrimary }}>
-              {item.offerCount} teklif
+              {t('tradeMarketScreen.offerCount', { count: item.offerCount })}
             </Text>
           </Box>
         ) : null}
@@ -97,7 +91,7 @@ function TradeListingCard({ item, currentUserId, onOfferPress }: TradeListingCar
           marginBottom="xs"
           style={{ color: tradeTheme.colors.tradePrimary, fontWeight: '700' }}
         >
-          Önerilen Takas
+          {t('tradeMarketScreen.suggestedTrade')}
         </Text>
         <Text variant="body" style={{ fontSize: 14 }}>
           {item.suggestedTrade}
@@ -126,12 +120,12 @@ function TradeListingCard({ item, currentUserId, onOfferPress }: TradeListingCar
           </Text>
         </Box>
         <Box flex={1}>
-          <Text variant="caption">İlan Sahibi</Text>
+          <Text variant="caption">{t('tradeMarketScreen.listingOwner')}</Text>
           <Text variant="label">{item.ownerName}</Text>
         </Box>
         {isOwnListing ? (
           <Text variant="caption" style={{ color: tradeTheme.colors.textMuted }}>
-            Senin ilanın
+            {t('tradeMarketScreen.ownListing')}
           </Text>
         ) : (
           <TouchableOpacity activeOpacity={0.82} onPress={() => onOfferPress(item)}>
@@ -142,7 +136,7 @@ function TradeListingCard({ item, currentUserId, onOfferPress }: TradeListingCar
               borderRadius="md"
             >
               <Text variant="buttonPrimary" style={{ color: '#FFFFFF' }}>
-                Teklif Ver
+                {t('tradeMarketScreen.makeOffer')}
               </Text>
             </Box>
           </TouchableOpacity>
@@ -159,6 +153,14 @@ function TradeTabSwitch({
   active: TradeTab;
   onChange: (tab: TradeTab) => void;
 }) {
+  const { t } = useTranslation();
+  const TAB_ITEMS: { id: TradeTab; label: string; short: string }[] = [
+    { id: 'market', label: t('tradeMarketScreen.tabMarket'), short: t('tradeMarketScreen.tabMarketShort') },
+    { id: 'new', label: t('tradeMarketScreen.tabNew'), short: t('tradeMarketScreen.tabNewShort') },
+    { id: 'history', label: t('tradeMarketScreen.tabHistory'), short: t('tradeMarketScreen.tabHistoryShort') },
+    { id: 'mine', label: t('tradeMarketScreen.tabMine'), short: t('tradeMarketScreen.tabMineShort') },
+    { id: 'offers', label: t('tradeMarketScreen.tabOffers'), short: t('tradeMarketScreen.tabOffersShort') },
+  ];
   return (
     <ScrollView
       horizontal
@@ -203,6 +205,7 @@ function TradeTabSwitch({
 }
 
 export function TradeMarketScreen() {
+  const { t } = useTranslation();
   const { firebaseUser } = useAuthStore();
   const { showToast } = useToast();
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
@@ -233,7 +236,7 @@ export function TradeMarketScreen() {
         setListings(market);
         setLoadError(null);
       } catch (err) {
-        const message = (err as Error).message || 'Takas ilanları yüklenemedi.';
+        const message = (err as Error).message || t('tradeMarketScreen.listingsLoadFailed');
         setListings([]);
         setLoadError(message);
         showToast(message);
@@ -251,13 +254,13 @@ export function TradeMarketScreen() {
         setMyOffers([]);
       }
     } catch (err) {
-      const message = (err as Error).message || 'Takas verisi yüklenemedi.';
+      const message = (err as Error).message || t('tradeMarketScreen.dataLoadFailed');
       setLoadError(message);
       showToast(message);
     } finally {
       setLoading(false);
     }
-  }, [firebaseUser, showToast]);
+  }, [firebaseUser, showToast, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -301,11 +304,11 @@ export function TradeMarketScreen() {
   return (
     <ThemeProvider theme={tradeTheme}>
       <SafeAreaView style={{ flex: 1, backgroundColor: tradeTheme.colors.background }}>
-        <AppHeader title="Takas" />
+        <AppHeader title={t('tradeMarketScreen.headerTitle')} />
         <Box flex={1} backgroundColor="background">
           <Box paddingHorizontal="lg" paddingTop="sm" paddingBottom="md">
             <Text variant="bodyMuted" marginTop="xs">
-              Güvenli takas, şeffaf işlem geçmişi.
+              {t('tradeMarketScreen.subtitle')}
             </Text>
             <TradeTabSwitch active={tab} onChange={setTab} />
             <Box
@@ -318,7 +321,7 @@ export function TradeMarketScreen() {
               borderColor="tradePrimaryBorder"
             >
               <Text variant="caption" style={{ color: tradeTheme.colors.tradePrimary, lineHeight: 18 }}>
-                Kupon kodları ilanlarda gösterilmez. Takas tamamlanınca cüzdana yansır.
+                {t('tradeMarketScreen.couponHint')}
               </Text>
             </Box>
           </Box>
@@ -327,7 +330,7 @@ export function TradeMarketScreen() {
             <Box flex={1} alignItems="center" justifyContent="center">
               <ActivityIndicator color={tradeTheme.colors.tradePrimary} size="large" />
               <Text variant="bodyMuted" marginTop="md">
-                İlanlar yükleniyor...
+                {t('tradeMarketScreen.loading')}
               </Text>
             </Box>
           ) : loadError ? (
@@ -336,7 +339,7 @@ export function TradeMarketScreen() {
                 {loadError}
               </Text>
               <Button
-                title="Tekrar dene"
+                title={t('tradeMarketScreen.retry')}
                 variant="outline"
                 onPress={() => {
                   setLoading(true);
@@ -349,7 +352,7 @@ export function TradeMarketScreen() {
               <TradeNewSwapPanel ownerId={firebaseUser.uid} onCreated={load} />
             ) : (
               <Box paddingHorizontal="lg">
-                <Text variant="bodyMuted">Yeni takas için giriş yap.</Text>
+                <Text variant="bodyMuted">{t('tradeMarketScreen.loginForNewTrade')}</Text>
               </Box>
             )
           ) : tab === 'history' ? (
@@ -357,7 +360,7 @@ export function TradeMarketScreen() {
               <TradeHistoryPanel userId={firebaseUser.uid} />
             ) : (
               <Box paddingHorizontal="lg">
-                <Text variant="bodyMuted">İşlem geçmişi için giriş yap.</Text>
+                <Text variant="bodyMuted">{t('tradeMarketScreen.loginForHistory')}</Text>
               </Box>
             )
           ) : tab === 'mine' ? (
@@ -372,7 +375,7 @@ export function TradeMarketScreen() {
               </Box>
             ) : (
               <Box paddingHorizontal="lg">
-                <Text variant="bodyMuted">İlanlarını görmek için giriş yap.</Text>
+                <Text variant="bodyMuted">{t('tradeMarketScreen.loginForListings')}</Text>
               </Box>
             )
           ) : tab === 'offers' ? (
@@ -387,7 +390,7 @@ export function TradeMarketScreen() {
               </Box>
             ) : (
               <Box paddingHorizontal="lg">
-                <Text variant="bodyMuted">Tekliflerini görmek için giriş yap.</Text>
+                <Text variant="bodyMuted">{t('tradeMarketScreen.loginForOffers')}</Text>
               </Box>
             )
           ) : (
@@ -405,7 +408,7 @@ export function TradeMarketScreen() {
               ListEmptyComponent={
                 <Box paddingHorizontal="lg" paddingTop="xl" alignItems="center">
                   <Text variant="bodyMuted" style={{ textAlign: 'center' }}>
-                    Pazarda aktif ilan yok. İlanlarım sekmesinden ilk ilanını oluşturabilirsin.
+                    {t('tradeMarketScreen.emptyMarket')}
                   </Text>
                 </Box>
               }

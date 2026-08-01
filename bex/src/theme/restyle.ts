@@ -1,24 +1,31 @@
 import { createTheme } from '@shopify/restyle';
 import { Colors } from './colors';
+import type { ColorKey } from './colors';
 import { FontFamily, FontSize } from './typography';
 
+function buildThemeColors(palette: Record<ColorKey, string>) {
+  return {
+    primary: palette.primary,
+    secondary: palette.secondary,
+    background: palette.background,
+    surface: palette.surface,
+    border: palette.border,
+    text: palette.text,
+    textMuted: palette.textMuted,
+    white: palette.white,
+    transparent: palette.transparent,
+    error: palette.error,
+    errorLight: palette.errorLight,
+    primaryLight: palette.primaryLight,
+    textOnPrimary: palette.textOnPrimary,
+    success: palette.success,
+    moneyGreen: palette.moneyGreen,
+    textSecondary: palette.textSecondary,
+  };
+}
+
 export const theme = createTheme({
-  colors: {
-    primary: Colors.primary,
-    secondary: Colors.secondary,
-    background: Colors.background,
-    surface: Colors.surface,
-    border: Colors.border,
-    text: Colors.text,
-    textMuted: Colors.textMuted,
-    white: Colors.white,
-    transparent: Colors.transparent,
-    error: Colors.error,
-    errorLight: Colors.errorLight,
-    primaryLight: Colors.primaryLight,
-    textOnPrimary: Colors.textOnPrimary,
-    success: Colors.success,
-  },
+  colors: buildThemeColors(Colors),
   spacing: {
     none: 0,
     xs: 4,
@@ -106,3 +113,15 @@ export const theme = createTheme({
 });
 
 export type Theme = typeof theme;
+
+/**
+ * Verilen palete (koyu/açık) göre restyle teması üretir. `ThemeProvider`'a
+ * dinamik olarak geçirilerek `@shopify/restyle` bileşenlerinin (Box, Text)
+ * tema değişince anında güncellenmesini sağlar.
+ */
+export function getTheme(palette: Record<ColorKey, string>): Theme {
+  return createTheme({
+    ...theme,
+    colors: buildThemeColors(palette),
+  });
+}

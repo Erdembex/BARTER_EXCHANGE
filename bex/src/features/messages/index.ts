@@ -11,14 +11,19 @@ import {
   fetchConversationParticipants,
   resolveConversationId,
   sendMessageByApplication,
+  sendImageMessageByApplication,
   usesConversationsRest,
 } from './conversationsApi';
 import { ApplicationMessage, ApplicationStatus, UserRole } from '@/types';
 
+// Kupon alındıktan sonra da (rewarded) sohbet açık kalır — taraflar artık tanışıyor,
+// işletme sonraki görevleri doğrudan bu kişiye ilan olarak gönderebilir. Sohbet yalnızca
+// biri diğerini engellerse kapanır (engelleme akışı ayrıca yönetilir).
 const MESSAGE_STATUSES: ApplicationStatus[] = [
   'approved',
   'submitted',
   'submission_approved',
+  'rewarded',
 ];
 
 const POLL_MS_ACTIVE = 2500;
@@ -26,7 +31,9 @@ const POLL_MS_BACKGROUND = 10000;
 
 export function canUseApplicationMessages(status: ApplicationStatus): boolean {
   if (shouldUseDemoData()) {
-    return ['pending', 'approved', 'submitted', 'submission_approved'].includes(status);
+    return ['pending', 'approved', 'submitted', 'submission_approved', 'rewarded'].includes(
+      status
+    );
   }
   return MESSAGE_STATUSES.includes(status);
 }
@@ -187,5 +194,36 @@ export const messagesRepository = {
     throw new Error(
       'Mesaj gönderilemedi. Çıkış yapıp tekrar giriş yapın; backend\'in çalıştığından emin olun.'
     );
+  },
+
+  async sendImage(
+    applicationId: string,
+    senderId: string,
+    senderRole: UserRole,
+    mediaUrl: string,
+    caption?: string
+  ): Promise<ApplicationMessage> {
+    if (!mediaUrl.trim()) throw new Error('Görsel seçilmedi.');
+
+    if (await usesConversationsRest()) {
+      const message = await sendImageMessageByApplication(applicationId, mediaUrl, caption);
+      await notifyMessageRecipient(applicationId, senderId, caption?.trim() || '📷 Fotoğraf');
+      return { ...message, senderRole };
+    }
+
+    if (shouldUseDemoData()) {
+      const message = demoStore.addMessage({
+        applicationId,
+        senderId,
+        senderRole,
+        text: caption?.trim() || '📷 Fotoğraf',
+        messageType: 'image',
+        mediaUrl,
+      });
+      await notifyMessageRecipient(applicationId, senderId, caption?.trim() || '📷 Fotoğraf');
+      return message;
+    }
+
+    throw new Error('Görsel gönderilemedi.');
   },
 };

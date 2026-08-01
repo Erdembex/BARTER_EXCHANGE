@@ -36,13 +36,22 @@ export function getDifficultyColor(difficulty: TaskDifficulty): string {
   }
 }
 
-export function getGreeting(name?: string): string {
+type GreetingTranslator = (key: string) => string;
+
+export function getGreeting(name: string | undefined, t: GreetingTranslator): string {
   const hour = new Date().getHours();
-  let time = 'Merhaba';
-  if (hour < 12) time = 'Günaydın';
-  else if (hour < 18) time = 'İyi günler';
-  else time = 'İyi akşamlar';
-  return name ? `${time}, ${name.split(' ')[0]} 👋` : `${time} 👋`;
+  let greetingKey = 'greeting.hello';
+  if (hour < 12) greetingKey = 'greeting.morning';
+  else if (hour < 18) greetingKey = 'greeting.afternoon';
+  else greetingKey = 'greeting.evening';
+
+  const greeting = t(greetingKey);
+  if (name) {
+    return t('greeting.helloName')
+      .replace('{{greeting}}', greeting)
+      .replace('{{name}}', name.split(' ')[0]);
+  }
+  return t('greeting.helloOnly').replace('{{greeting}}', greeting);
 }
 
 export function matchesSearch(

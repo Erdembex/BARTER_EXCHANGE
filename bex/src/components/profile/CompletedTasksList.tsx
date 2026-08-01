@@ -13,8 +13,10 @@ import { formatShortDate } from '@/lib/dateUtils';
 import { COMPLETED_TASKS_PREVIEW_LIMIT } from '@/features/portfolio/profileLimits';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 function TaskRow({ task }: { task: CompletedTask }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.row}>
       {task.previewImageUrl ? (
@@ -30,7 +32,7 @@ function TaskRow({ task }: { task: CompletedTask }) {
         </Text>
         <Text style={styles.taskMeta}>
           {formatShortDate(task.completedAt)}
-          {task.imageCount > 0 ? ` · ${task.imageCount} görsel` : ''}
+          {task.imageCount > 0 ? ` · ${t('completedTasksList.imageCount', { count: task.imageCount })}` : ''}
         </Text>
       </View>
     </View>
@@ -51,21 +53,22 @@ export function CompletedTasksModal({
   totalCount,
 }: CompletedTasksModalProps) {
   const total = totalCount ?? tasks.length;
+  const { t } = useTranslation();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.modalSafe}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Tamamlanan görevler ({total})</Text>
+          <Text style={styles.modalTitle}>{t('completedTasksList.modalTitle', { count: total })}</Text>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeText}>Kapat</Text>
+            <Text style={styles.closeText}>{t('completedTasksList.close')}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={styles.modalScroll}>
           {tasks.length > 0 ? (
             tasks.map((task) => <TaskRow key={task.applicationId} task={task} />)
           ) : (
-            <Text style={styles.emptyText}>Henüz tamamlanan görev yok.</Text>
+            <Text style={styles.emptyText}>{t('completedTasksList.empty')}</Text>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -90,11 +93,12 @@ export function CompletedTasksList({
   const total = totalCount ?? tasks.length;
   const preview = useMemo(() => tasks.slice(0, previewLimit), [tasks, previewLimit]);
   const hiddenCount = Math.max(0, total - preview.length);
+  const { t } = useTranslation();
 
   if (tasks.length === 0) {
     return (
       <View style={styles.emptyBox}>
-        <Text style={styles.emptyText}>Henüz tamamlanan görev yok.</Text>
+        <Text style={styles.emptyText}>{t('completedTasksList.empty')}</Text>
       </View>
     );
   }
@@ -102,10 +106,10 @@ export function CompletedTasksList({
   return (
     <>
       <View style={styles.wrap}>
-        <Text style={styles.title}>Tamamlanan görevler</Text>
+        <Text style={styles.title}>{t('completedTasksList.title')}</Text>
         {!compact ? (
           <Text style={styles.subtitle}>
-            Onaylanmış teslimler — son {Math.min(preview.length, previewLimit)} görev gösteriliyor.
+            {t('completedTasksList.subtitle', { count: Math.min(preview.length, previewLimit) })}
           </Text>
         ) : null}
         <View style={styles.list}>
@@ -116,7 +120,7 @@ export function CompletedTasksList({
         {hiddenCount > 0 ? (
           <TouchableOpacity style={styles.moreBtn} onPress={() => setShowAll(true)}>
             <Text style={styles.moreText}>
-              +{hiddenCount} görev daha · Tümünü gör ({total})
+              {t('completedTasksList.moreTasks', { count: hiddenCount, total })}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -142,15 +146,16 @@ interface CompletedTasksStatProps {
 export function CompletedTasksStat({ count, tasks, totalCount }: CompletedTasksStatProps) {
   const [showAll, setShowAll] = useState(false);
   const total = totalCount ?? count;
+  const { t } = useTranslation();
 
   if (count <= 0) {
-    return <Text style={styles.statMuted}>0 tamamlanan görev</Text>;
+    return <Text style={styles.statMuted}>{t('completedTasksList.statZero')}</Text>;
   }
 
   return (
     <>
       <TouchableOpacity onPress={() => setShowAll(true)} activeOpacity={0.7}>
-        <Text style={styles.statLink}>{count} tamamlanan görev</Text>
+        <Text style={styles.statLink}>{t('completedTasksList.statLabel', { count })}</Text>
       </TouchableOpacity>
 
       <CompletedTasksModal

@@ -20,4 +20,7 @@ public interface BusinessSubscriptionRepository extends JpaRepository<BusinessSu
 
     @Query("SELECT s FROM BusinessSubscription s WHERE s.cancelAtPeriodEnd = true AND s.currentPeriodEnd < :now AND s.status = 'ACTIVE'")
     List<BusinessSubscription> findDueCancellations(@Param("now") Instant now);
+
+    @Query("SELECT s FROM BusinessSubscription s WHERE s.pendingPlan IS NOT NULL ORDER BY s.pendingRequestedAt ASC")
+    List<BusinessSubscription> findAllWithPendingUpgrade();
 }

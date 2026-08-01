@@ -13,10 +13,12 @@ import { router } from 'expo-router';
 import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
 import { Button, Input } from '@/components/ui';
+import { useTranslation } from '@/i18n';
 
 type Step = 'form' | 'success';
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +27,7 @@ export default function ForgotPasswordScreen() {
 
   const handleReset = async () => {
     if (!email.trim() || !email.includes('@')) {
-      setError('Geçerli bir e-posta adresi girin.');
+      setError(t('forgotPasswordScreen.invalidEmail'));
       return;
     }
 
@@ -42,9 +44,9 @@ export default function ForgotPasswordScreen() {
       if (code === 'auth/not-supported-yet') {
         setError(message);
       } else if (code === 'auth/user-not-found') {
-        setError('Bu e-posta adresiyle kayıtlı hesap bulunamadı.');
+        setError(t('forgotPasswordScreen.userNotFound'));
       } else {
-        setError('Bir hata oluştu. Lütfen tekrar deneyin.');
+        setError(t('forgotPasswordScreen.genericError'));
       }
     } finally {
       setLoading(false);
@@ -64,7 +66,7 @@ export default function ForgotPasswordScreen() {
         >
           {/* Geri */}
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Geri</Text>
+            <Text style={styles.backText}>{t('forgotPasswordScreen.back')}</Text>
           </TouchableOpacity>
 
           {step === 'form' ? (
@@ -75,9 +77,9 @@ export default function ForgotPasswordScreen() {
               </View>
 
               <View style={styles.header}>
-                <Text style={styles.title}>Şifremi Unuttum</Text>
+                <Text style={styles.title}>{t('forgotPasswordScreen.title')}</Text>
                 <Text style={styles.subtitle}>
-                  E-posta adresini gir. Şifre sıfırlama bağlantısını gönderelim.
+                  {t('forgotPasswordScreen.subtitle')}
                 </Text>
               </View>
 
@@ -89,8 +91,8 @@ export default function ForgotPasswordScreen() {
                 ) : null}
 
                 <Input
-                  label="E-posta"
-                  placeholder="ornek@email.com"
+                  label={t('forgotPasswordScreen.emailLabel')}
+                  placeholder={t('forgotPasswordScreen.emailPlaceholder')}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -99,13 +101,13 @@ export default function ForgotPasswordScreen() {
                 />
 
                 <Button
-                  title="Sıfırlama Bağlantısı Gönder"
+                  title={t('forgotPasswordScreen.submit')}
                   onPress={handleReset}
                   loading={loading}
                 />
 
                 <Button
-                  title="Giriş ekranına dön"
+                  title={t('forgotPasswordScreen.backToLogin')}
                   onPress={() => router.back()}
                   variant="ghost"
                 />
@@ -118,37 +120,33 @@ export default function ForgotPasswordScreen() {
                 <Text style={styles.successEmoji}>✉️</Text>
               </View>
 
-              <Text style={styles.successTitle}>Kod Gönderildi!</Text>
+              <Text style={styles.successTitle}>{t('forgotPasswordScreen.successTitle')}</Text>
               <Text style={styles.successText}>
                 <Text style={styles.emailHighlight}>{email}</Text>
-                {' '}adresine 8 haneli sıfırlama kodu gönderdik.{'\n\n'}
-                Kodu uygulamada girerek yeni şifreni belirle. Kod 1 saat geçerlidir.
+                {t('forgotPasswordScreen.successText')}
               </Text>
 
               {devResetToken ? (
                 <View style={styles.devCodeBox}>
-                  <Text style={styles.devCodeLabel}>Yerel geliştirme kodu</Text>
+                  <Text style={styles.devCodeLabel}>{t('forgotPasswordScreen.devTokenLabel')}</Text>
                   <Text style={styles.devCodeValue} selectable>
                     {devResetToken}
                   </Text>
                   <Text style={styles.devCodeHint}>
-                    E-posta sunucusu kapalı — kodu buradan kopyala.
+                    {t('forgotPasswordScreen.devTokenHint')}
                   </Text>
                 </View>
               ) : __DEV__ ? (
                 <View style={styles.devCodeBox}>
                   <Text style={styles.devCodeHint}>
-                    E-posta gelmediyse backend terminalinde ara:{'\n'}
-                    [PasswordReset] Kod oluşturuldu … token=XXXXXXXX
-                    {'\n\n'}
-                    Mailpit kullanıyorsan: http://localhost:8025
+                    {t('forgotPasswordScreen.devNoTokenHint')}
                   </Text>
                 </View>
               ) : null}
 
               <View style={styles.successActions}>
                 <Button
-                  title="Kodu Gir — Yeni Şifre Belirle"
+                  title={t('forgotPasswordScreen.enterCode')}
                   onPress={() =>
                     router.push(
                       devResetToken
@@ -158,12 +156,12 @@ export default function ForgotPasswordScreen() {
                   }
                 />
                 <Button
-                  title="Giriş Ekranına Dön"
+                  title={t('forgotPasswordScreen.backToLoginFull')}
                   onPress={() => router.replace('/(auth)/login')}
                   variant="outline"
                 />
                 <Button
-                  title="Tekrar Gönder"
+                  title={t('forgotPasswordScreen.resend')}
                   onPress={() => setStep('form')}
                   variant="ghost"
                 />

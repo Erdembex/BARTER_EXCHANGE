@@ -8,14 +8,9 @@ import { TradeListing } from './types';
 import { TradeCreateListingModal } from './TradeCreateListingModal';
 import { TradeListingOffersModal } from './TradeListingOffersModal';
 import { tradeRepository } from './tradeRepository';
+import { useTranslation } from '@/i18n';
 
 const Box = createBox<TradeTheme>();
-
-const STATUS_LABEL: Record<TradeListing['status'], string> = {
-  active: 'Aktif',
-  paused: 'Duraklatıldı',
-  completed: 'Tamamlandı',
-};
 
 interface TradeMyListingsPanelProps {
   ownerId: string;
@@ -30,18 +25,24 @@ export function TradeMyListingsPanel({
   onRefresh,
   refreshing = false,
 }: TradeMyListingsPanelProps) {
+  const { t } = useTranslation();
+  const STATUS_LABEL: Record<TradeListing['status'], string> = {
+    active: t('tradeMyListingsPanel.statusActive'),
+    paused: t('tradeMyListingsPanel.statusPaused'),
+    completed: t('tradeMyListingsPanel.statusCompleted'),
+  };
   const [createVisible, setCreateVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<TradeListing | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const handleCancel = (listing: TradeListing) => {
     Alert.alert(
-      'İlanı iptal et',
-      'Bu takas ilanı kaldırılacak. Devam etmek istiyor musun?',
+      t('tradeMyListingsPanel.cancelTitle'),
+      t('tradeMyListingsPanel.cancelBody'),
       [
-        { text: 'Vazgeç', style: 'cancel' },
+        { text: t('tradeMyListingsPanel.dismiss'), style: 'cancel' },
         {
-          text: 'İptal et',
+          text: t('tradeMyListingsPanel.confirmCancel'),
           style: 'destructive',
           onPress: async () => {
             setCancellingId(listing.id);
@@ -50,8 +51,8 @@ export function TradeMyListingsPanel({
               await onRefresh();
             } catch (err) {
               Alert.alert(
-                'Hata',
-                err instanceof Error ? err.message : 'İlan iptal edilemedi.'
+                t('tradeMyListingsPanel.errorTitle'),
+                err instanceof Error ? err.message : t('tradeMyListingsPanel.cancelFailed')
               );
             } finally {
               setCancellingId(null);
@@ -82,13 +83,13 @@ export function TradeMyListingsPanel({
         }
         ListHeaderComponent={
           <Box paddingBottom="md">
-            <Button title="+ İlan Oluştur" onPress={() => setCreateVisible(true)} />
+            <Button title={t('tradeMyListingsPanel.createListing')} onPress={() => setCreateVisible(true)} />
           </Box>
         }
         ListEmptyComponent={
           <Box paddingTop="xl" alignItems="center">
             <Text variant="bodyMuted" style={{ textAlign: 'center' }}>
-              Henüz ilanın yok. Aktif kuponunu pazara koyarak takas başlatabilirsin.
+              {t('tradeMyListingsPanel.empty')}
             </Text>
           </Box>
         }
@@ -138,7 +139,7 @@ export function TradeMyListingsPanel({
               borderTopColor="border"
             >
               <Text variant="caption">
-                {item.offerCount > 0 ? `${item.offerCount} teklif` : 'Henüz teklif yok'}
+                {item.offerCount > 0 ? t('tradeMyListingsPanel.offerCount', { count: item.offerCount }) : t('tradeMyListingsPanel.noOffersYet')}
               </Text>
               {item.status === 'active' ? (
                 <Box flexDirection="row" gap="sm">
@@ -150,7 +151,7 @@ export function TradeMyListingsPanel({
                       borderRadius="md"
                     >
                       <Text variant="buttonPrimary" style={{ color: '#FFFFFF' }}>
-                        Teklifleri Gör
+                        {t('tradeMyListingsPanel.viewOffers')}
                       </Text>
                     </Box>
                   </TouchableOpacity>
@@ -167,7 +168,7 @@ export function TradeMyListingsPanel({
                       borderColor="border"
                     >
                       <Text variant="caption">
-                        {cancellingId === item.id ? '...' : 'İptal'}
+                        {cancellingId === item.id ? t('tradeMyListingsPanel.cancelling') : t('tradeMyListingsPanel.cancel')}
                       </Text>
                     </Box>
                   </TouchableOpacity>

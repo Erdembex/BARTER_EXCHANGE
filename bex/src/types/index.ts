@@ -16,6 +16,8 @@ export interface BexUser {
   district?: string;
   reputationScore: number;
   completedTaskCount: number;
+  averageRating?: number;
+  feedbackCount?: number;
   portfolioItems: PortfolioItem[];
   joinedAt: Timestamp;
   isBanned: boolean;
@@ -122,6 +124,7 @@ export interface Task {
   rewardQuantity: number;
   maxApplicants: number;
   currentApplicantCount: number;
+  acceptedApplicantCount?: number;
   status: TaskStatus;
   location: GeoPoint;
   deadline: Timestamp;
@@ -217,6 +220,25 @@ export interface BexNotification {
   createdAt: Timestamp;
 }
 
+export type ChatOfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COUNTERED';
+
+export type ChatOffer = {
+  id: string;
+  messageId: string;
+  listingId?: string;
+  listingTitle?: string;
+  listingDescription?: string;
+  resultApplicationId?: string;
+  rewardType: string;
+  quantity: number;
+  unit: string;
+  validityDays: number;
+  note?: string;
+  status: ChatOfferStatus;
+};
+
+export type ChatMessageType = 'text' | 'offer' | 'image' | 'system';
+
 // ─── Başvuru mesajları (FAZ 7) ───────────────────────────────
 export interface ApplicationMessage {
   id: string;
@@ -226,6 +248,10 @@ export interface ApplicationMessage {
   text: string;
   createdAt: Timestamp;
   isRead?: boolean;
+  messageType?: ChatMessageType;
+  offer?: ChatOffer;
+  /** Sohbet görseli — profilde asla gösterilmez */
+  mediaUrl?: string;
 }
 
 // ─── Auth form ───────────────────────────────────────────────

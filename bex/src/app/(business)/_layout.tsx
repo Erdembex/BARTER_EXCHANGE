@@ -1,22 +1,27 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { useBusiness } from '@/features/business/useBusiness';
 import { useMessagingInbox } from '@/hooks/useMessagingInbox';
-import { Colors } from '@/theme';
+import { useMessagingInboxStore } from '@/store/messagingInboxStore';
+import { useThemeColors } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 function TabIcon({
-  emoji,
+  name,
   focused,
   locked,
+  color,
 }: {
-  emoji: string;
+  name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
   locked?: boolean;
+  color: string;
 }) {
   return (
     <View style={styles.iconWrap}>
-      <Text style={{ fontSize: 20, opacity: locked ? 0.35 : focused ? 1 : 0.45 }}>{emoji}</Text>
+      <Ionicons name={name} size={22} color={color} style={{ opacity: locked ? 0.4 : 1 }} />
       {locked ? <Text style={styles.lockDot}>🔒</Text> : null}
     </View>
   );
@@ -25,7 +30,10 @@ function TabIcon({
 export default function BusinessTabsLayout() {
   const { bexUser } = useAuthStore();
   const { business } = useBusiness();
-  const { totalUnread, isUnlocked } = useMessagingInbox('business');
+  const { isUnlocked } = useMessagingInbox('business');
+  const totalUnread = useMessagingInboxStore((s) => s.businessTotalUnread);
+  const Colors = useThemeColors();
+  const { t } = useTranslation();
 
   if (bexUser && bexUser.role !== 'business') {
     return <Redirect href="/(tabs)/home" />;
@@ -36,7 +44,8 @@ export default function BusinessTabsLayout() {
       initialRouteName="panel"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
+        // İşletme tarafı kendi kurumsal vurgu rengini kullanır (rol ayrımı)
+        tabBarActiveTintColor: Colors.business,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
           backgroundColor: Colors.background,
@@ -56,46 +65,77 @@ export default function BusinessTabsLayout() {
       <Tabs.Screen
         name="panel"
         options={{
-          title: 'Panel',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          title: t('tabsBusiness.panel'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon name={focused ? 'grid' : 'grid-outline'} focused={focused} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="applications/index"
         options={{
-          title: 'Başvuru',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📥" focused={focused} />,
+          title: t('tabsBusiness.applications'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'file-tray-full' : 'file-tray-full-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Sohbet',
+          title: t('tabsBusiness.messages'),
           tabBarBadge: totalUnread > 0 ? (totalUnread > 99 ? '99+' : totalUnread) : undefined,
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="💬" focused={focused} locked={!isUnlocked && !!business?.id} />
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              focused={focused}
+              locked={!isUnlocked && !!business?.id}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="tasks"
         options={{
-          title: 'Görevler',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
+          title: t('tabsBusiness.tasks'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'briefcase' : 'briefcase-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="coupons/index"
         options={{
-          title: 'Kupon',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🎟️" focused={focused} />,
+          title: t('tabsBusiness.coupons'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'pricetag' : 'pricetag-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          title: t('tabsBusiness.profile'),
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              focused={focused}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen name="analytics" options={{ href: null }} />

@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { tasksRepository, EnrichedTask } from '@/features/data';
 import { shouldUseListingsRest } from '@/features/listing/listingsApi';
@@ -21,18 +21,22 @@ import { useAuthStore } from '@/store/authStore';
 import { saveLocationFilter } from '@/lib/locationFilterStorage';
 import { resolveLocationFilter } from '@/lib/resolveLocationFilter';
 import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { useTranslation } from '@/i18n';
+import { useDifficultyLabels } from '@/constants/taskLabels';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
-const DIFF_LABELS: Record<string, string> = {
-  all: 'Tümü',
-  easy: 'Kolay',
-  medium: 'Orta',
-  hard: 'Zor',
-};
 
 export default function TasksScreen() {
+  const { t } = useTranslation();
+  const difficultyLabels = useDifficultyLabels();
+  const DIFF_LABELS: Record<string, string> = {
+    all: t('tasksScreen.difficultyAll'),
+    ...difficultyLabels,
+  };
+  const { q } = useLocalSearchParams<{ q?: string }>();
   const { bexUser, isInitialized } = useAuthStore();
   const didInitFilter = useRef(false);
+  const didInitSearch = useRef(false);
   const [search, setSearch] = useState('');
   const [city, setCity] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
@@ -52,6 +56,15 @@ export default function TasksScreen() {
   useEffect(() => {
     shouldUseListingsRest().then(setRestListings);
   }, []);
+
+  useEffect(() => {
+    if (didInitSearch.current) return;
+    const query = typeof q === 'string' ? q.trim() : '';
+    if (query) {
+      setSearch(query);
+      didInitSearch.current = true;
+    }
+  }, [q]);
 
   useEffect(() => {
     if (!isInitialized || didInitFilter.current) return;
@@ -84,10 +97,12 @@ export default function TasksScreen() {
       list.filter((t) => {
         if (category && t.category !== category) return false;
         if (difficulty && t.difficulty !== difficulty) return false;
-        if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+        if (!restListings && search && !t.title.toLowerCase().includes(search.toLowerCase())) {
+          return false;
+        }
         return true;
       }),
-    [category, difficulty, search]
+    [category, difficulty, search, restListings]
   );
 
   const loadInitial = useCallback(async () => {
@@ -97,7 +112,12 @@ export default function TasksScreen() {
       const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
         10,
         null,
-        { city: city ?? undefined, district: district ?? undefined, category }
+        {
+          city: city ?? undefined,
+          district: district ?? undefined,
+          category,
+          q: restListings && search.trim() ? search.trim() : undefined,
+        }
       );
       setTasks(fetched);
       setLastDoc(doc);
@@ -105,11 +125,11 @@ export default function TasksScreen() {
       setHasMore(cursor !== null || (doc !== null && fetched.length >= 10));
     } catch {
       setTasks([]);
-      setLoadError('Görevler yüklenemedi. Sunucu kapalı olabilir — aşağı çekerek tekrar dene.');
+      setLoadError(t('tasksScreen.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [city, district, category]);
+  }, [city, district, category, search, restListings]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -119,7 +139,12 @@ export default function TasksScreen() {
     const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
       10,
       cursorArg,
-      { city: city ?? undefined, district: district ?? undefined, category }
+      {
+        city: city ?? undefined,
+        district: district ?? undefined,
+        category,
+        q: restListings && search.trim() ? search.trim() : undefined,
+      }
     );
     setTasks((prev) => [...prev, ...fetched]);
     setLastDoc(doc);
@@ -143,9 +168,9 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Görevler" />
+      <AppHeader title={t('tasksScreen.title')} />
       <View style={styles.header}>
-        <Text style={styles.subtitle}>Becerinle ödül kazan</Text>
+        <Text style={styles.subtitle}>{t('tasksScreen.subtitle')}</Text>
       </View>
 
       <View style={styles.filters}>
@@ -196,7 +221,7 @@ export default function TasksScreen() {
             loadError ? (
               <Text style={styles.error}>{loadError}</Text>
             ) : (
-              <Text style={styles.empty}>Bu filtrelere uygun görev yok.</Text>
+              <Text style={styles.empty}>{t('tasksScreen.noResults')}</Text>
             )
           }
           renderItem={({ item }) => (

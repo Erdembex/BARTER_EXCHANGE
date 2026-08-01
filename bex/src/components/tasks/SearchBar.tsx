@@ -7,18 +7,22 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Colors, Typography, Radius, Spacing } from '../../theme';
+import { useTranslation } from '@/i18n';
 
 interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
+  onSubmit?: () => void;
 }
 
 export function SearchBar({
   value,
   onChangeText,
-  placeholder = 'Görev ara...',
+  placeholder,
+  onSubmit,
 }: SearchBarProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>🔍</Text>
@@ -26,9 +30,10 @@ export function SearchBar({
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('searchBar.placeholder')}
         placeholderTextColor={Colors.textTertiary}
         returnKeyType="search"
+        onSubmitEditing={onSubmit}
       />
       {value.length > 0 && (
         <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

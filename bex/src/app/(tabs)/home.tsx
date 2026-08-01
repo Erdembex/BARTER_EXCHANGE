@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,15 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useOpenNotifications } from '@/hooks/useOpenNotifications';
-import { applicationsRepository, tasksRepository, EnrichedTask } from '@/features/data';
+import { applicationsRepository, tasksRepository, businessesRepository, EnrichedTask } from '@/features/data';
 import { authService } from '@/features/auth/authService';
-import { BexUser, Application } from '@/types';
+import { BexUser, Application, Business } from '@/types';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { demoStore } from '@/lib/demoStore';
 import { getGreeting } from '@/lib/taskUtils';
@@ -25,69 +26,81 @@ import {
   formatFilterLocationLabel,
   toApiCityFilter,
 } from '@/lib/locationFilterUtils';
-import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
+import { useApplicationStatusLabels } from '@/constants/taskLabels';
 import { getApplicationTarget } from '@/lib/applicationNavigation';
 import { useMessagingInbox } from '@/hooks/useMessagingInbox';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { HomeScreenSkeleton } from '@/components/common/HomeScreenSkeleton';
 import { TaskCard } from '@/components/tasks';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { SearchBar } from '@/components/tasks/SearchBar';
+import { Typography, Spacing, Radius, Shadow, useThemeColors } from '@/theme';
+import { useTranslation } from '@/i18n';
 
 type QuickLink = {
   route: Href;
   label: string;
   hint: string;
-  glyph: string;
+  icon: keyof typeof Ionicons.glyphMap;
   tint: string;
   bg: string;
 };
 
-const QUICK_LINKS: QuickLink[] = [
-  {
-    route: '/(tabs)/messages' as Href,
-    label: 'Sohbet',
-    hint: 'İşletmelerle yazış',
-    glyph: 'S',
-    tint: Colors.info,
-    bg: Colors.infoLight,
-  },
-  {
-    route: '/(tabs)/tasks' as Href,
-    label: 'Görevler',
-    hint: 'Yeni fırsatları keşfet',
-    glyph: 'G',
-    tint: Colors.primary,
-    bg: Colors.primaryLight,
-  },
-  {
-    route: '/(tabs)/applications' as Href,
-    label: 'Başvurular',
-    hint: 'Aktif süreçlerin',
-    glyph: 'B',
-    tint: Colors.primary,
-    bg: Colors.primaryLight,
-  },
-  {
-    route: '/(tabs)/trade' as Href,
-    label: 'Takas',
-    hint: 'Kupon takası yap',
-    glyph: 'T',
-    tint: Colors.accentDark,
-    bg: Colors.accentLight,
-  },
-  {
-    route: '/(tabs)/wallet' as Href,
-    label: 'Cüzdan',
-    hint: 'Kuponlarını gör',
-    glyph: 'C',
-    tint: Colors.success,
-    bg: Colors.successLight,
-  },
-];
+function getQuickLinks(
+  Colors: ReturnType<typeof useThemeColors>,
+  t: (key: string) => string
+): QuickLink[] {
+  return [
+    {
+      route: '/(tabs)/messages' as Href,
+      label: t('home.quickLinks.messages.label'),
+      hint: t('home.quickLinks.messages.hint'),
+      icon: 'chatbubble-ellipses',
+      tint: Colors.info,
+      bg: Colors.infoLight,
+    },
+    {
+      route: '/(tabs)/tasks' as Href,
+      label: t('home.quickLinks.tasks.label'),
+      hint: t('home.quickLinks.tasks.hint'),
+      icon: 'briefcase',
+      tint: Colors.primary,
+      bg: Colors.primaryLight,
+    },
+    {
+      route: '/(tabs)/applications' as Href,
+      label: t('home.quickLinks.applications.label'),
+      hint: t('home.quickLinks.applications.hint'),
+      icon: 'document-text',
+      tint: Colors.primary,
+      bg: Colors.primaryLight,
+    },
+    {
+      route: '/(tabs)/trade' as Href,
+      label: t('home.quickLinks.trade.label'),
+      hint: t('home.quickLinks.trade.hint'),
+      icon: 'swap-horizontal',
+      tint: Colors.accentDark,
+      bg: Colors.accentLight,
+    },
+    {
+      route: '/(tabs)/wallet' as Href,
+      label: t('home.quickLinks.wallet.label'),
+      hint: t('home.quickLinks.wallet.hint'),
+      icon: 'wallet',
+      tint: Colors.success,
+      bg: Colors.successLight,
+    },
+  ];
+}
 
 export default function HomeScreen() {
   const { bexUser, firebaseUser, setBexUser } = useAuthStore();
+  const Colors = useThemeColors();
+  const { t } = useTranslation();
+  const applicationStatusLabels = useApplicationStatusLabels();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+  const QUICK_LINKS = useMemo(() => getQuickLinks(Colors, t), [Colors, t]);
   const { unreadCount } = useNotifications();
   const { totalUnread: messageUnread, isUnlocked: messagingUnlocked } = useMessagingInbox('user');
   const openNotifications = useOpenNotifications();
@@ -96,29 +109,35 @@ export default function HomeScreen() {
     Array<Application & { taskTitle: string }>
   >([]);
   const [nearbyTasks, setNearbyTasks] = useState<EnrichedTask[]>([]);
-  const [nearbySectionTitle, setNearbySectionTitle] = useState('Öne çıkan görevler');
+  const [popularBusinesses, setPopularBusinesses] = useState<Business[]>([]);
+  const [nearbySectionTitle, setNearbySectionTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [homeSearch, setHomeSearch] = useState('');
 
   const loadNearbyTasks = useCallback(async (user: BexUser | null) => {
     const resolved = await resolveLocationFilter(user);
 
     if (toApiCityFilter(resolved.city)) {
       setNearbySectionTitle(
-        `Bölgedeki görevler · ${formatFilterLocationLabel(resolved.city, resolved.district)}`
+        t('home.regionalTasks', {
+          location: formatFilterLocationLabel(resolved.city, resolved.district),
+        })
       );
       const { tasks } = await tasksRepository.getActive(4, null, {
-        city: resolved.city,
-        district: resolved.district,
+        city: resolved.city ?? undefined,
+        district: resolved.district ?? undefined,
       });
-      setNearbyTasks(tasks);
-      return;
+      if (tasks.length > 0) {
+        setNearbyTasks(tasks);
+        return;
+      }
     }
 
-    setNearbySectionTitle('Öne çıkan görevler');
+    setNearbySectionTitle(t('home.featuredTasks'));
     const featured = await tasksRepository.getFeatured(4);
     setNearbyTasks(featured);
-  }, []);
+  }, [t]);
 
   const loadData = useCallback(async () => {
     try {
@@ -132,7 +151,7 @@ export default function HomeScreen() {
           const preview = await Promise.all(
             apps.slice(0, 3).map(async (app) => {
               const task = await tasksRepository.getById(app.taskId);
-              return { ...app, taskTitle: task?.title ?? 'Görev' };
+              return { ...app, taskTitle: task?.title ?? t('common.task') };
             })
           );
           setActiveApplications(preview);
@@ -146,6 +165,8 @@ export default function HomeScreen() {
       }
 
       await loadNearbyTasks(bexUser);
+      const popular = await businessesRepository.getPopular(6);
+      setPopularBusinesses(popular);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -169,15 +190,24 @@ export default function HomeScreen() {
     loadData();
   };
 
+  const openTaskSearch = () => {
+    const query = homeSearch.trim();
+    if (query) {
+      router.push({ pathname: '/search', params: { q: query } } as Href);
+      return;
+    }
+    router.push('/search' as Href);
+  };
+
   if (loading) {
     return <HomeScreenSkeleton />;
   }
 
-  const displayName = bexUser?.displayName?.trim() || 'Kullanıcı';
+  const displayName = bexUser?.displayName?.trim() || t('common.user');
 
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Ana Sayfa" />
+      <AppHeader title={t('home.title')} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -186,7 +216,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scroll}
       >
         <LinearGradient
-          colors={[Colors.secondary, Colors.gradientMid, '#000000']}
+          colors={[Colors.gradientBlue, Colors.gradientMid, Colors.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
@@ -199,12 +229,22 @@ export default function HomeScreen() {
             <ProfileAvatar name={displayName} avatarUrl={bexUser?.avatarUrl} size={64} />
           </TouchableOpacity>
           <View style={styles.heroText}>
-            <Text style={styles.greeting}>{getGreeting(displayName)}</Text>
-            <Text style={styles.subGreeting}>
-              Menüden istediğin bölüme geçebilir veya hızlı erişim kartlarını kullanabilirsin.
-            </Text>
+            <Text style={styles.greeting}>{getGreeting(displayName, t)}</Text>
+            <Text style={styles.subGreeting}>{t('home.subGreeting')}</Text>
           </View>
         </LinearGradient>
+
+        <View style={styles.searchWrap}>
+          <SearchBar
+            value={homeSearch}
+            onChangeText={setHomeSearch}
+            placeholder={t('home.searchPlaceholder')}
+            onSubmit={openTaskSearch}
+          />
+          <TouchableOpacity style={styles.searchBtn} activeOpacity={0.88} onPress={openTaskSearch}>
+            <Text style={styles.searchBtnText}>{t('common.search')}</Text>
+          </TouchableOpacity>
+        </View>
 
         {messageUnread > 0 ? (
           <TouchableOpacity
@@ -213,9 +253,9 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/messages' as Href)}
           >
             <Text style={styles.messageTitle}>
-              {messageUnread} okunmamış mesaj
+              {t('home.unreadMessages', { count: messageUnread })}
             </Text>
-            <Text style={styles.messageHint}>Sohbet sekmesine git →</Text>
+            <Text style={styles.messageHint}>{t('home.goToMessages')}</Text>
           </TouchableOpacity>
         ) : messagingUnlocked ? (
           <TouchableOpacity
@@ -223,8 +263,8 @@ export default function HomeScreen() {
             activeOpacity={0.88}
             onPress={() => router.push('/(tabs)/messages' as Href)}
           >
-            <Text style={styles.messageTitleMuted}>Sohbetlerin hazır</Text>
-            <Text style={styles.messageHintMuted}>İşletmelerle yazış →</Text>
+            <Text style={styles.messageTitleMuted}>{t('home.messagesReady')}</Text>
+            <Text style={styles.messageHintMuted}>{t('home.chatWithBusinesses')}</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -235,9 +275,9 @@ export default function HomeScreen() {
             onPress={openNotifications}
           >
             <Text style={styles.noticeTitle}>
-              {unreadCount} okunmamış bildirim
+              {t('home.unreadNotifications', { count: unreadCount })}
             </Text>
-            <Text style={styles.noticeHint}>Görmek için dokun →</Text>
+            <Text style={styles.noticeHint}>{t('home.tapToView')}</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -248,13 +288,13 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/applications' as Href)}
             >
               <View style={styles.summaryTop}>
-                <Text style={styles.summaryLabel}>Aktif başvuru</Text>
+                <Text style={styles.summaryLabel}>{t('home.activeApplication')}</Text>
                 <View style={styles.summaryBadge}>
-                  <Text style={styles.summaryBadgeText}>Canlı</Text>
+                  <Text style={styles.summaryBadgeText}>{t('common.live')}</Text>
                 </View>
               </View>
               <Text style={styles.summaryValue}>{activeApplicationCount}</Text>
-              <Text style={styles.summaryHint}>Tüm başvurular →</Text>
+              <Text style={styles.summaryHint}>{t('home.allApplications')}</Text>
             </TouchableOpacity>
             {activeApplications.length > 0 ? (
               <View style={styles.appPreviewList}>
@@ -270,7 +310,7 @@ export default function HomeScreen() {
                         {app.taskTitle}
                       </Text>
                       <Text style={styles.appPreviewStatus}>
-                        {APPLICATION_STATUS_LABELS[app.status]}
+                        {applicationStatusLabels[app.status]}
                       </Text>
                     </View>
                     <Text style={styles.appPreviewArrow}>›</Text>
@@ -281,19 +321,50 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>Hoş geldin</Text>
-            <Text style={styles.welcomeBody}>
-              Görevlere göz at, başvuru yap ve kupon kazanmaya başla.
-            </Text>
+            <Text style={styles.welcomeTitle}>{t('home.welcomeTitle')}</Text>
+            <Text style={styles.welcomeBody}>{t('home.welcomeBody')}</Text>
             <TouchableOpacity
               style={styles.welcomeBtn}
               onPress={() => router.push('/(tabs)/tasks' as Href)}
               activeOpacity={0.88}
             >
-              <Text style={styles.welcomeBtnText}>Görevleri keşfet</Text>
+              <Text style={styles.welcomeBtnText}>{t('home.exploreTasks')}</Text>
             </TouchableOpacity>
           </View>
         )}
+
+        {popularBusinesses.length > 0 ? (
+          <View style={styles.popularSection}>
+            <Text style={styles.sectionTitle}>{t('home.popularBusinesses')}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.popularRow}
+            >
+              {popularBusinesses.map((biz) => (
+                <TouchableOpacity
+                  key={biz.id}
+                  style={styles.popularCard}
+                  activeOpacity={0.88}
+                  onPress={() => router.push(`/business/${biz.id}` as Href)}
+                >
+                  <View style={styles.popularAvatar}>
+                    <Text style={styles.popularAvatarText}>{biz.name.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={styles.popularName} numberOfLines={2}>
+                    {biz.name}
+                    {biz.isVerified ? ' ✓' : ''}
+                  </Text>
+                  {biz.completedTaskCount != null && biz.completedTaskCount > 0 ? (
+                    <Text style={styles.popularMeta}>
+                      {t('home.completedTasks', { count: biz.completedTaskCount })}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
 
         {nearbyTasks.length > 0 ? (
           <View style={styles.nearbySection}>
@@ -303,7 +374,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/(tabs)/tasks' as Href)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.seeAll}>Tümünü gör</Text>
+                <Text style={styles.seeAll}>{t('common.seeAll')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.nearbyList}>
@@ -322,7 +393,7 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Hızlı erişim</Text>
+        <Text style={styles.sectionTitle}>{t('home.quickAccess')}</Text>
         <View style={styles.links}>
           {QUICK_LINKS.map((link) => (
             <TouchableOpacity
@@ -332,7 +403,7 @@ export default function HomeScreen() {
               onPress={() => router.push(link.route)}
             >
               <View style={[styles.linkIconWrap, { backgroundColor: link.bg }]}>
-                <Text style={[styles.linkGlyph, { color: link.tint }]}>{link.glyph}</Text>
+                <Ionicons name={link.icon} size={20} color={link.tint} />
               </View>
               <View style={styles.linkText}>
                 <Text style={styles.linkLabel}>{link.label}</Text>
@@ -347,7 +418,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(Colors: ReturnType<typeof useThemeColors>) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     padding: Spacing[5],
@@ -378,6 +450,24 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     color: 'rgba(255,255,255,0.88)',
     lineHeight: 20,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  searchBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing[4],
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnText: {
+    ...Typography.labelMedium,
+    color: Colors.textOnPrimary,
+    fontWeight: '700',
   },
   noticeCard: {
     padding: Spacing[4],
@@ -497,6 +587,35 @@ const styles = StyleSheet.create({
   },
   welcomeBtnText: { ...Typography.labelLarge, color: Colors.textOnPrimary, fontWeight: '700' },
   nearbySection: { gap: Spacing[3] },
+  popularSection: { gap: Spacing[3] },
+  popularRow: { gap: Spacing[3], paddingRight: Spacing[2] },
+  popularCard: {
+    width: 132,
+    padding: Spacing[3],
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  popularAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  popularAvatarText: { ...Typography.labelLarge, color: Colors.primary, fontWeight: '800' },
+  popularName: {
+    ...Typography.caption,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    textAlign: 'center',
+    minHeight: 32,
+  },
+  popularMeta: { ...Typography.caption, color: Colors.textMuted, textAlign: 'center' },
   nearbyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -530,10 +649,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  linkGlyph: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
   linkText: { flex: 1, gap: 2 },
   linkLabel: { ...Typography.labelLarge, color: Colors.textPrimary, fontWeight: '700' },
   linkHint: { ...Typography.caption, color: Colors.textSecondary },
@@ -543,4 +658,5 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontWeight: '300',
   },
-});
+  });
+}
