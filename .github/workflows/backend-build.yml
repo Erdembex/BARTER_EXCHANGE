@@ -1,0 +1,38 @@
+name: Backend Build
+
+on:
+  push:
+    branches: [main, fix/subscription-plan-seed]
+    paths:
+      - 'takkas-backend/**'
+  pull_request:
+    paths:
+      - 'takkas-backend/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: takkas-backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build JAR
+        run: mvn -B package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: takkas-backend-jar
+          path: takkas-backend/target/takkas-backend-*.jar
+          retention-days: 14

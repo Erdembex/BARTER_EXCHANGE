@@ -13,56 +13,56 @@
 
 ```bash
 ssh -i oracle-key.pem ubuntu@SUNUCU_IP
-bash -s < deploy/scripts/setup-server.sh
 ```
 
-Veya manuel:
-
+**Tek komut (önerilen):**
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y openjdk-21-jdk nginx certbot python3-certbot-nginx git postgresql postgresql-contrib redis-server
+git clone https://github.com/Erdembex/BARTER_EXCHANGE.git
+cd BARTER_EXCHANGE/takkas-backend
+bash deploy/scripts/full-server-setup.sh
 ```
 
-PostgreSQL:
-
+Veya adım adım:
 ```bash
-sudo -u postgres psql -c "CREATE USER takkas WITH PASSWORD 'GÜÇLÜ_ŞİFRE';"
-sudo -u postgres psql -c "CREATE DATABASE takkas OWNER takkas;"
+bash deploy/scripts/setup-server.sh
+sudo bash deploy/scripts/setup-postgres.sh GÜÇLÜ_ŞİFRE
 ```
 
 ## 3. Backend deploy (JAR)
 
-Lokal makinede:
+**Env üret (lokal):**
+```bash
+cd takkas-backend
+bash deploy/scripts/generate-env.sh api.SENIN-DOMAIN
+# .env.generated → düzenle → .env olarak kaydet
+```
+
+Lokal makinede (Maven varsa) veya GitHub Actions artifact:
 
 ```bash
 cd takkas-backend
-mvn -B package -DskipTests
-scp -i oracle-key.pem target/takkas-backend-*.jar ubuntu@SUNUCU_IP:/opt/takkas/takkas-backend.jar
-scp -i oracle-key.pem .env ubuntu@SUNUCU_IP:/opt/takkas/.env
+bash deploy/scripts/deploy-jar.sh ubuntu@SUNUCU_IP oracle-key.pem
 scp -i oracle-key.pem firebase-sa.json ubuntu@SUNUCU_IP:/opt/takkas/firebase-sa.json
 ```
 
-Sunucuda:
+Maven yoksa: GitHub → Actions → Backend Build → artifact indir → `JAR_PATH=... deploy-jar.sh ...`
 
+Sunucuda systemd + SSL:
 ```bash
-sudo mkdir -p /opt/takkas /var/takkas/uploads /backup
-sudo cp deploy/systemd/takkas.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable takkas
-sudo systemctl start takkas
-sudo systemctl status takkas
+sudo bash deploy/scripts/install-systemd.sh
+sudo bash deploy/scripts/setup-nginx-ssl.sh api.SENIN-DOMAIN
+sudo bash deploy/scripts/install-backup-cron.sh
 ```
 
 ## 4. Nginx + SSL
 
-DNS: `api.bex.app` → VM public IP (A kaydı)
+DNS: `api.SENIN-DOMAIN` → VM public IP (A kaydı)
 
 ```bash
-sudo cp deploy/nginx/takkas.conf /etc/nginx/sites-available/takkas
-sudo ln -sf /etc/nginx/sites-available/takkas /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d api.bex.app
+sudo bash deploy/scripts/setup-nginx-ssl.sh api.SENIN-DOMAIN
 ```
+
+Manuel alternatif: [`deploy/nginx/takkas.conf.template`](../takkas-backend/deploy/nginx/takkas.conf.template)
 
 ## 5. Docker alternatifi
 
@@ -77,13 +77,12 @@ docker compose -f docker-compose.prod.yml up -d
 ## 6. Yedekleme (cron)
 
 ```bash
-# /etc/cron.daily/takkas-backup
-pg_dump -U takkas takkas | gzip > /backup/takkas-$(date +%F).sql.gz
+sudo bash deploy/scripts/install-backup-cron.sh
 ```
 
 ## 7. Doğrulama
 
 ```bash
-curl https://api.bex.app/actuator/health
+curl https://api.SENIN-DOMAIN/actuator/health
 journalctl -u takkas -f
 ```

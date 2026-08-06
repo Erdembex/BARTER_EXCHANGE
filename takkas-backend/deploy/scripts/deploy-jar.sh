@@ -11,10 +11,25 @@ if [[ -n "$KEY" ]]; then
   SCP_OPTS=(-i "$KEY")
 fi
 
-echo "==> Maven build..."
-mvn -B package -DskipTests -q
+if command -v mvn &>/dev/null; then
+  echo "==> Maven build (lokal)..."
+  mvn -B package -DskipTests -q
+else
+  echo "Maven yok — GitHub Actions artifact veya sunucuda build kullan."
+  echo "  GitHub: Actions -> Backend Build -> artifact indir"
+  echo "  Sunucu: git clone && cd takkas-backend && mvn -B package -DskipTests"
+  JAR="${JAR_PATH:-}"
+  if [[ -z "$JAR" || ! -f "$JAR" ]]; then
+    echo "HATA: JAR_PATH=/path/to/takkas-backend-*.jar belirt veya Maven kur"
+    exit 1
+  fi
+fi
 
-JAR=$(ls target/takkas-backend-*.jar | head -1)
+JAR="${JAR:-$(ls target/takkas-backend-*.jar 2>/dev/null | head -1)}"
+if [[ ! -f "$JAR" ]]; then
+  echo "HATA: JAR bulunamadi: $JAR"
+  exit 1
+fi
 echo "==> Uploading $JAR to $REMOTE:/opt/takkas/takkas-backend.jar"
 scp "${SCP_OPTS[@]}" "$JAR" "$REMOTE:/opt/takkas/takkas-backend.jar"
 

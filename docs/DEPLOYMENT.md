@@ -33,10 +33,15 @@ Hesaplar → Backend (Oracle/Docker) → S3 → Mail → EAS Build → Play Stor
 
 Detaylı adımlar:
 
+- **Master checklist:** [`docs/STORE_LAUNCH_CHECKLIST.md`](STORE_LAUNCH_CHECKLIST.md)
+- Hesap açma: [`docs/ACCOUNTS_SETUP.md`](ACCOUNTS_SETUP.md)
+- Gizlilik sitesi: [`website/`](../website/)
 - Backend Oracle VM: [`docs/ORACLE_DEPLOY.md`](ORACLE_DEPLOY.md)
 - Docker ile deploy: [`takkas-backend/docker-compose.prod.yml`](../takkas-backend/docker-compose.prod.yml)
-- Google Play: [`docs/PLAY_STORE.md`](PLAY_STORE.md)
-- App Store: [`docs/APP_STORE.md`](APP_STORE.md)
+- Firebase production: [`docs/FIREBASE_PRODUCTION.md`](FIREBASE_PRODUCTION.md)
+- Google Play: [`docs/PLAY_STORE.md`](PLAY_STORE.md) · [`docs/PLAY_CONSOLE_SETUP.md`](PLAY_CONSOLE_SETUP.md)
+- App Store: [`docs/APP_STORE.md`](APP_STORE.md) · [`docs/APP_STORE_CONNECT_SETUP.md`](APP_STORE_CONNECT_SETUP.md)
+- Yayın sonrası: [`docs/POST_LAUNCH.md`](POST_LAUNCH.md)
 
 ---
 
