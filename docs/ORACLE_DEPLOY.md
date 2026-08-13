@@ -7,7 +7,15 @@
 3. Image: Ubuntu 22.04
 4. Boot volume: 50–100 GB
 5. SSH key pair indir
-6. Security List portları: 22 (sadece senin IP), 80, 443
+6. Security List portları: 22 (sadece senin IP), 80, 443, 8080 (test)
+
+## 1b. VM içi firewall (iptables)
+
+Oracle Ubuntu imajında **sadece 22 açık** gelir; Security List yetmez:
+
+```bash
+sudo bash deploy/scripts/open-vm-ports.sh
+```
 
 ## 2. Sunucu kurulumu
 
@@ -63,6 +71,13 @@ sudo bash deploy/scripts/setup-nginx-ssl.sh api.SENIN-DOMAIN
 ```
 
 Manuel alternatif: [`deploy/nginx/takkas.conf.template`](../takkas-backend/deploy/nginx/takkas.conf.template)
+
+**Domain yokken (sadece IP):**
+
+```bash
+sudo bash deploy/scripts/setup-nginx-ip.sh
+curl http://SUNUCU_IP/actuator/health
+```
 
 ## 5. Docker alternatifi
 

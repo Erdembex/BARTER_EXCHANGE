@@ -36,3 +36,8 @@ logging:
   level:
     com.takkas: INFO
     org.springframework.security: WARN
+
+management:
+  health:
+    mail:
+      enabled: false
