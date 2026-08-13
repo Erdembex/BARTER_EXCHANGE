@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "eas-cli": "^16.17.4",
     "firebase-tools": "^15.22.1",
     "typescript": "~5.9.2"
   },
@@ -65,7 +66,10 @@
     "build:production:ios": "eas build --profile production --platform ios",
     "submit:android": "eas submit --platform android --profile production",
     "submit:ios": "eas submit --platform ios --profile production",
-    "eas:secrets": "eas secret:list"
+    "submit:all": "eas submit --platform all --profile production",
+    "eas:secrets": "eas secret:list",
+    "eas:setup-secrets": "node -e \"console.log('Windows: .\\\\scripts\\\\setup-eas-secrets.ps1 -ApiDomain api.SENIN-DOMAIN\\nUnix: ./scripts/setup-eas-secrets.sh api.SENIN-DOMAIN')\"",
+    "store:verify-play": "bash scripts/verify-play-service-account.sh"
   },
   "private": true
 }
