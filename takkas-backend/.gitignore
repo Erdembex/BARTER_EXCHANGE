@@ -7,3 +7,5 @@ upload-result.json
 .env
 .env.*
 !.env.example
+deploy/secrets.env
+secrets.env

@@ -79,6 +79,13 @@ sudo bash deploy/scripts/setup-nginx-ip.sh
 curl http://SUNUCU_IP/actuator/health
 ```
 
+**Domain alındıktan sonra (SSL + BASE_URL tek komut):**
+
+→ [`setup-production-domain.sh`](../takkas-backend/deploy/scripts/setup-production-domain.sh)  
+→ Sabit IP: [`ORACLE_RESERVED_IP.md`](ORACLE_RESERVED_IP.md)
+
+Test sonrası 8080 kapat: `sudo bash deploy/scripts/close-public-8080.sh`
+
 ## 5. Docker alternatifi
 
 Oracle VM'de Docker kuruluysa:

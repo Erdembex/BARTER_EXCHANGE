@@ -18,14 +18,22 @@
       },
       "env": {
         "APP_VARIANT": "preview",
-        "EXPO_PUBLIC_API_BASE_URL": "http://150.230.158.219"
+        "EXPO_PUBLIC_API_BASE_URL": "http://150.230.158.219",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "bexcursor",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "bexcursor.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "bexcursor.firebasestorage.app",
+        "EXPO_PUBLIC_USE_DEMO_DATA": "false"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_API_BASE_URL": "http://150.230.158.219"
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.barterex.com.tr",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "bexcursor",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "bexcursor.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "bexcursor.firebasestorage.app",
+        "EXPO_PUBLIC_USE_DEMO_DATA": "false"
       }
     }
   },

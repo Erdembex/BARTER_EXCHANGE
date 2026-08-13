@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "BEX",
+    "name": "Barter",
     "slug": "bex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "bex",
-    "description": "Görev yap, ödül kazan. BEX ile işletmelerden görev al, tamamla ve kupon kazan.",
+    "description": "Görev yap, ödül kazan. Barter ile işletmelerden görev al, tamamla ve kupon kazan.",
     "primaryColor": "#EAB308",
     "backgroundColor": "#071209",
     "splash": {
@@ -38,7 +38,12 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
       ],
       "usesCleartextTraffic": true
     },
@@ -83,7 +88,11 @@
     },
     "extra": {
       "appCheckDebugToken": "",
-      "privacyPolicyUrl": "https://bex.app/gizlilik"
+      "privacyPolicyUrl": "https://barterex.com.tr/gizlilik.html",
+      "router": {},
+      "eas": {
+        "projectId": "1883a871-3730-4cbb-a11e-120480fbbe20"
+      }
     }
   }
 }

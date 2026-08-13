@@ -1,0 +1,39 @@
+{
+  "appName": "Barter",
+  "androidPackage": "com.bex.app",
+  "iosBundleId": "com.bex.app",
+  "defaultLanguage": "tr-TR",
+  "privacyPolicyUrl": "https://barterex.com.tr/gizlilik.html",
+  "supportUrl": "https://barterex.com.tr/destek.html",
+  "supportEmail": "destek@barterex.com.tr",
+  "category": {
+    "playStore": "BUSINESS",
+    "appStore": "BUSINESS"
+  },
+  "contentRating": {
+    "targetAge": "13+",
+    "dataCollected": [
+      "location",
+      "photos",
+      "camera",
+      "userId",
+      "messages"
+    ]
+  },
+  "screenshots": {
+    "android": {
+      "phone": { "min": 2, "recommended": 4 },
+      "tablet": { "optional": true }
+    },
+    "ios": {
+      "iphone67": "1290x2796",
+      "iphone65": "1284x2778",
+      "iphone55": "1242x2208"
+    }
+  },
+  "easSubmit": {
+    "androidTrack": "internal",
+    "androidTrackAfterTest": "production",
+    "iosTestFlight": true
+  }
+}
