@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { FeedbackDto } from '@/features/feedback/feedbackApi';
 import { StarRatingDisplay } from '@/components/profile/StarRating';
 import { formatShortDate } from '@/lib/dateUtils';
 import { Timestamp } from 'firebase/firestore';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface ProfileFeedbackListProps {
@@ -20,6 +20,8 @@ export function ProfileFeedbackList({
   items,
   title,
 }: ProfileFeedbackListProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   if (totalCount === 0 && items.length === 0) return null;
 
@@ -46,7 +48,7 @@ export function ProfileFeedbackList({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -68,4 +70,4 @@ const styles = StyleSheet.create({
   author: { ...Typography.labelMedium, color: Colors.textPrimary },
   comment: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
   date: { ...Typography.caption, color: Colors.textMuted },
-});
+}));

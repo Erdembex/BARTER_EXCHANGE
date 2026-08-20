@@ -1,9 +1,11 @@
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
-import { Colors } from '@/theme';
+import { createThemedStyles, useThemeColors } from '@/theme';
 
 export default function Index() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { firebaseUser, bexUser, isInitialized } = useAuthStore();
 
   if (!isInitialized) {
@@ -42,11 +44,11 @@ export default function Index() {
   return <Redirect href="/(tabs)/home" />;
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   center: {
     flex: 1,
     backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

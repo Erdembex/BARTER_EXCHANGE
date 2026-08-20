@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -22,11 +21,13 @@ import { TaskCard } from '@/components/tasks';
 import { TaskDetailSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { Button } from '@/components/ui';
 import { DangerBadge } from '@/components/profile/DangerBadge';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { Typography, Spacing, Radius, Shadow, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 import { useApplicationStatusLabels, useCategoryLabels, useDifficultyLabels } from '@/constants/taskLabels';
 
 export default function TaskDetailScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const CATEGORY_LABELS = useCategoryLabels();
@@ -239,7 +240,7 @@ export default function TaskDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing[4] },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
@@ -335,4 +336,4 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[2],
   },
   similarSection: { gap: Spacing[3], marginTop: Spacing[2] },
-});
+}));

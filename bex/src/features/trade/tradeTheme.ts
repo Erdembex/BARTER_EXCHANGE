@@ -1,29 +1,57 @@
+import { useMemo } from 'react';
 import { createTheme } from '@shopify/restyle';
-import { theme } from '@/theme/restyle';
+import { Colors as DarkColors } from '@/theme/colors';
+import { LightColors } from '@/theme/colorsLight';
+import type { ColorKey } from '@/theme/colors';
+import { getTheme } from '@/theme/restyle';
+import { useThemeColors } from '@/theme';
+import { useThemeStore } from '@/store/themeStore';
 
-/** Takas & cüzdan — altın & para yeşili */
-export const tradeTheme = createTheme({
-  ...theme,
-  colors: {
-    ...theme.colors,
-    tradePrimary: '#EAB308',
-    tradePrimaryDark: '#CA8A04',
-    tradePrimaryLight: 'rgba(234, 179, 8, 0.16)',
-    tradePrimaryBorder: '#1E3324',
-    tradeAccent: '#FFD700',
-    tradeAccentLight: 'rgba(255, 215, 0, 0.14)',
-    tradeAccentBorder: 'rgba(234, 179, 8, 0.35)',
-    tradeMoneyGreen: '#22C55E',
-  },
-  borderRadii: {
-    ...theme.borderRadii,
-    xs: 4,
-    sm: 6,
-    md: 8,
-    lg: 10,
-    xl: 12,
-    '2xl': 14,
-  },
+/** Takas & cüzdan — aktif uygulama temasına göre üretilir */
+export function getTradeTheme(palette: Record<ColorKey, string>) {
+  const base = getTheme(palette);
+  return createTheme({
+    ...base,
+    colors: {
+      ...base.colors,
+      tradePrimary: palette.primary,
+      tradePrimaryDark: palette.primaryDark,
+      tradePrimaryLight: palette.primaryLight,
+      tradePrimaryBorder: palette.border,
+      tradeAccent: palette.accent,
+      tradeAccentLight: palette.accentLight,
+      tradeAccentBorder: palette.borderGold,
+      tradeMoneyGreen: palette.moneyGreen,
+    },
+    borderRadii: {
+      ...base.borderRadii,
+      xs: 4,
+      sm: 6,
+      md: 8,
+      lg: 10,
+      xl: 12,
+      '2xl': 14,
+    },
+  });
+}
+
+export type TradeTheme = ReturnType<typeof getTradeTheme>;
+
+/** Aktif uygulama temasına göre takas ekranı restyle teması */
+export function useTradeTheme() {
+  const colors = useThemeColors();
+  return useMemo(() => getTradeTheme(colors), [colors]);
+}
+
+/** Modül düzeyi referanslar — tema store ile senkron kalır */
+let activeTradeTheme = getTradeTheme(DarkColors);
+
+useThemeStore.subscribe((state) => {
+  activeTradeTheme = getTradeTheme(state.mode === 'light' ? LightColors : DarkColors);
 });
 
-export type TradeTheme = typeof tradeTheme;
+export const tradeTheme: TradeTheme = new Proxy({} as TradeTheme, {
+  get(_target, prop, receiver) {
+    return Reflect.get(activeTradeTheme, prop, receiver);
+  },
+});

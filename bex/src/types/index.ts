@@ -12,6 +12,8 @@ export interface BexUser {
   phone: string;
   phoneVerified: boolean;
   avatarUrl: string;
+  bio?: string;
+  cvUrl?: string;
   city?: string;
   district?: string;
   reputationScore: number;
@@ -163,6 +165,8 @@ export interface Application {
   reviewedAt?: Timestamp;
   reviewNote?: string;
   createdAt: Timestamp;
+  /** Mevcut kullanıcı bu görev için puan verdi mi */
+  feedbackSubmitted?: boolean;
 }
 
 export type CreateApplication = Pick<

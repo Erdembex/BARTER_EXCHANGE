@@ -1,28 +1,37 @@
-# BEX — Statik Web Sitesi
+# Passla — Statik Web Sitesi
 
-Mağaza yayını için gerekli **gizlilik politikası** ve **destek** sayfaları.
+Mağaza yayını için **gizlilik politikası** ve **destek** sayfaları.
 
 ## Dosyalar
 
-| Dosya | URL (domain kökünde) |
-|-------|----------------------|
-| `index.html` | `https://SENIN-DOMAIN/` |
-| `gizlilik.html` | `https://SENIN-DOMAIN/gizlilik` veya `/gizlilik.html` |
-| `destek.html` | `https://SENIN-DOMAIN/destek` |
+| Dosya | URL |
+|-------|-----|
+| `index.html` | `https://passla.com.tr/` |
+| `gizlilik.html` | `https://passla.com.tr/gizlilik.html` |
+| `destek.html` | `https://passla.com.tr/destek.html` |
 
-Play Store / App Store için gizlilik URL'si: **`https://SENIN-DOMAIN/gizlilik.html`**
+Play Store / App Store gizlilik URL'si: **`https://passla.com.tr/gizlilik.html`**
 
-## Cloudflare Pages ile yayınlama (ücretsiz)
+## Cloudflare + Oracle (önerilen)
 
-1. [Cloudflare Dashboard](https://dash.cloudflare.com) → Pages → Create project
-2. Connect to Git → bu repo → Build settings:
-   - **Framework preset:** None
-   - **Build command:** (boş)
-   - **Build output directory:** `website`
-3. Custom domain: `bex.app` (veya aldığınız domain)
-4. `_redirects` dosyası `/gizlilik` → `gizlilik.html` yönlendirmesini sağlar
+1. Cloudflare Free → [`docs/CLOUDFLARE_SETUP.md`](../docs/CLOUDFLARE_SETUP.md)
+2. Natro'da sadece nameserver değiştir
+3. Cloudflare A kayıtları: `@` + `api` → `150.230.158.219`
 
-## Domain almadan önce test
+Sunucuda (repo clone sonrası):
+
+```bash
+cd BARTER_EXCHANGE/takkas-backend
+sudo bash deploy/scripts/setup-passla-production.sh passla.com.tr
+```
+
+Sadece statik site (SSL sonra):
+
+```bash
+sudo bash deploy/scripts/setup-passla-website.sh passla.com.tr
+```
+
+## Lokal test
 
 ```bash
 cd website
@@ -30,7 +39,7 @@ npx serve .
 # http://localhost:3000/gizlilik.html
 ```
 
-## Özelleştirme
+## Uygulama eşleştirme
 
-Domain farklıysa HTML içindeki `destek@bex.app` e-postasını güncelleyin.
-`bex/app.json` → `extra.privacyPolicyUrl` değerini gerçek URL ile eşleştirin.
+- [`bex/app.json`](../bex/app.json) → `privacyPolicyUrl`: `https://passla.com.tr/gizlilik.html`
+- Destek e-postası: `destek@passla.com.tr`

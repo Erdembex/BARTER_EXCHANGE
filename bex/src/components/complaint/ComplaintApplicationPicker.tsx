@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
@@ -14,7 +13,7 @@ import {
 } from '@/features/complaint/complaintsApi';
 import { APPLICATION_STATUS_LABELS } from '@/constants/taskLabels';
 import type { ApplicationStatus } from '@/types';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface ComplaintApplicationPickerProps {
@@ -41,6 +40,8 @@ export function ComplaintApplicationPicker({
   onSelect,
   onClear,
 }: ComplaintApplicationPickerProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const [items, setItems] = useState<ComplaintEligibleApplicationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +126,7 @@ export function ComplaintApplicationPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: { gap: Spacing[2] },
   hint: { ...Typography.bodySmall, color: Colors.textMuted, lineHeight: 20 },
   error: { ...Typography.bodySmall, color: Colors.error },
@@ -154,4 +155,4 @@ const styles = StyleSheet.create({
   selectedLabel: { ...Typography.caption, color: Colors.textMuted },
   selectedName: { ...Typography.labelLarge, color: Colors.textPrimary },
   changeLink: { ...Typography.labelMedium, color: Colors.primary },
-});
+}));

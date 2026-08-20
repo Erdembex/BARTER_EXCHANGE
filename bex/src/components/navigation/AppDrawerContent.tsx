@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import {
   DrawerContentScrollView,
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
+import { router, Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface AppDrawerContentProps extends DrawerContentComponentProps {
@@ -18,6 +19,7 @@ type MenuItem = {
   route: string;
   labelKey: string;
   icon: string;
+  href?: Href;
 };
 
 type MenuSection = {
@@ -47,11 +49,14 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { route: 'notifications/index', labelKey: 'appDrawer.notifications', icon: '◉' },
       { route: 'profile', labelKey: 'appDrawer.profile', icon: '○' },
+      { route: 'settings', labelKey: 'appDrawer.settings', icon: '⚙', href: '/settings' as Href },
     ],
   },
 ];
 
 export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDrawerContentProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const insets = useSafeAreaInsets();
   const { bexUser } = useAuthStore();
   const { t } = useTranslation();
@@ -101,7 +106,11 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
                   style={[styles.menuItem, active && styles.menuItemActive]}
                   activeOpacity={0.85}
                   onPress={() => {
-                    navigation.navigate(item.route);
+                    if (item.href) {
+                      router.push(item.href);
+                    } else {
+                      navigation.navigate(item.route);
+                    }
                     navigation.closeDrawer();
                   }}
                 >
@@ -132,7 +141,7 @@ export function AppDrawerContent({ state, navigation, unreadCount = 0 }: AppDraw
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   root: {
     flex: 1,
     backgroundColor: Colors.surface,
@@ -227,4 +236,4 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
   },
-});
+}));

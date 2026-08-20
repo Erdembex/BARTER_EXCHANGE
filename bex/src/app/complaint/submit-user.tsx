@@ -1,13 +1,15 @@
 import React from 'react';
-import { StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { SafeAreaView, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { BackHeader } from '@/components/navigation/BackHeader';
 import { IndividualComplaintSubmitForm } from '@/components/complaint/IndividualComplaintSubmitForm';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Spacing } from '@/theme';
+import { Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function IndividualComplaintSubmitScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { applicationId, applicationLabel } = useLocalSearchParams<{
     applicationId?: string;
@@ -33,7 +35,7 @@ export default function IndividualComplaintSubmitScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
-});
+}));

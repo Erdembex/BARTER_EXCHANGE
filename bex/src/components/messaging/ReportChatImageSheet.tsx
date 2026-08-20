@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Modal,
   TouchableOpacity,
   ScrollView,
@@ -19,7 +18,7 @@ import {
   reportChatImage,
 } from '@/features/messages/messageImageReportsApi';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type ReportChatImageSheetProps = {
@@ -37,6 +36,8 @@ export function ReportChatImageSheet({
   onClose,
   onSubmitted,
 }: ReportChatImageSheetProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [reason, setReason] = useState<MessageImageReportReason | null>(null);
   const [customText, setCustomText] = useState('');
@@ -159,7 +160,7 @@ export function ReportChatImageSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -219,4 +220,4 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: Spacing[2],
   },
-});
+}));

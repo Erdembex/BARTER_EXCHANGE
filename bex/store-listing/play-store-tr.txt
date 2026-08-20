@@ -1,4 +1,4 @@
-# BEX — Play Store Listing (Türkçe)
+# Passla — Play Store Listing (Türkçe)
 
 ## Kısa açıklama (max 80 karakter)
 
@@ -6,13 +6,14 @@ Görev yap, ödül kazan. Yakındaki işletme görevlerini tamamla, kupon kazan.
 
 ## Uzun açıklama
 
-BEX ile çevrendeki işletmelerden görev al, becerilerini kullan ve ödül kazan!
+Passla ile çevrendeki işletmelerden görev al, becerilerini kullan ve ödül kazan!
 
 **Ne yapabilirsin?**
 • Yakınındaki görevleri keşfet
 • Görevleri tamamla ve kupon kazan
 • İşletmelerle mesajlaş, teklif gönder
 • Takas ve beceri paylaşımı yap
+• Profiline ön yazı ve CV ekle
 • QR kod ile kuponlarını kullan
 
 **Kimler için?**
@@ -20,6 +21,6 @@ BEX ile çevrendeki işletmelerden görev al, becerilerini kullan ve ödül kaza
 
 **Gizliliğin**
 Konum yalnızca yakındaki görevleri göstermek için, uygulama açıkken kullanılır.
-Gizlilik politikası: https://barterex.com.tr/gizlilik.html
+Gizlilik politikası: https://passla.com.tr/gizlilik.html
 
-Destek: destek@barterex.com.tr
+Destek: destek@passla.com.tr

@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   View,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -14,10 +13,12 @@ import { usersRepository } from '@/features/data';
 import { CompletedTask, PortfolioItem } from '@/types';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function PublicUserProfileScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [displayName, setDisplayName] = useState('');
@@ -31,6 +32,8 @@ export default function PublicUserProfileScreen() {
   const [isDangerous, setIsDangerous] = useState(false);
   const [approvedComplaintCount, setApprovedComplaintCount] = useState(0);
   const [complaintRate, setComplaintRate] = useState(0);
+  const [bio, setBio] = useState<string | undefined>();
+  const [cvUrl, setCvUrl] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -49,6 +52,8 @@ export default function PublicUserProfileScreen() {
       setIsDangerous(stats.isDangerous);
       setApprovedComplaintCount(stats.approvedComplaintCount);
       setComplaintRate(stats.complaintRate);
+      setBio(stats.bio);
+      setCvUrl(stats.cvUrl);
     } else {
       setDisplayName(await usersRepository.getDisplayName(id));
       setCompletedCount(0);
@@ -86,6 +91,8 @@ export default function PublicUserProfileScreen() {
 
         <PublicProfileSections
           profileId={profileId || String(id)}
+          bio={bio}
+          cvUrl={cvUrl}
           completedCount={completedCount}
           completedTasks={completedTasks}
           portfolio={portfolio}
@@ -100,7 +107,7 @@ export default function PublicUserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
@@ -108,4 +115,4 @@ const styles = StyleSheet.create({
   backText: { ...Typography.labelMedium, color: Colors.textSecondary },
   hero: { alignItems: 'center', gap: Spacing[2] },
   title: { ...Typography.headingLarge, color: Colors.textPrimary },
-});
+}));

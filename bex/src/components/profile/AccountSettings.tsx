@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { router, Href } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { authService, getAuthErrorMessage } from '@/features/auth/authService';
@@ -14,7 +15,7 @@ import { LocationPicker } from '@/components/common/LocationPicker';
 import { usersRepository } from '@/features/data';
 import { CompletedTask } from '@/types';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface AccountSettingsProps {
@@ -28,6 +29,8 @@ export function AccountSettings({
   onUserUpdated,
   showAdminLink = true,
 }: AccountSettingsProps) {
+  const styles = useAccountSettingsStyles();
+  const Colors = useThemeColors();
   const { t } = useTranslation();
   const ROLE_LABELS = {
     user: t('accountSettings.roleUser'),
@@ -55,6 +58,11 @@ export function AccountSettings({
   const [locationDistrict, setLocationDistrict] = useState(bexUser?.district ?? '');
   const [editingLocation, setEditingLocation] = useState(false);
   const [savingLocation, setSavingLocation] = useState(false);
+  const [bioDraft, setBioDraft] = useState(bexUser?.bio ?? '');
+  const [editingBio, setEditingBio] = useState(false);
+  const [savingBio, setSavingBio] = useState(false);
+  const [uploadingCv, setUploadingCv] = useState(false);
+  const [removingCv, setRemovingCv] = useState(false);
 
   useEffect(() => {
     hasRestAuthSession().then(setRestMode);
@@ -63,7 +71,8 @@ export function AccountSettings({
   useEffect(() => {
     if (bexUser?.city) setLocationCity(bexUser.city);
     if (bexUser?.district) setLocationDistrict(bexUser.district);
-  }, [bexUser?.city, bexUser?.district]);
+    if (!editingBio) setBioDraft(bexUser?.bio ?? '');
+  }, [bexUser?.city, bexUser?.district, bexUser?.bio, editingBio]);
 
   const handlePickAvatar = async () => {
     if (!firebaseUser) return;
@@ -159,6 +168,78 @@ export function AccountSettings({
     } finally {
       setSavingLocation(false);
     }
+  };
+
+  const handleSaveBio = async () => {
+    setSavingBio(true);
+    try {
+      const updated = await authService.updateBio(bioDraft);
+      onUserUpdated(updated);
+      setEditingBio(false);
+      showToast(t('accountSettings.bioUpdated'));
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : t('accountSettings.bioUpdateFailed');
+      showToast(message);
+    } finally {
+      setSavingBio(false);
+    }
+  };
+
+  const handlePickCv = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    setUploadingCv(true);
+    try {
+      const updated = await authService.uploadCv(asset.uri, asset.name ?? 'cv.pdf');
+      onUserUpdated(updated);
+      showToast(t('accountSettings.cvUploaded'));
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : t('accountSettings.cvUploadFailed');
+      showToast(message);
+    } finally {
+      setUploadingCv(false);
+    }
+  };
+
+  const handleRemoveCv = () => {
+    Alert.alert(
+      t('accountSettings.removeCvTitle'),
+      t('accountSettings.removeCvBody'),
+      [
+        { text: t('accountSettings.cancel'), style: 'cancel' },
+        {
+          text: t('accountSettings.removeCvConfirm'),
+          style: 'destructive',
+          onPress: async () => {
+            setRemovingCv(true);
+            try {
+              const updated = await authService.removeCv();
+              onUserUpdated(updated);
+              showToast(t('accountSettings.cvRemoved'));
+            } catch (error) {
+              const message =
+                error instanceof Error && error.message
+                  ? error.message
+                  : t('accountSettings.cvRemoveFailed');
+              showToast(message);
+            } finally {
+              setRemovingCv(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSavePassword = async () => {
@@ -465,6 +546,102 @@ export function AccountSettings({
         </View>
       ) : null}
 
+      {bexUser?.role === 'user' ? (
+        <View style={styles.card}>
+          <Text style={styles.locationTitle}>{t('accountSettings.bioTitle')}</Text>
+          <Text style={styles.locationHint}>{t('accountSettings.bioHint')}</Text>
+          {editingBio ? (
+            <View style={styles.editBlock}>
+              <Input
+                label={t('accountSettings.bioLabel')}
+                value={bioDraft}
+                onChangeText={setBioDraft}
+                placeholder={t('accountSettings.bioPlaceholder')}
+                multiline
+                numberOfLines={5}
+                maxLength={1000}
+                style={{ minHeight: 120, textAlignVertical: 'top' }}
+              />
+              <View style={styles.editActions}>
+                <Button
+                  title={t('accountSettings.save')}
+                  size="sm"
+                  onPress={handleSaveBio}
+                  loading={savingBio}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title={t('accountSettings.cancel')}
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => {
+                    setEditingBio(false);
+                    setBioDraft(bexUser?.bio ?? '');
+                  }}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.bioPreview}>
+                {bexUser.bio?.trim() ? bexUser.bio : t('accountSettings.bioEmpty')}
+              </Text>
+              <Button
+                title={t('accountSettings.editBio')}
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setBioDraft(bexUser.bio ?? '');
+                  setEditingBio(true);
+                }}
+              />
+            </>
+          )}
+        </View>
+      ) : null}
+
+      {bexUser?.role === 'user' ? (
+        <View style={styles.card}>
+          <Text style={styles.locationTitle}>{t('accountSettings.cvTitle')}</Text>
+          <Text style={styles.locationHint}>{t('accountSettings.cvHint')}</Text>
+          {bexUser.cvUrl ? (
+            <>
+              <TouchableOpacity onPress={() => Linking.openURL(bexUser.cvUrl!)}>
+                <Text style={styles.cvLink}>{t('accountSettings.viewCv')}</Text>
+              </TouchableOpacity>
+              <View style={styles.editActions}>
+                <Button
+                  title={t('accountSettings.replaceCv')}
+                  variant="outline"
+                  size="sm"
+                  onPress={handlePickCv}
+                  loading={uploadingCv}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title={t('accountSettings.removeCv')}
+                  variant="ghost"
+                  size="sm"
+                  onPress={handleRemoveCv}
+                  loading={removingCv}
+                  style={{ flex: 1 }}
+                  textStyle={{ color: Colors.error }}
+                />
+              </View>
+            </>
+          ) : (
+            <Button
+              title={t('accountSettings.uploadCv')}
+              variant="outline"
+              size="sm"
+              onPress={handlePickCv}
+              loading={uploadingCv}
+            />
+          )}
+        </View>
+      ) : null}
+
       {publicProfileHref ? (
         <Button
           title={t('accountSettings.publicProfile')}
@@ -501,6 +678,7 @@ export function AccountSettings({
 }
 
 function Row({ label, value }: { label: string; value: string }) {
+  const styles = useAccountSettingsStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -509,7 +687,7 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useAccountSettingsStyles = createThemedStyles((Colors) => ({
   avatarHint: {
     ...Typography.caption,
     color: Colors.textTertiary,
@@ -576,4 +754,6 @@ const styles = StyleSheet.create({
   editActions: { flexDirection: 'row', gap: Spacing[2] },
   locationTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   locationHint: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
-});
+  bioPreview: { ...Typography.bodyMedium, color: Colors.textSecondary, lineHeight: 22 },
+  cvLink: { ...Typography.labelMedium, color: Colors.primary },
+}));

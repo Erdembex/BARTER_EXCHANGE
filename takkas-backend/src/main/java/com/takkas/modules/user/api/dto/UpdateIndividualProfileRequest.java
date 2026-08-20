@@ -14,5 +14,6 @@ public record UpdateIndividualProfileRequest(
     @NotBlank String district,
     String avatarUrl,
     @Size(max = 1000) String bio,
+    @Size(max = 500) String cvUrl,
     @NotEmpty List<Skill> skills
 ) {}

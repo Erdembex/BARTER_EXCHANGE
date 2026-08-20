@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Business } from '../../types';
-import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
+import { Typography, Radius, Spacing, Shadow, createThemedStyles, useThemeColors } from '../../theme';
 import { useTranslation } from '@/i18n';
 
 interface BusinessCardProps {
@@ -10,6 +10,8 @@ interface BusinessCardProps {
 }
 
 export function BusinessCard({ business, onPress }: BusinessCardProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   return (
     <TouchableOpacity
@@ -40,7 +42,7 @@ export function BusinessCard({ business, onPress }: BusinessCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   card: {
     width: 160,
     backgroundColor: Colors.card,
@@ -97,4 +99,4 @@ const styles = StyleSheet.create({
     color: Colors.success,
     fontWeight: '600',
   },
-});
+}));

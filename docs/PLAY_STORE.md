@@ -1,20 +1,22 @@
-# Google Play Store Yayın Rehberi
+# Google Play Store Yayın Rehberi — Passla
 
 ## Ön koşullar
 
 - [ ] Google Play Console geliştirici hesabı (~25 USD)
-- [ ] Production backend: `https://api.bex.app`
+- [ ] Production backend: `https://api.passla.com.tr`
 - [ ] EAS production build hazır
-- [ ] Gizlilik politikası: `https://bex.app/gizlilik`
+- [ ] Gizlilik politikası: `https://passla.com.tr/gizlilik.html`
 
 ## 1. Play Console uygulama oluştur
 
 1. https://play.google.com/console → Create app
-2. Package name: **`com.bex.app`** (`bex/app.json` ile aynı olmalı)
-3. App name: BEX
+2. Package name: **`com.passla.app`** (`bex/app.json` ile aynı olmalı)
+3. App name: **Passla**
 4. Default language: Turkish
 
 ## 2. Store listing
+
+Metinler: [`bex/store-listing/play-store-tr.txt`](../bex/store-listing/play-store-tr.txt)
 
 | Alan | İçerik |
 |------|--------|
@@ -22,48 +24,35 @@
 | Uzun açıklama | TR + EN |
 | Ekran görüntüleri | Telefon (min 2), tablet (opsiyonel) |
 | Uygulama ikonu | 512x512 PNG |
-| Gizlilik politikası | https://bex.app/gizlilik |
+| Gizlilik politikası | https://passla.com.tr/gizlilik.html |
 | İçerik derecelendirme | Anketi doldur |
 | Veri güvenliği | Konum, kamera, fotoğraf bildir |
 
-## 3. Service account (EAS submit)
+## 3. Internal testing (kapalı beta)
+
+1. Release → Testing → Internal testing
+2. `npm run build:production:android` veya `preview-phone`
+3. Test kullanıcı e-posta listesi ekle
+4. Detay: [`PLAY_CONSOLE_SETUP.md`](PLAY_CONSOLE_SETUP.md)
+
+## 4. Service account (EAS submit)
 
 1. Google Cloud Console → IAM → Service Accounts → Create
 2. Play Console → Setup → API access → Link service account
-3. Rol: Release manager
-4. JSON key indir → `bex/google-play-service-account.json` (git'e ekleme!)
-5. `.gitignore`'da olduğundan emin ol
-
-## 4. eas.json ayarları
-
-`bex/eas.json` içinde:
-
-```json
-"android": {
-  "serviceAccountKeyPath": "./google-play-service-account.json",
-  "track": "internal"
-}
-```
-
-İlk test: `internal` track. Onay sonrası `production`'a promote et.
+3. JSON key → `bex/google-play-service-account.json` (git'e ekleme!)
 
 ## 5. Build ve submit
 
-```bash
+```powershell
 cd bex
-npm run build:production
-eas submit --platform android --profile production
+npm run build:production:android
+npm run submit:android
 ```
-
-## 6. İnceleme
-
-- Internal test: birkaç saat
-- Production review: 1–7 gün
 
 ## Checklist
 
-- [ ] Package name `com.bex.app` eşleşiyor
-- [ ] versionCode EAS tarafından artırılıyor (`autoIncrement: true`)
-- [ ] Production API URL EAS secret'ta
+- [ ] Package name `com.passla.app` eşleşiyor
+- [ ] Production API URL EAS secret'ta (`https://api.passla.com.tr`)
 - [ ] Veri güvenliği formu tamamlandı
 - [ ] İçerik derecelendirme tamamlandı
+- [ ] Min 2 ekran görüntüsü yüklendi

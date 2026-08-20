@@ -8,4 +8,6 @@ upload-result.json
 .env.*
 !.env.example
 deploy/secrets.env
+deploy/aws/secrets.local.env
+deploy/mail/secrets.local.env
 secrets.env

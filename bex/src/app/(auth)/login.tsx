@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
@@ -18,11 +17,13 @@ import {
   saveCredentials,
   clearSavedCredentials,
 } from '@/lib/credentialStorage';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
-import { Button, Input, BexLogo } from '@/components/ui';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
+import { Button, Input, PasslaLogo } from '@/components/ui';
 import { useTranslation } from '@/i18n';
 
 export default function LoginScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { setBexUser, setFirebaseUser } = useAuthStore();
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -89,7 +90,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logoContainer}>
-            <BexLogo size="md" />
+            <PasslaLogo size="md" />
           </View>
 
           <View style={styles.header}>
@@ -163,7 +164,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -272,4 +273,4 @@ const styles = StyleSheet.create({
     ...Typography.labelLarge,
     color: Colors.primary,
   },
-});
+}));

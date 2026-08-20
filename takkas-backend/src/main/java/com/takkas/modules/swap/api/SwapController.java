@@ -25,6 +25,7 @@ public class SwapController {
     private final SwapOfferService swapOfferService;
     private final SwapTradeService swapTradeService;
     private final SwapTradeRepository swapTradeRepository;
+    private final SwapOfferMessageService swapOfferMessageService;
 
     @PostMapping("/api/individual/swap-listings")
     @ResponseStatus(HttpStatus.CREATED)
@@ -94,5 +95,25 @@ public class SwapController {
     public List<SwapTradeResponse> getMyTrades(@CurrentUser UserPrincipal p) {
         return swapTradeRepository.findAllByParticipant(p.profileId())
             .stream().map(SwapMapper::toTradeResponse).toList();
+    }
+
+    @GetMapping("/api/swap-offers/{offerId}/messages")
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public List<SwapOfferMessageResponse> getOfferMessages(
+        @CurrentUser UserPrincipal p,
+        @PathVariable UUID offerId
+    ) {
+        return swapOfferMessageService.listMessages(offerId, p);
+    }
+
+    @PostMapping("/api/swap-offers/{offerId}/messages")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public SwapOfferMessageResponse sendOfferMessage(
+        @CurrentUser UserPrincipal p,
+        @PathVariable UUID offerId,
+        @Valid @RequestBody CreateSwapOfferMessageRequest req
+    ) {
+        return swapOfferMessageService.sendMessage(offerId, p, req);
     }
 }

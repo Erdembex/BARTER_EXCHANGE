@@ -1,0 +1,1 @@
+ALTER TABLE individual_profiles ADD COLUMN IF NOT EXISTS cv_url VARCHAR(500);

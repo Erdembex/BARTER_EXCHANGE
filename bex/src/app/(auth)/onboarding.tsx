@@ -2,7 +2,6 @@ import React, { useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   Dimensions,
   TouchableOpacity,
@@ -10,13 +9,15 @@ import {
   ViewToken,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -170,7 +171,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -272,4 +273,4 @@ const styles = StyleSheet.create({
     ...Typography.labelMedium,
     color: Colors.textSecondary,
   },
-});
+}));

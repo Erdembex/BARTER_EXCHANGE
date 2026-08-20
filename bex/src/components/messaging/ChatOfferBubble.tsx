@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { ChatOffer } from '@/types';
 import { formatOfferLabel } from '@/features/messages/offersApi';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { Timestamp } from 'firebase/firestore';
 import { useTranslation } from '@/i18n';
 
@@ -25,6 +25,8 @@ export function ChatOfferBubble({
   onReject,
   acting,
 }: ChatOfferBubbleProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
 
   const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -117,7 +119,7 @@ export function ChatOfferBubble({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: { width: '100%', marginBottom: Spacing[2] },
   rowMine: { alignItems: 'flex-end' },
   rowOther: { alignItems: 'flex-start' },
@@ -207,4 +209,4 @@ const styles = StyleSheet.create({
   acceptText: { ...Typography.caption, color: Colors.white, fontWeight: '700' },
   time: { ...Typography.caption, color: Colors.textMuted, alignSelf: 'flex-end' },
   timeMine: { color: Colors.textOnGold, opacity: 0.72 },
-});
+}));

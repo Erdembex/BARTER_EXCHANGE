@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { authService } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function BannedScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { signOut } = useAuthStore();
   const [loading, setLoading] = useState(false);
@@ -33,7 +35,7 @@ export default function BannedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   content: {
     flex: 1,
@@ -51,4 +53,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: Spacing[4],
   },
-});
+}));

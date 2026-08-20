@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
@@ -20,10 +19,12 @@ import { uploadSubmissionFiles } from '@/features/applications/submissionService
 import { useAuthStore } from '@/store/authStore';
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function SubmitTaskScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser } = useAuthStore();
@@ -213,7 +214,7 @@ export default function SubmitTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: Spacing[5], gap: Spacing[5], paddingBottom: Spacing[10] },
@@ -243,4 +244,4 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   removeHint: { ...Typography.caption, color: Colors.error },
-});
+}));

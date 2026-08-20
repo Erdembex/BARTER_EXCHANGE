@@ -1,35 +1,49 @@
-# Website — Cloudflare Pages
+# Passla — Gizlilik Sitesi Deploy
 
 Statik dosyalar: [`website/`](../website/)
 
-## Hizli deploy
+## Oracle VM (önerilen — domain ile aynı sunucu)
 
-1. [Cloudflare Dashboard](https://dash.cloudflare.com) → **Pages** → Create project
-2. Connect Git → repo: `BARTER_EXCHANGE` (veya sadece `website/` klasoru)
-3. Build settings:
-   - Framework: **None**
-   - Build command: *(bos)*
-   - Output directory: **`website`**
-4. Custom domain: **`barterex.com.tr`**
-5. DNS A kaydi VM IP'sine (Reserved IP onerilir)
+DNS (Natro):
+- `@` → `150.230.158.219`
+- `api` → `150.230.158.219`
 
-## Domain almadan test
+Windows'tan deploy:
 
 ```powershell
-cd website
-npx serve .
-# http://localhost:3000/gizlilik.html
+.\scripts\deploy-passla-website-oracle.ps1
 ```
 
-## Eslestirme
+Sunucuda manuel:
 
-| Dosya | URL |
-|-------|-----|
-| [`bex/app.json`](../bex/app.json) `privacyPolicyUrl` | `https://barterex.com.tr/gizlilik.html` |
-| [`store-listing/metadata.json`](../bex/store-listing/metadata.json) | ayni |
+```bash
+cd BARTER_EXCHANGE/takkas-backend
+sudo bash deploy/scripts/setup-passla-production.sh passla.com.tr
+```
 
-Deploy sonrasi:
+## Doğrulama
+
+| URL | Beklenen |
+|-----|----------|
+| `https://passla.com.tr/gizlilik.html` | 200, Passla metni |
+| `https://passla.com.tr/destek.html` | 200 |
+| `https://api.passla.com.tr/actuator/health` | `{"status":"UP"}` |
+
+PowerShell:
 
 ```powershell
-curl.exe -sS -o NUL -w "%{http_code}" https://barterex.com.tr/gizlilik.html
+Invoke-WebRequest https://passla.com.tr/gizlilik.html -Method Head
+Invoke-RestMethod https://api.passla.com.tr/actuator/health
 ```
+
+## Uygulama eşleştirme
+
+| Dosya | Değer |
+|-------|-------|
+| [`bex/app.json`](../bex/app.json) | `privacyPolicyUrl`: `https://passla.com.tr/gizlilik.html` |
+| [`bex/store-listing/metadata.json`](../bex/store-listing/metadata.json) | Passla URL'leri |
+
+## DNS henüz yayılmadıysa
+
+`nslookup passla.com.tr` → `150.230.158.219` olmalı.  
+Natro park sayfası (`85.159.x.x`) görüyorsan [`NATRO_DNS.md`](NATRO_DNS.md) adımlarını uygula.

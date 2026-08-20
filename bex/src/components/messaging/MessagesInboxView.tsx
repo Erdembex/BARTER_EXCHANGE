@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   ActivityIndicator,
@@ -18,7 +17,7 @@ import { triggerNotificationRefresh } from '@/store/notificationRefreshBridge';
 import { ConversationRow } from '@/components/messaging/ConversationRow';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type MessagesInboxViewProps = {
@@ -32,6 +31,8 @@ export function MessagesInboxView({
   chatRoute,
   showMenu = audience === 'user',
 }: MessagesInboxViewProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
 
   const LOCKED_COPY: Record<
@@ -153,7 +154,7 @@ export function MessagesInboxView({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   bizHeader: {
     paddingHorizontal: Spacing[5],
@@ -208,4 +209,4 @@ const styles = StyleSheet.create({
   },
   empty: { paddingVertical: Spacing[10], alignItems: 'center' },
   emptyText: { ...Typography.bodyMedium, color: Colors.textTertiary },
-});
+}));

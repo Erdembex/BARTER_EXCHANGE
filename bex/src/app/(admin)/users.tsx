@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   TouchableOpacity,
@@ -15,10 +14,12 @@ import { adminRepository } from '@/features/admin';
 import { BexUser } from '@/types';
 import { Input, Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminUsersScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const ROLE_LABELS: Record<BexUser['role'], string> = {
     user: t('adminUsersScreen.roleUser'),
@@ -137,7 +138,7 @@ export default function AdminUsersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
@@ -194,4 +195,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: Spacing[2],
   },
-});
+}));

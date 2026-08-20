@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
@@ -19,11 +18,13 @@ import { useToast } from '@/components/common/Toast';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
 import { PortfolioItem } from '@/types';
 import { Button, Input } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { isTaskOpenForApplications } from '@/lib/taskUtils';
 import { useTranslation } from '@/i18n';
 
 export default function ApplyScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { firebaseUser, bexUser } = useAuthStore();
@@ -165,7 +166,7 @@ export default function ApplyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[5], paddingBottom: Spacing[10] },
   back: { alignSelf: 'flex-start' },
@@ -195,4 +196,4 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.error,
   },
   errorText: { ...Typography.bodySmall, color: Colors.error },
-});
+}));

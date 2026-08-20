@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -27,13 +26,13 @@ import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery'
 import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { ApplicationMessageThread } from '@/components/application/ApplicationMessageThread';
 import { canUseApplicationMessages } from '@/features/messages';
-import { TaskFeedbackModal } from '@/components/profile/TaskFeedbackModal';
-import { submitBusinessFeedback } from '@/features/feedback/feedbackApi';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function ApplicationDetailScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +45,6 @@ export default function ApplicationDetailScreen() {
   const [reviewNote, setReviewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
   const hasLoadedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -78,6 +76,11 @@ export default function ApplicationDetailScreen() {
       load();
     }, [load])
   );
+
+  const needsFeedback =
+    !!application &&
+    ['submission_approved', 'rewarded'].includes(application.status) &&
+    !application.feedbackSubmitted;
 
   const handleApproveApplication = async () => {
     if (!application || actionLoading) return;
@@ -199,7 +202,46 @@ export default function ApplicationDetailScreen() {
         </View>
 
         <Text style={styles.taskTitle}>{task?.title ?? t('applicationDetailBizScreen.defaultTask')}</Text>
-        <Text style={styles.meta}>{t('applicationDetailBizScreen.applicantLabel', { name: applicantName || application.userId.slice(0, 8) })}</Text>
+
+        {canApproveApplication ? (
+          <View style={styles.applicantCard}>
+            <Text style={styles.applicantCardTitle}>
+              {t('applicationDetailBizScreen.applicantLabel', {
+                name: applicantName || application.userId.slice(0, 8),
+              })}
+            </Text>
+            <Text style={styles.applicantCardHint}>
+              {t('applicationDetailBizScreen.applicantReviewHint')}
+            </Text>
+            <View style={styles.applicantActions}>
+              <Button
+                title={t('applicationDetailBizScreen.viewApplicantProfile')}
+                variant="outline"
+                size="sm"
+                onPress={() =>
+                  router.push({ pathname: '/user/[id]', params: { id: application.userId } } as Href)
+                }
+                style={styles.applicantActionBtn}
+              />
+              {firebaseUser && bexUser ? (
+                <Button
+                  title={t('applicationDetailBizScreen.messageApplicant')}
+                  size="sm"
+                  onPress={() =>
+                    router.push(`/(business)/messages/${application.id}` as Href)
+                  }
+                  style={styles.applicantActionBtn}
+                />
+              ) : null}
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.meta}>
+            {t('applicationDetailBizScreen.applicantLabel', {
+              name: applicantName || application.userId.slice(0, 8),
+            })}
+          </Text>
+        )}
 
         {canApproveApplication ? (
           <>
@@ -209,32 +251,7 @@ export default function ApplicationDetailScreen() {
               subtitle={t('applicationDetailBizScreen.approvedPortfolioSubtitle')}
               emptyText={t('applicationDetailBizScreen.approvedPortfolioEmpty')}
             />
-
-            {applicantPortfolio.length > 0 ? (
-              <Button
-                title={t('applicationDetailBizScreen.viewFullPortfolio')}
-                variant="ghost"
-                size="sm"
-                onPress={() =>
-                  router.push({ pathname: '/user/[id]', params: { id: application.userId } } as Href)
-                }
-                style={{ alignSelf: 'flex-start' }}
-              />
-            ) : null}
           </>
-        ) : null}
-
-        <View style={styles.block}>
-          <Text style={styles.blockTitle}>{t('applicationDetailBizScreen.coverLetterTitle')}</Text>
-          <Text style={styles.blockText}>{application.coverLetter || '—'}</Text>
-        </View>
-
-        {application.portfolioUrl ? (
-          <TouchableOpacity
-            onPress={() => Linking.openURL(application.portfolioUrl!)}
-          >
-            <Text style={styles.link}>{t('applicationDetailBizScreen.openPortfolioLink')}</Text>
-          </TouchableOpacity>
         ) : null}
 
         {firebaseUser &&
@@ -256,6 +273,19 @@ export default function ApplicationDetailScreen() {
               }
             />
           </>
+        ) : null}
+
+        <View style={styles.block}>
+          <Text style={styles.blockTitle}>{t('applicationDetailBizScreen.coverLetterTitle')}</Text>
+          <Text style={styles.blockText}>{application.coverLetter || '—'}</Text>
+        </View>
+
+        {application.portfolioUrl ? (
+          <TouchableOpacity
+            onPress={() => Linking.openURL(application.portfolioUrl!)}
+          >
+            <Text style={styles.link}>{t('applicationDetailBizScreen.openPortfolioLink')}</Text>
+          </TouchableOpacity>
         ) : null}
 
         {application.submissionText ? (
@@ -350,11 +380,19 @@ export default function ApplicationDetailScreen() {
         ) ? (
           <>
             {['submission_approved', 'rewarded'].includes(application.status) ? (
-              <Button
-                title={t('applicationDetailBizScreen.giveFeedbackToUser')}
-                variant="secondary"
-                onPress={() => setShowFeedback(true)}
-              />
+              application.feedbackSubmitted ? (
+                <View style={styles.waitingBox}>
+                  <Text style={styles.waitingText}>
+                    {t('applicationDetailBizScreen.feedbackSubmitted')}
+                  </Text>
+                </View>
+              ) : needsFeedback ? (
+                <View style={styles.waitingBox}>
+                  <Text style={styles.waitingText}>
+                    {t('applicationDetailBizScreen.feedbackRequired')}
+                  </Text>
+                </View>
+              ) : null
             ) : null}
             <Button
               title={t('applicationDetailBizScreen.reportUser')}
@@ -372,21 +410,11 @@ export default function ApplicationDetailScreen() {
           </>
         ) : null}
       </ScrollView>
-
-      <TaskFeedbackModal
-        visible={showFeedback}
-        title={t('applicationDetailBizScreen.feedbackModalTitle')}
-        onClose={() => setShowFeedback(false)}
-        onSubmit={async (stars, comment) => {
-          await submitBusinessFeedback(application.id, stars, comment);
-          showToast(t('applicationDetailBizScreen.feedbackSavedToast'));
-        }}
-      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: {
     flex: 1,
@@ -415,6 +443,19 @@ const styles = StyleSheet.create({
   badgeText: { ...Typography.labelMedium, color: Colors.primaryDark },
   taskTitle: { ...Typography.headingLarge, color: Colors.textPrimary, marginBottom: Spacing[1] },
   meta: { ...Typography.bodySmall, color: Colors.textSecondary, marginBottom: Spacing[5] },
+  applicantCard: {
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    marginBottom: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: Spacing[2],
+  },
+  applicantCardTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
+  applicantCardHint: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
+  applicantActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2], marginTop: Spacing[1] },
+  applicantActionBtn: { flexGrow: 1, minWidth: 140 },
   block: {
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
@@ -449,4 +490,4 @@ const styles = StyleSheet.create({
   waitingText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
   actions: { gap: Spacing[3], marginTop: Spacing[4] },
   errorText: { ...Typography.bodyMedium, color: Colors.error },
-});
+}));

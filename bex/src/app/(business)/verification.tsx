@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -14,10 +13,12 @@ import { submitBusinessVerification } from '@/features/business/verificationServ
 import { useVerificationStatusLabels } from '@/constants/businessLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function BusinessVerificationScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const VERIFICATION_STATUS_LABELS = useVerificationStatusLabels();
   const { business, reload } = useBusiness();
@@ -129,7 +130,7 @@ export default function BusinessVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   back: { alignSelf: 'flex-start' },
@@ -166,4 +167,4 @@ const styles = StyleSheet.create({
   },
   fileName: { ...Typography.labelMedium, color: Colors.textPrimary },
   fileType: { ...Typography.caption, color: Colors.textTertiary },
-});
+}));

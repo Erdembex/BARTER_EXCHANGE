@@ -1,38 +1,38 @@
 {
   "expo": {
-    "name": "Barter",
+    "name": "Passla",
     "slug": "bex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "bex",
-    "description": "Görev yap, ödül kazan. Barter ile işletmelerden görev al, tamamla ve kupon kazan.",
-    "primaryColor": "#EAB308",
-    "backgroundColor": "#071209",
+    "scheme": "passla",
+    "description": "Görev yap, ödül kazan, kupon takas et. Passla ile işletmelerden görev al, tamamla ve değerini aktar.",
+    "primaryColor": "#D4B86A",
+    "backgroundColor": "#18122B",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#071209"
+      "backgroundColor": "#18122B"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bex.app",
+      "bundleIdentifier": "com.passla.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "BEX, görev teslimi için fotoğraf seçmeni sağlar.",
-        "NSPhotoLibraryAddUsageDescription": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
-        "NSCameraUsageDescription": "BEX, görev teslimi ve kupon QR okuma için kamerayı kullanır.",
-        "NSLocationWhenInUseUsageDescription": "BEX, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır.",
+        "NSPhotoLibraryUsageDescription": "Passla, görev teslimi için fotoğraf seçmeni sağlar.",
+        "NSPhotoLibraryAddUsageDescription": "Passla, sohbetteki görselleri galerine kaydetmeni sağlar.",
+        "NSCameraUsageDescription": "Passla, görev teslimi ve kupon QR okuma için kamerayı kullanır.",
+        "NSLocationWhenInUseUsageDescription": "Passla, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#071209",
+        "backgroundColor": "#18122B",
         "foregroundImage": "./assets/icon.png"
       },
-      "package": "com.bex.app",
+      "package": "com.passla.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
@@ -44,8 +44,7 @@
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
-      ],
-      "usesCleartextTraffic": true
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -58,37 +57,38 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#EAB308"
+          "color": "#D4B86A"
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "BEX, kupon QR kodlarını okutmak için kameraya erişim ister."
+          "cameraPermission": "Passla, kupon QR kodlarını okutmak için kameraya erişim ister."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "BEX, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır."
+          "locationWhenInUsePermission": "Passla, yakınındaki görevleri göstermek ve il/ilçe seçimini kolaylaştırmak için konumunu kullanır."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
-          "savePhotosPermission": "BEX, sohbetteki görselleri galerine kaydetmeni sağlar.",
+          "photosPermission": "Passla, sohbetteki görselleri galerine kaydetmeni sağlar.",
+          "savePhotosPermission": "Passla, sohbetteki görselleri galerine kaydetmeni sağlar.",
           "isAccessMediaLocationEnabled": false
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withAndroidCleartext.js"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "appCheckDebugToken": "",
-      "privacyPolicyUrl": "https://barterex.com.tr/gizlilik.html",
+      "privacyPolicyUrl": "https://passla.com.tr/gizlilik.html",
       "router": {},
       "eas": {
         "projectId": "1883a871-3730-4cbb-a11e-120480fbbe20"

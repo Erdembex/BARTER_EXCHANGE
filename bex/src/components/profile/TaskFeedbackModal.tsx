@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Modal,
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  BackHandler,
 } from 'react-native';
 import { Button, Input } from '@/components/ui';
 import { StarRatingInput } from '@/components/profile/StarRating';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface TaskFeedbackModalProps {
   visible: boolean;
   title: string;
+  required?: boolean;
   onClose: () => void;
   onSubmit: (stars: number, comment: string) => Promise<void>;
 }
@@ -23,9 +24,12 @@ interface TaskFeedbackModalProps {
 export function TaskFeedbackModal({
   visible,
   title,
+  required = false,
   onClose,
   onSubmit,
 }: TaskFeedbackModalProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const [step, setStep] = useState<'stars' | 'comment'>('stars');
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
@@ -42,9 +46,20 @@ export function TaskFeedbackModal({
   };
 
   const handleClose = () => {
+    if (required) return;
     reset();
     onClose();
   };
+
+  useEffect(() => {
+    if (!visible || !required) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [visible, required]);
+
+  useEffect(() => {
+    if (!visible) reset();
+  }, [visible]);
 
   const handleContinue = () => {
     if (stars < 1) {
@@ -58,14 +73,15 @@ export function TaskFeedbackModal({
   const handleSubmit = async () => {
     if (stars < 1) {
       setError(t('taskFeedbackModal.starsRequiredSubmit'));
-      setStep('stars');
+      if (!required) setStep('stars');
       return;
     }
     setLoading(true);
     setError(null);
     try {
       await onSubmit(stars, comment.trim());
-      handleClose();
+      if (!required) handleClose();
+      else reset();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('taskFeedbackModal.submitFailed'));
     } finally {
@@ -73,29 +89,34 @@ export function TaskFeedbackModal({
     }
   };
 
+  const subtitle = required
+    ? t('taskFeedbackModal.subtitleRequired')
+    : step === 'stars'
+      ? t('taskFeedbackModal.subtitleStars')
+      : t('taskFeedbackModal.subtitleComment');
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={required ? () => {} : handleClose}
+    >
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity onPress={handleClose}>
-            <Text style={styles.close}>{t('taskFeedbackModal.close')}</Text>
-          </TouchableOpacity>
+          {!required ? (
+            <TouchableOpacity onPress={handleClose}>
+              <Text style={styles.close}>{t('taskFeedbackModal.close')}</Text>
+            </TouchableOpacity>
+          ) : null}
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>
-            {step === 'stars'
-              ? t('taskFeedbackModal.subtitleStars')
-              : t('taskFeedbackModal.subtitleComment')}
-          </Text>
+          {required ? (
+            <Text style={styles.requiredHint}>{t('taskFeedbackModal.requiredHint')}</Text>
+          ) : null}
+          <Text style={styles.subtitle}>{subtitle}</Text>
 
-          {step === 'stars' ? (
+          {required || step === 'comment' ? (
             <>
-              <StarRatingInput value={stars} onChange={setStars} />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Button title={t('taskFeedbackModal.continue')} onPress={handleContinue} disabled={stars < 1} />
-            </>
-          ) : (
-            <>
-              <StarRatingInput value={stars} onChange={setStars} size={24} />
+              <StarRatingInput value={stars} onChange={setStars} size={required ? 32 : 24} />
               <Input
                 label={t('taskFeedbackModal.commentLabel')}
                 value={comment}
@@ -105,8 +126,29 @@ export function TaskFeedbackModal({
                 numberOfLines={4}
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Button title={t('taskFeedbackModal.submit')} onPress={handleSubmit} loading={loading} />
-              <Button title={t('taskFeedbackModal.backToStars')} variant="ghost" onPress={() => setStep('stars')} />
+              <Button
+                title={t('taskFeedbackModal.submit')}
+                onPress={handleSubmit}
+                loading={loading}
+                disabled={stars < 1}
+              />
+              {!required ? (
+                <Button
+                  title={t('taskFeedbackModal.backToStars')}
+                  variant="ghost"
+                  onPress={() => setStep('stars')}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <StarRatingInput value={stars} onChange={setStars} />
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Button
+                title={t('taskFeedbackModal.continue')}
+                onPress={handleContinue}
+                disabled={stars < 1}
+              />
             </>
           )}
         </ScrollView>
@@ -115,11 +157,12 @@ export function TaskFeedbackModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   close: { ...Typography.labelMedium, color: Colors.textSecondary },
   title: { ...Typography.headingMedium, color: Colors.textPrimary },
+  requiredHint: { ...Typography.bodySmall, color: Colors.warning, lineHeight: 20 },
   subtitle: { ...Typography.bodyMedium, color: Colors.textMuted, lineHeight: 22 },
   error: { ...Typography.bodySmall, color: Colors.error },
-});
+}));

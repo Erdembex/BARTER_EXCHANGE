@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Typography, Spacing } from '@/theme';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 
 interface StarRatingInputProps {
   value: number;
@@ -9,6 +9,8 @@ interface StarRatingInputProps {
 }
 
 export function StarRatingInput({ value, onChange, size = 32 }: StarRatingInputProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.row}>
       {[1, 2, 3, 4, 5].map((star) => (
@@ -23,6 +25,7 @@ export function StarRatingInput({ value, onChange, size = 32 }: StarRatingInputP
 }
 
 export function StarRatingDisplay({ value, size = 16 }: { value: number; size?: number }) {
+  const styles = useScreenStyles();
   const rounded = Math.round(value * 10) / 10;
   return (
     <Text style={[styles.display, { fontSize: size }]}>
@@ -32,8 +35,8 @@ export function StarRatingDisplay({ value, size = 16 }: { value: number; size?: 
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: { flexDirection: 'row', gap: Spacing[2], justifyContent: 'center' },
   star: { color: Colors.warning ?? '#F5A623' },
   display: { color: Colors.warning ?? '#F5A623', fontWeight: '700' },
-});
+}));

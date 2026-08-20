@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
@@ -14,7 +13,7 @@ import { applicationsRepository, businessesRepository, tasksRepository, usersRep
 import { canUseApplicationMessages } from '@/features/messages';
 import { useMessagingInbox, MessagingAudience } from '@/hooks/useMessagingInbox';
 import { ChatThreadView } from '@/components/messaging/ChatThreadView';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface MessageThreadScreenProps {
@@ -26,6 +25,8 @@ export function MessageThreadScreen({
   applicationId,
   messagingAudience = 'user',
 }: MessageThreadScreenProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { firebaseUser, bexUser } = useAuthStore();
   const { conversations } = useMessagingInbox(messagingAudience);
@@ -128,7 +129,7 @@ export function MessageThreadScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing[6] },
   header: {
@@ -157,4 +158,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-});
+}));

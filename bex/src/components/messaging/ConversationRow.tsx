@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { ConversationPreview } from '@/features/messages/inboxService';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface ConversationRowProps {
@@ -11,6 +11,8 @@ interface ConversationRowProps {
 }
 
 export function ConversationRow({ item, onPress }: ConversationRowProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const preview = item.lastMessage?.trim() || t('conversationRow.noMessageYet');
   const hasUnread = item.unreadCount > 0;
@@ -51,7 +53,7 @@ export function ConversationRow({ item, onPress }: ConversationRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,4 +129,4 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontWeight: '300',
   },
-});
+}));

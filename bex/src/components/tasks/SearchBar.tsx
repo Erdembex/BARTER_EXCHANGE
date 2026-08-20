@@ -2,11 +2,10 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
 } from 'react-native';
-import { Colors, Typography, Radius, Spacing } from '../../theme';
+import { Typography, Radius, Spacing, createThemedStyles, useThemeColors } from '../../theme';
 import { useTranslation } from '@/i18n';
 
 interface SearchBarProps {
@@ -16,35 +15,7 @@ interface SearchBarProps {
   onSubmit?: () => void;
 }
 
-export function SearchBar({
-  value,
-  onChangeText,
-  placeholder,
-  onSubmit,
-}: SearchBarProps) {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.container}>
-      <Text style={styles.icon}>🔍</Text>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder ?? t('searchBar.placeholder')}
-        placeholderTextColor={Colors.textTertiary}
-        returnKeyType="search"
-        onSubmitEditing={onSubmit}
-      />
-      {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.clear}>✕</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((Colors) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -70,4 +41,35 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     padding: 4,
   },
-});
+}));
+
+export function SearchBar({
+  value,
+  onChangeText,
+  placeholder,
+  onSubmit,
+}: SearchBarProps) {
+  const { t } = useTranslation();
+  const Colors = useThemeColors();
+  const styles = useStyles();
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.icon}>🔍</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder ?? t('searchBar.placeholder')}
+        placeholderTextColor={Colors.textTertiary}
+        returnKeyType="search"
+        onSubmitEditing={onSubmit}
+      />
+      {value.length > 0 && (
+        <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.clear}>✕</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}

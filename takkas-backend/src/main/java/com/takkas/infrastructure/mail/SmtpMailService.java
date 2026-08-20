@@ -16,7 +16,7 @@ public class SmtpMailService implements MailService {
     @Value("${app.base-url}")
     private String baseUrl;
 
-    @Value("${spring.mail.username:}")
+    @Value("${spring.mail.from:noreply@passla.com.tr}")
     private String fromAddress;
 
     public SmtpMailService(ObjectProvider<JavaMailSender> mailSenderProvider) {

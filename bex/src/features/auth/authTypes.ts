@@ -20,6 +20,7 @@ export interface IndividualProfileDto {
   district: string;
   avatarUrl?: string | null;
   bio?: string | null;
+  cvUrl?: string | null;
   skills?: string[];
   phone?: string | null;
   phoneVerified?: boolean;

@@ -25,4 +25,12 @@ public class MediaUploadController {
                                  @RequestParam("files") MultipartFile[] files) {
         return new UploadResponse(mediaStorageService.storeUserFiles(principal.userId(), files));
     }
+
+    @PostMapping(value = "/cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public UploadResponse uploadCv(@CurrentUser UserPrincipal principal,
+                                   @RequestParam("file") MultipartFile file) {
+        return new UploadResponse(java.util.List.of(
+            mediaStorageService.storeCvFile(principal.userId(), file)));
+    }
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   Dimensions,
@@ -10,7 +9,7 @@ import {
 import { PortfolioItem } from '@/types';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -33,6 +32,8 @@ export function UserPortfolioGallery({
   compact = false,
   maxItems,
 }: UserPortfolioGalleryProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const resolvedTitle = title ?? t('userPortfolioGallery.title');
   const resolvedSubtitle = subtitle ?? t('userPortfolioGallery.subtitle');
@@ -101,7 +102,7 @@ export function UserPortfolioGallery({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: {
     width: '100%',
     backgroundColor: Colors.surface,
@@ -169,4 +170,4 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   closeText: { ...Typography.labelMedium, color: Colors.textPrimary },
-});
+}));

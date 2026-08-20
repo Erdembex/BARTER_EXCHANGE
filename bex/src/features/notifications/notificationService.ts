@@ -33,7 +33,7 @@ export const notificationService = {
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'BEX Bildirimleri',
+        name: 'Passla Bildirimleri',
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }

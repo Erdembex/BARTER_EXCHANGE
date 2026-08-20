@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -12,10 +11,12 @@ import { usersRepository } from '@/features/data';
 import { Button, Input } from '@/components/ui';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { BackHeader } from '@/components/navigation/BackHeader';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function BusinessProfileSearchScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -124,7 +125,7 @@ export default function BusinessProfileSearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   subtitle: { ...Typography.bodyMedium, color: Colors.textMuted, lineHeight: 22 },
@@ -142,4 +143,4 @@ const styles = StyleSheet.create({
   previewMeta: { ...Typography.caption, color: Colors.textMuted, textAlign: 'center' },
   recentTasks: { width: '100%', gap: 2, marginTop: Spacing[1] },
   recentTaskItem: { ...Typography.caption, color: Colors.textSecondary },
-});
+}));

@@ -2,6 +2,7 @@ export { Colors } from './colors';
 export type { ColorKey } from './colors';
 export { LightColors } from './colorsLight';
 export { useThemeColors, useIsDarkMode } from './useThemeColors';
+export { createThemedStyles } from './createThemedStyles';
 export { Typography, FontFamily, FontSize } from './typography';
 export { Spacing, Radius, Shadow } from './spacing';
 export { theme, getTheme } from './restyle';

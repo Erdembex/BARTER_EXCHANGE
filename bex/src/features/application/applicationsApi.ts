@@ -50,6 +50,7 @@ type ApplicationDetailDto = {
   reviewedAt?: string | null;
   listingId?: string;
   businessId?: string;
+  feedbackSubmittedByMe?: boolean;
 };
 
 type ApplicantDto = {
@@ -159,6 +160,7 @@ async function mapDetailToApplication(
     coverLetter: dto.coverLetter?.trim() ?? '',
     ...mapDetailFields(dto),
     createdAt: toTimestamp(dto.appliedAt),
+    feedbackSubmitted: dto.feedbackSubmittedByMe ?? false,
   };
 }
 

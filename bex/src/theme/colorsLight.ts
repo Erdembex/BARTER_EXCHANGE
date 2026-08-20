@@ -1,74 +1,62 @@
 import type { ColorKey } from './colors';
 
-/**
- * Açık mod paleti. Anahtarlar `colors.ts` (koyu mod) ile birebir aynı olmalı —
- * `Record<ColorKey, string>` bunu derleme zamanında garanti eder.
- */
+/** Açık mod — yüksek kontrast, okunabilir metin */
 export const LightColors: Record<ColorKey, string> = {
-  // Marka — altın & para yeşili (marka kimliği her iki modda da sabit kalır)
-  primary: '#EAB308',
-  primaryLight: 'rgba(234, 179, 8, 0.14)',
-  primaryDark: '#C8940A',
-  secondary: '#052E16',
-  accent: '#B8860B',
-  accentLight: 'rgba(184, 134, 11, 0.12)',
-  accentDark: '#8A6508',
+  primary: '#A6883F',
+  primaryLight: 'rgba(166, 136, 63, 0.12)',
+  primaryDark: '#7A6228',
+  secondary: '#6B5094',
+  accent: '#7358A0',
+  accentLight: 'rgba(115, 88, 160, 0.1)',
+  accentDark: '#553F78',
 
-  moneyGreen: '#16A34A',
-  moneyGreenDark: '#15803D',
-  moneyGreenLight: 'rgba(22, 163, 74, 0.14)',
+  moneyGreen: '#2F7A4F',
+  moneyGreenDark: '#1F5738',
+  moneyGreenLight: 'rgba(47, 122, 79, 0.1)',
 
-  // İşletme tarafı — kurumsal ikincil kimlik rengi
-  business: '#0F766E',
-  businessLight: 'rgba(15, 118, 110, 0.12)',
-  businessDark: '#0B5C56',
+  business: '#6B5094',
+  businessLight: 'rgba(107, 80, 148, 0.1)',
+  businessDark: '#553F78',
 
-  // Açık, sıcak zemin — net yüzey hiyerarşisi
-  background: '#F7F7F2',
+  background: '#F5F0FA',
   surface: '#FFFFFF',
-  surfaceSecondary: '#EEF0E7',
+  surfaceSecondary: '#EBE3F5',
   card: '#FFFFFF',
 
-  // Koyu yeşilimsi metin — açık zeminde yüksek okunabilirlik
-  text: '#142016',
-  textPrimary: '#142016',
-  textMuted: '#6B7A6D',
-  textSecondary: '#3F4C41',
-  textTertiary: '#8B978C',
+  text: '#1A1224',
+  textPrimary: '#1A1224',
+  textMuted: '#5C5068',
+  textSecondary: '#3D3349',
+  textTertiary: '#6E627E',
   textInverse: '#FFFFFF',
-  textOnPrimary: '#1B1608',
-  textOnGold: '#1B1608',
+  textOnPrimary: '#FFFFFF',
+  textOnGold: '#1A1224',
 
-  // Sınır
-  border: '#E1E4DA',
-  borderLight: '#ECEFE5',
-  borderFocus: '#EAB308',
-  borderGold: 'rgba(234, 179, 8, 0.45)',
+  border: '#CFC3DE',
+  borderLight: '#E2DAED',
+  borderFocus: '#A6883F',
+  borderGold: 'rgba(166, 136, 63, 0.45)',
 
-  // Durum
-  success: '#16A34A',
-  successLight: 'rgba(22, 163, 74, 0.12)',
-  error: '#DC2626',
-  errorLight: 'rgba(220, 38, 38, 0.10)',
-  warning: '#D97706',
-  warningLight: 'rgba(217, 119, 6, 0.12)',
-  info: '#0284C7',
-  infoLight: 'rgba(2, 132, 199, 0.10)',
+  success: '#2F7A4F',
+  successLight: 'rgba(47, 122, 79, 0.1)',
+  error: '#B53A45',
+  errorLight: 'rgba(181, 58, 69, 0.08)',
+  warning: '#9A6B1F',
+  warningLight: 'rgba(154, 107, 31, 0.1)',
+  info: '#6B5094',
+  infoLight: 'rgba(107, 80, 148, 0.08)',
 
-  // Zorluk seviyeleri
-  difficultyEasy: '#16A34A',
-  difficultyMedium: '#D97706',
-  difficultyHard: '#DC2626',
+  difficultyEasy: '#2F7A4F',
+  difficultyMedium: '#9A6B1F',
+  difficultyHard: '#B53A45',
 
-  // Overlay
-  overlay: 'rgba(20, 32, 22, 0.55)',
-  overlayLight: 'rgba(234, 179, 8, 0.08)',
+  overlay: 'rgba(26, 18, 36, 0.45)',
+  overlayLight: 'rgba(107, 80, 148, 0.06)',
 
   transparent: 'transparent',
   white: '#FFFFFF',
 
-  // Hero gradyanları — koyu yeşilden açık zemine yumuşak geçiş
-  gradientBlue: '#14532D',
-  gradientGold: '#EAB308',
-  gradientMid: '#3F5B45',
+  gradientBlue: '#5A4678',
+  gradientGold: '#A6883F',
+  gradientMid: '#7358A0',
 };

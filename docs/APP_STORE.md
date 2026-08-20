@@ -1,77 +1,42 @@
-# App Store Yayın Rehberi
+# App Store Yayın Rehberi — Passla
 
 ## Ön koşullar
 
 - [ ] Apple Developer Program (~99 USD/yıl)
-- [ ] Production backend: `https://api.bex.app`
-- [ ] EAS production build hazır
-- [ ] Gizlilik politikası URL'si
+- [ ] Production backend: `https://api.passla.com.tr`
+- [ ] Gizlilik: `https://passla.com.tr/gizlilik.html`
 
 ## 1. App Store Connect
 
 1. https://appstoreconnect.apple.com → My Apps → New App
 2. Platform: iOS
-3. Name: BEX
-4. Bundle ID: **`com.bex.app`**
-5. SKU: `bex-app`
+3. Name: **Passla**
+4. Bundle ID: **`com.passla.app`**
+5. SKU: `passla-app`
 6. Primary language: Turkish
 
 ## 2. Store listing
 
+Metinler: [`bex/store-listing/app-store-tr.txt`](../bex/store-listing/app-store-tr.txt)
+
 | Alan | Gereksinim |
 |------|------------|
-| Ekran görüntüleri | 6.7", 6.5", 5.5" iPhone boyutları |
-| Açıklama | TR (+ EN opsiyonel) |
-| Anahtar kelimeler | görev, ödül, kupon, beceri |
-| Destek URL | https://bex.app |
-| Gizlilik politikası | https://bex.app/gizlilik |
+| Ekran görüntüleri | 6.7", 6.5", 5.5" iPhone |
+| Destek URL | https://passla.com.tr/destek.html |
+| Gizlilik politikası | https://passla.com.tr/gizlilik.html |
 
-## 3. App Privacy
+## 3. TestFlight
 
-Bildirilecek veri türleri:
-
-- Konum (yakındaki görevler)
-- Fotoğraflar (görev teslimi, sohbet)
-- Kamera (QR kupon okuma)
-- Kullanıcı kimliği (hesap)
-
-`ITSAppUsesNonExemptEncryption: false` — export compliance sorunu yok (`bex/app.json`).
-
-## 4. eas.json ayarları
-
-`bex/eas.json` içinde gerçek değerler:
-
-```json
-"ios": {
-  "appleId": "senin@email.com",
-  "ascAppId": "1234567890"
-}
-```
-
-`ascAppId`: App Store Connect → App Information → Apple ID
-
-## 5. Build ve submit
-
-```bash
+```powershell
 cd bex
-npx eas login
-eas build --profile production --platform ios
-eas submit --platform ios --profile production
+npx eas build --profile production --platform ios
+npm run submit:ios
 ```
 
-İlk build'de Apple hesap bilgileri sorulur; EAS sertifikaları otomatik yönetir.
-
-## 6. TestFlight → Review
-
-1. App Store Connect → TestFlight → Internal Testing
-2. Build'i internal test grubuna ekle
-3. Test tamam → Submit for Review
-4. Apple inceleme: genelde 1–3 gün (ilk submission daha uzun)
+Detay: [`APP_STORE_CONNECT_SETUP.md`](APP_STORE_CONNECT_SETUP.md)
 
 ## Checklist
 
-- [ ] Bundle ID `com.bex.app` eşleşiyor
-- [ ] Production API URL EAS secret'ta
-- [ ] App Privacy anketi tamamlandı
-- [ ] Ekran görüntüleri yüklendi
-- [ ] TestFlight internal test geçti
+- [ ] Bundle ID `com.passla.app` eşleşiyor
+- [ ] App Privacy formu tamamlandı
+- [ ] TestFlight internal test OK

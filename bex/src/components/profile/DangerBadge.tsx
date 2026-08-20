@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { View, Text } from 'react-native';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 interface DangerBadgeProps {
   compact?: boolean;
@@ -8,6 +8,8 @@ interface DangerBadgeProps {
 }
 
 export function DangerBadge({ compact = false, label = 'Tehlikeli' }: DangerBadgeProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={[styles.badge, compact && styles.badgeCompact]}>
       <Text style={[styles.text, compact && styles.textCompact]}>{label}</Text>
@@ -15,7 +17,7 @@ export function DangerBadge({ compact = false, label = 'Tehlikeli' }: DangerBadg
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   badge: {
     alignSelf: 'flex-start',
     backgroundColor: Colors.error,
@@ -36,4 +38,4 @@ const styles = StyleSheet.create({
   textCompact: {
     fontSize: 10,
   },
-});
+}));

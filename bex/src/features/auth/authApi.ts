@@ -180,6 +180,7 @@ export async function updateIndividualProfile(
     district: profile.district,
     avatarUrl: profile.avatarUrl ?? null,
     bio: profile.bio ?? null,
+    cvUrl: profile.cvUrl ?? null,
     skills: profile.skills?.length ? profile.skills : ['OTHER'],
   });
   return data;

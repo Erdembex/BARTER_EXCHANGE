@@ -1,12 +1,33 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+/** Production API (DNS + SSL) — Expo Go, fiziksel telefon, web */
+const PRODUCTION_API = 'https://api.passla.com.tr';
+/** Eski ad — hot reload / cache uyumlulugu */
+const ORACLE_API = PRODUCTION_API;
+
+/** PC proxy — web tarayici + Android emulator (adb reverse ile) */
+const LOCAL_PROXY = 'http://127.0.0.1:8888';
+
+function isAndroidEmulator(): boolean {
+  if (Platform.OS !== 'android') return false;
+  const model = Constants.platform?.android?.model?.toLowerCase() ?? '';
+  const deviceName = Constants.deviceName?.toLowerCase() ?? '';
+  return (
+    model.includes('sdk') ||
+    model.includes('emulator') ||
+    deviceName.includes('emulator') ||
+    deviceName.includes('sdk')
+  );
+}
 
 function resolveDefaultApiBaseUrl(): string {
-  // Web tarayıcısı aynı makinedeki backend'e localhost ile bağlanır
-  if (Platform.OS === 'web') {
-    return 'http://localhost:8080';
+  // Yalnizca Android emulator Oracle'a ulasamaz — PC proxy gerekir
+  if (Platform.OS === 'android' && isAndroidEmulator()) {
+    return LOCAL_PROXY;
   }
-  // Telefon / emülatör — LAN IP (bilgisayarın yerel ağ adresi)
-  return 'http://192.168.1.102:8080';
+  // Web (PC tarayici), iPhone, gercek Android telefon
+  return PRODUCTION_API;
 }
 
 /** Spring Boot REST API kök adresi */

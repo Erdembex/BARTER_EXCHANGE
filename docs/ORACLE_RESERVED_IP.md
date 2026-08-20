@@ -26,7 +26,7 @@ Sonra:
 
 ```bash
 cd BARTER_EXCHANGE/takkas-backend
-sudo bash deploy/scripts/setup-production-domain.sh api.barterex.com.tr
+sudo bash deploy/scripts/setup-passla-production.sh passla.com.tr
 ```
 
 ## IP degisirse

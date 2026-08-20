@@ -179,7 +179,9 @@ public class UserService {
             trust.complaintRate(),
             trust.isDangerous(),
             completedTasks,
-            portfolioItems);
+            portfolioItems,
+            profile.getBio(),
+            profile.getCvUrl());
     }
 
     public String resolveUniqueUsername(String baseName) {
@@ -229,6 +231,7 @@ public class UserService {
         p.setDistrict(req.district());
         p.setAvatarUrl(req.avatarUrl());
         p.setBio(req.bio());
+        p.setCvUrl(req.cvUrl());
         syncSkills(p, req.skills());
         return toResponse(p);
     }
@@ -270,7 +273,7 @@ public class UserService {
         User user = p.getUser();
         return new IndividualProfileResponse(
             p.getId(), p.getUsername(), p.getFullName(), p.getCity(),
-            p.getDistrict(), p.getAvatarUrl(), p.getBio(),
+            p.getDistrict(), p.getAvatarUrl(), p.getBio(), p.getCvUrl(),
             p.getSkills().stream().map(IndividualSkill::getSkill).toList(),
             user != null ? user.getPhone() : null,
             user != null && user.isPhoneVerified());

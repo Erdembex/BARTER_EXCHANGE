@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   TouchableOpacity,
@@ -19,7 +18,7 @@ import {
 } from '@/features/admin/adminSubscriptionsApi';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation, getLocale } from '@/i18n';
 
 function formatDate(iso?: string): string {
@@ -28,6 +27,8 @@ function formatDate(iso?: string): string {
 }
 
 export default function AdminSubscriptionsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const PERIOD_LABELS: Record<string, string> = {
     MONTHLY: t('adminSubscriptionsScreen.periodMonthly'),
@@ -157,7 +158,7 @@ export default function AdminSubscriptionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
   header: { marginBottom: Spacing[4] },
@@ -188,4 +189,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing[3] },
   empty: { alignItems: 'center', paddingTop: Spacing[10] },
   emptyText: { ...Typography.bodyMedium, color: Colors.textMuted },
-});
+}));

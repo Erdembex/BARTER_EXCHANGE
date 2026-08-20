@@ -43,6 +43,17 @@ public class MediaStorageService {
         return storeFiles(userId, files, 3, this::validateBusinessDocument, BUSINESS_DOC_EXTENSIONS);
     }
 
+    /** Bireysel CV — yalnızca PDF, tek dosya */
+    public String storeCvFile(UUID userId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessRuleException("CV dosyası seçmelisin.");
+        }
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BusinessRuleException("CV en fazla 10 MB olabilir.");
+        }
+        return storeFiles(userId, new MultipartFile[] { file }, 1, this::validatePdf, Set.of(".pdf")).get(0);
+    }
+
     private List<String> storeFiles(
         UUID userId,
         MultipartFile[] files,
@@ -119,6 +130,11 @@ public class MediaStorageService {
     private void validateBusinessDocument(MultipartFile file) {
         validateFile(file, BUSINESS_DOC_CONTENT_TYPES, BUSINESS_DOC_EXTENSIONS,
             "Yalnızca JPG, PNG, WEBP veya PDF yüklenebilir.");
+    }
+
+    private void validatePdf(MultipartFile file) {
+        validateFile(file, Set.of("application/pdf"), Set.of(".pdf"),
+            "CV yalnızca PDF formatında olabilir.");
     }
 
     private void validateFile(MultipartFile file, Set<String> allowedTypes, Set<String> allowedExts, String message) {

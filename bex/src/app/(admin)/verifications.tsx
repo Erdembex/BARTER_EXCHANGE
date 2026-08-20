@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   TouchableOpacity,
@@ -17,10 +16,12 @@ import { BUSINESS_CATEGORY_LABELS, VERIFICATION_STATUS_LABELS } from '@/constant
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminVerificationsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -140,7 +141,7 @@ export default function AdminVerificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
   header: { marginBottom: Spacing[4] },
@@ -169,4 +170,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing[3] },
   empty: { alignItems: 'center', paddingTop: Spacing[10] },
   emptyText: { ...Typography.bodyMedium, color: Colors.textMuted },
-});
+}));

@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   ActivityIndicator,
@@ -15,12 +14,14 @@ import { useBusiness } from '@/features/business/useBusiness';
 import { applicationsRepository, tasksRepository, usersRepository } from '@/features/data';
 import { Application, ApplicationStatus } from '@/types';
 import { ApplicationCard } from '@/components/business';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type FilterKey = 'all' | 'pending' | 'submitted' | 'coupon';
 
 export default function BusinessApplicationsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const FILTERS: { key: FilterKey; label: string; statuses?: ApplicationStatus[] }[] = [
     { key: 'all', label: t('businessApplicationsScreen.filterAll') },
@@ -185,6 +186,21 @@ export default function BusinessApplicationsScreen() {
                 params: { id: item.id },
               })
             }
+            onViewProfile={
+              item.status === 'pending'
+                ? () =>
+                    router.push({
+                      pathname: '/user/[id]',
+                      params: { id: item.userId },
+                    } as Href)
+                : undefined
+            }
+            onOpenChat={
+              item.status === 'pending'
+                ? () =>
+                    router.push(`/(business)/messages/${item.id}` as Href)
+                : undefined
+            }
           />
         )}
       />
@@ -192,7 +208,7 @@ export default function BusinessApplicationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[4], paddingBottom: Spacing[2] },
@@ -235,4 +251,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing[1],
     textAlign: 'center',
   },
-});
+}));

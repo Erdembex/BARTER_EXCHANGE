@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -94,6 +94,38 @@ function getQuickLinks(
   ];
 }
 
+function getDiscoverLinks(
+  Colors: ReturnType<typeof useThemeColors>,
+  t: (key: string) => string
+): QuickLink[] {
+  return [
+    {
+      route: '/map' as Href,
+      label: t('home.discoverLinks.map.label'),
+      hint: t('home.discoverLinks.map.hint'),
+      icon: 'map',
+      tint: Colors.accent,
+      bg: Colors.accentLight,
+    },
+    {
+      route: '/leaderboard' as Href,
+      label: t('home.discoverLinks.leaderboard.label'),
+      hint: t('home.discoverLinks.leaderboard.hint'),
+      icon: 'trophy',
+      tint: Colors.primary,
+      bg: Colors.primaryLight,
+    },
+    {
+      route: '/about' as Href,
+      label: t('home.discoverLinks.about.label'),
+      hint: t('home.discoverLinks.about.hint'),
+      icon: 'heart',
+      tint: Colors.secondary,
+      bg: Colors.businessLight,
+    },
+  ];
+}
+
 export default function HomeScreen() {
   const { bexUser, firebaseUser, setBexUser } = useAuthStore();
   const Colors = useThemeColors();
@@ -101,6 +133,7 @@ export default function HomeScreen() {
   const applicationStatusLabels = useApplicationStatusLabels();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
   const QUICK_LINKS = useMemo(() => getQuickLinks(Colors, t), [Colors, t]);
+  const DISCOVER_LINKS = useMemo(() => getDiscoverLinks(Colors, t), [Colors, t]);
   const { unreadCount } = useNotifications();
   const { totalUnread: messageUnread, isUnlocked: messagingUnlocked } = useMessagingInbox('user');
   const openNotifications = useOpenNotifications();
@@ -114,32 +147,41 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [homeSearch, setHomeSearch] = useState('');
+  const loadSeqRef = useRef(0);
 
   const loadNearbyTasks = useCallback(async (user: BexUser | null) => {
+    const seq = ++loadSeqRef.current;
     const resolved = await resolveLocationFilter(user);
+    const cityFilter = toApiCityFilter(resolved.city);
+    const regionalLabel = formatFilterLocationLabel(resolved.city, resolved.district);
 
-    if (toApiCityFilter(resolved.city)) {
-      setNearbySectionTitle(
-        t('home.regionalTasks', {
-          location: formatFilterLocationLabel(resolved.city, resolved.district),
-        })
-      );
-      const { tasks } = await tasksRepository.getActive(4, null, {
+    let title = t('home.featuredTasks');
+    let tasks: EnrichedTask[] = [];
+
+    if (cityFilter) {
+      const { tasks: regional } = await tasksRepository.getActive(4, null, {
         city: resolved.city ?? undefined,
         district: resolved.district ?? undefined,
       });
-      if (tasks.length > 0) {
-        setNearbyTasks(tasks);
-        return;
+      if (seq !== loadSeqRef.current) return;
+
+      if (regional.length > 0) {
+        title = t('home.regionalTasks', { location: regionalLabel });
+        tasks = regional;
+      } else {
+        tasks = await tasksRepository.getFeatured(4);
+        if (seq !== loadSeqRef.current) return;
       }
+    } else {
+      tasks = await tasksRepository.getFeatured(4);
+      if (seq !== loadSeqRef.current) return;
     }
 
-    setNearbySectionTitle(t('home.featuredTasks'));
-    const featured = await tasksRepository.getFeatured(4);
-    setNearbyTasks(featured);
+    setNearbySectionTitle(title);
+    setNearbyTasks(tasks);
   }, [t]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (user: BexUser | null) => {
     try {
       if (firebaseUser) {
         if (shouldUseDemoData()) {
@@ -164,30 +206,38 @@ export default function HomeScreen() {
         setActiveApplications([]);
       }
 
-      await loadNearbyTasks(bexUser);
+      await loadNearbyTasks(user);
       const popular = await businessesRepository.getPopular(6);
       setPopularBusinesses(popular);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [firebaseUser, bexUser, loadNearbyTasks]);
+  }, [firebaseUser, loadNearbyTasks, t]);
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-      authService.refreshProfile().then((fresh) => {
-        if (fresh) {
-          setBexUser(fresh);
-          loadNearbyTasks(fresh);
-        }
-      });
-    }, [loadData, loadNearbyTasks, setBexUser])
+      let active = true;
+
+      (async () => {
+        const fresh = await authService.refreshProfile().catch(() => null);
+        if (!active) return;
+
+        const user = fresh ?? bexUser;
+        if (fresh) setBexUser(fresh);
+        await loadData(user);
+      })();
+
+      return () => {
+        active = false;
+        loadSeqRef.current += 1;
+      };
+    }, [bexUser, loadData, setBexUser])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadData(bexUser);
   };
 
   const openTaskSearch = () => {
@@ -392,6 +442,27 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : null}
+
+        <Text style={styles.sectionTitle}>{t('home.discoverMore')}</Text>
+        <View style={styles.links}>
+          {DISCOVER_LINKS.map((link) => (
+            <TouchableOpacity
+              key={link.label}
+              style={styles.linkCard}
+              activeOpacity={0.88}
+              onPress={() => router.push(link.route)}
+            >
+              <View style={[styles.linkIconWrap, { backgroundColor: link.bg }]}>
+                <Ionicons name={link.icon} size={20} color={link.tint} />
+              </View>
+              <View style={styles.linkText}>
+                <Text style={styles.linkLabel}>{link.label}</Text>
+                <Text style={styles.linkHint}>{link.hint}</Text>
+              </View>
+              <Text style={styles.linkArrow}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <Text style={styles.sectionTitle}>{t('home.quickAccess')}</Text>
         <View style={styles.links}>

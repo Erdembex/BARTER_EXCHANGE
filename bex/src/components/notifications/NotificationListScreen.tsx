@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   SectionList,
   TouchableOpacity,
@@ -17,7 +16,7 @@ import { BexNotification } from '@/types';
 import { Button } from '@/components/ui';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import {
   getNotificationVisual,
   groupNotificationsByDay,
@@ -36,6 +35,7 @@ function NotificationCard({
   item: BexNotification;
   onPress: () => void;
 }) {
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const visual = getNotificationVisual(item.type);
 
@@ -69,6 +69,8 @@ function NotificationCard({
 }
 
 export function NotificationListScreen({ showBack = false }: NotificationListScreenProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { firebaseUser, bexUser } = useAuthStore();
   const { refreshUnread, unreadCount } = useNotifications();
@@ -171,7 +173,7 @@ export function NotificationListScreen({ showBack = false }: NotificationListScr
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
   header: { marginBottom: Spacing[3] },
@@ -270,4 +272,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-});
+}));

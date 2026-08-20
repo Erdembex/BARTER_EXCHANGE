@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   Linking,
@@ -12,7 +11,7 @@ import { resolveMediaUrl } from '@/lib/mediaUrl';
 import { isPortfolioImageUrl } from '@/lib/portfolioUtils';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,6 +28,8 @@ interface ImagePreviewGridProps {
 }
 
 export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [preview, setPreview] = useState<PreviewItem | null>(null);
 
@@ -96,7 +97,7 @@ export function ImagePreviewGrid({ urls, thumbSize = 88 }: ImagePreviewGridProps
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing[2] },
   thumb: {
     borderRadius: Radius.md,
@@ -143,4 +144,4 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   closeText: { ...Typography.labelMedium, color: Colors.textPrimary },
-});
+}));

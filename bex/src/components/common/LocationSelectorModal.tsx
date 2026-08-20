@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type LocationSelectorModalProps = {
@@ -33,6 +33,8 @@ export function LocationSelectorModal({
   onClose,
   searchPlaceholder,
 }: LocationSelectorModalProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const resolvedSearchPlaceholder = searchPlaceholder ?? t('locationSelectorModal.searchPlaceholder');
   const [query, setQuery] = useState('');
@@ -105,7 +107,7 @@ export function LocationSelectorModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   header: {
@@ -157,4 +159,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing[8],
   },
-});
+}));

@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -14,10 +13,12 @@ import { usersRepository } from '@/features/data';
 import { CompletedTask, PortfolioItem } from '@/types';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { PublicProfileSections } from '@/components/profile/PublicProfileSections';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function PublicUserProfileByUsernameScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { username } = useLocalSearchParams<{ username: string }>();
   const [displayName, setDisplayName] = useState('');
@@ -31,6 +32,8 @@ export default function PublicUserProfileByUsernameScreen() {
   const [isDangerous, setIsDangerous] = useState(false);
   const [approvedComplaintCount, setApprovedComplaintCount] = useState(0);
   const [complaintRate, setComplaintRate] = useState(0);
+  const [bio, setBio] = useState<string | undefined>();
+  const [cvUrl, setCvUrl] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -51,6 +54,8 @@ export default function PublicUserProfileByUsernameScreen() {
       setIsDangerous(stats.isDangerous);
       setApprovedComplaintCount(stats.approvedComplaintCount);
       setComplaintRate(stats.complaintRate);
+      setBio(stats.bio);
+      setCvUrl(stats.cvUrl);
     } else {
       setNotFound(true);
       setDisplayName('');
@@ -102,6 +107,8 @@ export default function PublicUserProfileByUsernameScreen() {
 
         <PublicProfileSections
           profileId={profileId}
+          bio={bio}
+          cvUrl={cvUrl}
           completedCount={completedCount}
           completedTasks={completedTasks}
           portfolio={portfolio}
@@ -116,7 +123,7 @@ export default function PublicUserProfileByUsernameScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing[5] },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
@@ -126,4 +133,4 @@ const styles = StyleSheet.create({
   title: { ...Typography.headingLarge, color: Colors.textPrimary },
   notFoundTitle: { ...Typography.headingMedium, color: Colors.textPrimary, marginBottom: Spacing[2] },
   notFoundText: { ...Typography.bodyMedium, color: Colors.textMuted, marginBottom: Spacing[4] },
-});
+}));

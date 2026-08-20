@@ -2,12 +2,10 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,10 +16,13 @@ import { useCategoryLabels, useDifficultyLabels } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { shouldUseDemoData } from '@/lib/devMode';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { confirmDialog } from '@/lib/confirmDialog';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function BusinessTasksScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const CATEGORY_LABELS = useCategoryLabels();
   const DIFFICULTY_LABELS = useDifficultyLabels();
@@ -44,28 +45,6 @@ export default function BusinessTasksScreen() {
       load();
     }, [load])
   );
-
-  const handlePublish = (task: Task) => {
-    if (!business) return;
-    Alert.alert(t('businessTasksScreen.publishTitle'), t('businessTasksScreen.publishBody', { title: task.title }), [
-      { text: t('businessTasksScreen.cancelDismiss'), style: 'cancel' },
-      {
-        text: t('businessTasksScreen.publish'),
-        onPress: async () => {
-          setActionId(task.id);
-          try {
-            await tasksRepository.publish(task.id);
-            showToast(t('businessTasksScreen.publishedToast'));
-            await load();
-          } catch (err: unknown) {
-            showToast(err instanceof Error ? err.message : t('businessTasksScreen.publishFailedToast'));
-          } finally {
-            setActionId(null);
-          }
-        },
-      },
-    ]);
-  };
 
   const visibleTasks = tasks.filter(
     (t) => t.status === 'active' || t.status === 'draft'
@@ -104,7 +83,7 @@ export default function BusinessTasksScreen() {
   const canCancelTask = (task: Task) =>
     task.status === 'active' && (task.acceptedApplicantCount ?? 0) === 0;
 
-  const handlePauseToggle = (task: Task) => {
+  const handlePauseToggle = async (task: Task) => {
     if (!business) return;
     const pausing = task.status === 'active';
     if (!task.approvedByAdmin && pausing) {
@@ -112,50 +91,46 @@ export default function BusinessTasksScreen() {
       return;
     }
     const restMode = !shouldUseDemoData();
-    Alert.alert(
-      pausing
-        ? restMode
-          ? t('businessTasksScreen.closeTaskTitle')
-          : t('businessTasksScreen.pauseTaskTitle')
-        : t('businessTasksScreen.restartTaskTitle'),
-      pausing
-        ? restMode
-          ? t('businessTasksScreen.closeBody')
-          : t('businessTasksScreen.pauseBody')
-        : t('businessTasksScreen.restartBody'),
-      [
-        { text: t('businessTasksScreen.cancelDismiss'), style: 'cancel' },
-        {
-          text: pausing
-            ? restMode
-              ? t('businessTasksScreen.close')
-              : t('businessTasksScreen.pause')
-            : t('businessTasksScreen.start'),
-          onPress: async () => {
-            setActionId(task.id);
-            try {
-              await tasksRepository.setStatus(
-                task.id,
-                business.id,
-                pausing ? 'paused' : 'active'
-              );
-              showToast(
-                pausing
-                  ? restMode
-                    ? t('businessTasksScreen.closedToast')
-                    : t('businessTasksScreen.pausedToast')
-                  : t('businessTasksScreen.reactivatedToast')
-              );
-              await load();
-            } catch (err: unknown) {
-              showToast(err instanceof Error ? err.message : t('businessTasksScreen.actionFailedToast'));
-            } finally {
-              setActionId(null);
-            }
-          },
-        },
-      ]
+    const title = pausing
+      ? restMode
+        ? t('businessTasksScreen.closeTaskTitle')
+        : t('businessTasksScreen.pauseTaskTitle')
+      : t('businessTasksScreen.restartTaskTitle');
+    const message = pausing
+      ? restMode
+        ? t('businessTasksScreen.closeBody')
+        : t('businessTasksScreen.pauseBody')
+      : t('businessTasksScreen.restartBody');
+    const confirmLabel = pausing
+      ? restMode
+        ? t('businessTasksScreen.close')
+        : t('businessTasksScreen.pause')
+      : t('businessTasksScreen.start');
+
+    const ok = await confirmDialog(
+      title,
+      message,
+      confirmLabel,
+      t('businessTasksScreen.cancelDismiss'),
     );
+    if (!ok) return;
+
+    setActionId(task.id);
+    try {
+      await tasksRepository.setStatus(task.id, business.id, pausing ? 'paused' : 'active');
+      showToast(
+        pausing
+          ? restMode
+            ? t('businessTasksScreen.closedToast')
+            : t('businessTasksScreen.pausedToast')
+          : t('businessTasksScreen.reactivatedToast')
+      );
+      await load();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : t('businessTasksScreen.actionFailedToast'));
+    } finally {
+      setActionId(null);
+    }
   };
 
   if (bizLoading || loading) {
@@ -254,25 +229,6 @@ export default function BusinessTasksScreen() {
             </TouchableOpacity>
 
             <View style={styles.actions}>
-              {!item.approvedByAdmin ? (
-                <>
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => router.push(`/(business)/edit-task/${item.id}` as Href)}
-                  >
-                    <Text style={styles.actionText}>{t('businessTasksScreen.edit')}</Text>
-                  </TouchableOpacity>
-                  {item.status === 'draft' ? (
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handlePublish(item)}
-                      disabled={actionId === item.id}
-                    >
-                      <Text style={styles.actionText}>{t('businessTasksScreen.publish')}</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </>
-              ) : null}
               {item.status === 'active' ? (
                 canCancelTask(item) ? (
                   <TouchableOpacity
@@ -287,7 +243,7 @@ export default function BusinessTasksScreen() {
                 ) : (
                   <TouchableOpacity
                     style={styles.actionBtn}
-                    onPress={() => handlePauseToggle(item)}
+                    onPress={() => void handlePauseToggle(item)}
                     disabled={actionId === item.id}
                   >
                     <Text style={styles.actionText}>
@@ -304,7 +260,7 @@ export default function BusinessTasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
@@ -380,4 +336,4 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: Spacing[3] },
   emptyTitle: { ...Typography.headingMedium, color: Colors.textPrimary },
   emptyText: { ...Typography.bodyMedium, color: Colors.textSecondary, marginTop: Spacing[1] },
-});
+}));

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Typography, Spacing, Radius, Shadow, createThemedStyles, useThemeColors } from '@/theme';
 
 interface StatCardProps {
   label: string;
@@ -10,6 +10,8 @@ interface StatCardProps {
 }
 
 export function StatCard({ label, value, emoji, onPress }: StatCardProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const content = (
     <>
       {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
@@ -29,7 +31,7 @@ export function StatCard({ label, value, emoji, onPress }: StatCardProps) {
   return <View style={styles.card}>{content}</View>;
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   card: {
     flex: 1,
     minWidth: '45%',
@@ -53,4 +55,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing[1],
   },
-});
+}));

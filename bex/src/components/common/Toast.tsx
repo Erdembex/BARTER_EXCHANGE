@@ -6,9 +6,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 interface ToastContextValue {
   showToast: (message: string) => void;
@@ -17,6 +17,8 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
@@ -74,7 +76,7 @@ export function useToast() {
   return ctx;
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   toast: {
     position: 'absolute',
     left: Spacing[5],
@@ -91,4 +93,4 @@ const styles = StyleSheet.create({
     color: Colors.textOnPrimary,
     textAlign: 'center',
   },
-});
+}));

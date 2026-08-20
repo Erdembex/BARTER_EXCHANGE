@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   ScrollView,
@@ -12,10 +11,11 @@ import { CompletedTask } from '@/types';
 import { formatShortDate } from '@/lib/dateUtils';
 import { COMPLETED_TASKS_PREVIEW_LIMIT } from '@/features/portfolio/profileLimits';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 function TaskRow({ task }: { task: CompletedTask }) {
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   return (
     <View style={styles.row}>
@@ -52,6 +52,8 @@ export function CompletedTasksModal({
   tasks,
   totalCount,
 }: CompletedTasksModalProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const total = totalCount ?? tasks.length;
   const { t } = useTranslation();
 
@@ -89,6 +91,7 @@ export function CompletedTasksList({
   previewLimit = COMPLETED_TASKS_PREVIEW_LIMIT,
   compact = false,
 }: CompletedTasksListProps) {
+  const styles = useScreenStyles();
   const [showAll, setShowAll] = useState(false);
   const total = totalCount ?? tasks.length;
   const preview = useMemo(() => tasks.slice(0, previewLimit), [tasks, previewLimit]);
@@ -144,6 +147,7 @@ interface CompletedTasksStatProps {
 
 /** Hero alanındaki "X tamamlanan görev" metni — dokununca tam listeyi açar */
 export function CompletedTasksStat({ count, tasks, totalCount }: CompletedTasksStatProps) {
+  const styles = useScreenStyles();
   const [showAll, setShowAll] = useState(false);
   const total = totalCount ?? count;
   const { t } = useTranslation();
@@ -168,7 +172,7 @@ export function CompletedTasksStat({ count, tasks, totalCount }: CompletedTasksS
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: {
     width: '100%',
     backgroundColor: Colors.surface,
@@ -238,4 +242,4 @@ const styles = StyleSheet.create({
   modalTitle: { ...Typography.headingSmall, color: Colors.textPrimary },
   closeText: { ...Typography.labelMedium, color: Colors.primary },
   modalScroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[1] },
-});
+}));

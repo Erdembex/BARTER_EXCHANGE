@@ -50,7 +50,7 @@ public class ApplicationController {
     @PreAuthorize("hasRole('INDIVIDUAL')")
     public ApplicationDetailResponse getMyDetail(@CurrentUser UserPrincipal p,
                                                    @PathVariable UUID id) {
-        return queryService.getDetail(id, p.profileId(), UserType.INDIVIDUAL);
+        return queryService.getDetail(id, p.profileId(), UserType.INDIVIDUAL, p.userId());
     }
 
     @GetMapping("/api/business/listings/{listingId}/applications")
@@ -65,7 +65,7 @@ public class ApplicationController {
     @PreAuthorize("hasRole('BUSINESS')")
     public ApplicationDetailResponse getApplicantDetail(@CurrentUser UserPrincipal p,
                                                           @PathVariable UUID id) {
-        return queryService.getDetail(id, p.profileId(), UserType.BUSINESS);
+        return queryService.getDetail(id, p.profileId(), UserType.BUSINESS, p.userId());
     }
 
     @PatchMapping("/api/business/applications/{id}/review")

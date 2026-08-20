@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
@@ -24,7 +23,7 @@ import {
 } from '@/features/subscription/subscriptionApi';
 import { BackHeader } from '@/components/navigation/BackHeader';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const PERIOD_MONTHS: Record<BillingPeriod, number> = {
@@ -69,6 +68,8 @@ function formatDate(iso?: string): string {
 }
 
 export default function BusinessSubscriptionScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
 
   const PERIOD_OPTIONS: { key: BillingPeriod; label: string }[] = [
@@ -367,7 +368,7 @@ export default function BusinessSubscriptionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -488,4 +489,4 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     marginTop: Spacing[2],
   },
-});
+}));

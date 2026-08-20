@@ -44,12 +44,13 @@ public class ListingQueryService {
         String city = blankToNull(filter.city());
         String district = blankToNull(filter.district());
         String q = blankToNull(filter.q());
+        var rewardType = filter.rewardType();
         var page = PageRequest.of(0, size);
         var listings = q == null
             ? listingRepository.findActiveListingsForDiscover(
-                city, district, filter.skills(), now, cursor, page)
+                city, district, filter.skills(), rewardType, now, cursor, page)
             : listingRepository.searchActiveListingsForDiscover(
-                city, district, filter.skills(), q, now, cursor, page);
+                city, district, filter.skills(), rewardType, q, now, cursor, page);
         var cards = enrichCards(listings.stream().map(ListingMapper::toCardResponse).toList());
         var nextCursor = listings.isEmpty() ? null : listings.getLast().getCreatedAt();
         return PageResponse.of(cards, nextCursor);

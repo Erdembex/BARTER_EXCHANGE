@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   SafeAreaView,
@@ -24,13 +23,15 @@ import {
   clearPendingPhoneVerification,
 } from '@/features/auth/phoneAuthService';
 import { useAuthStore } from '@/store/authStore';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/i18n';
 
 const OTP_LENGTH = 6;
 
 export default function PhoneVerificationScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { firebaseUser, setBexUser } = useAuthStore();
   const [phone, setPhone] = useState('');
@@ -347,7 +348,7 @@ export default function PhoneVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   kav: { flex: 1 },
   scroll: {
@@ -440,4 +441,4 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   recaptchaHost: { height: 1, overflow: 'hidden', opacity: 0 },
-});
+}));

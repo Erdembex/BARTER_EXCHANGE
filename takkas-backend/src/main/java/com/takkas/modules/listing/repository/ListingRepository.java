@@ -27,6 +27,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         SELECT DISTINCT l FROM Listing l
         JOIN l.business b
         JOIN b.user u
+        JOIN l.reward r
         LEFT JOIN l.skills s
         WHERE l.status = 'ACTIVE'
           AND b.businessName NOT LIKE 'Test Cafe%'
@@ -36,6 +37,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
           AND (:city IS NULL OR b.city = :city)
           AND (:district IS NULL OR b.district = :district)
           AND (:#{#skills == null || #skills.isEmpty()} = true OR s.skill IN :skills)
+          AND (:rewardType IS NULL OR r.rewardType = :rewardType)
           AND l.createdAt < :cursor
         ORDER BY l.createdAt DESC
         """)
@@ -43,6 +45,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         @Param("city") String city,
         @Param("district") String district,
         @Param("skills") List<Skill> skills,
+        @Param("rewardType") com.takkas.modules.listing.domain.enums.RewardType rewardType,
         @Param("now") Instant now,
         @Param("cursor") Instant cursor,
         Pageable pageable);
@@ -51,6 +54,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         SELECT DISTINCT l FROM Listing l
         JOIN l.business b
         JOIN b.user u
+        JOIN l.reward r
         LEFT JOIN l.skills s
         WHERE l.status = 'ACTIVE'
           AND b.businessName NOT LIKE 'Test Cafe%'
@@ -60,8 +64,11 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
           AND (:city IS NULL OR b.city = :city)
           AND (:district IS NULL OR b.district = :district)
           AND (:#{#skills == null || #skills.isEmpty()} = true OR s.skill IN :skills)
+          AND (:rewardType IS NULL OR r.rewardType = :rewardType)
           AND (LOWER(l.title) LIKE LOWER(CONCAT('%', :q, '%'))
-               OR LOWER(b.businessName) LIKE LOWER(CONCAT('%', :q, '%')))
+               OR LOWER(b.businessName) LIKE LOWER(CONCAT('%', :q, '%'))
+               OR LOWER(r.description) LIKE LOWER(CONCAT('%', :q, '%'))
+               OR LOWER(CAST(r.rewardType AS string)) LIKE LOWER(CONCAT('%', :q, '%')))
           AND l.createdAt < :cursor
         ORDER BY l.createdAt DESC
         """)
@@ -69,6 +76,7 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
         @Param("city") String city,
         @Param("district") String district,
         @Param("skills") List<Skill> skills,
+        @Param("rewardType") com.takkas.modules.listing.domain.enums.RewardType rewardType,
         @Param("q") String q,
         @Param("now") Instant now,
         @Param("cursor") Instant cursor,

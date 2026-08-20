@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Application, ApplicationStatus } from '@/types';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const STATUS_INDEX: Record<ApplicationStatus, number> = {
@@ -19,6 +19,8 @@ interface ApplicationProgressProps {
 }
 
 export function ApplicationProgress({ status }: ApplicationProgressProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const STEPS = [
     { label: t('applicationProgress.stepApplication'), threshold: 0 },
@@ -87,7 +89,7 @@ export function ApplicationProgress({ status }: ApplicationProgressProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -142,4 +144,4 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   bannerText: { ...Typography.bodySmall, color: Colors.textSecondary },
-});
+}));

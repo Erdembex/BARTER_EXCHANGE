@@ -15,4 +15,6 @@ public record IndividualPublicProfileResponse(
     double complaintRate,
     boolean isDangerous,
     List<CompletedTaskResponse> completedTasks,
-    List<PortfolioItemResponse> portfolioItems) {}
+    List<PortfolioItemResponse> portfolioItems,
+    String bio,
+    String cvUrl) {}

@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   TouchableOpacity,
@@ -16,10 +15,12 @@ import type { EnrichedTask } from '@/features/data/businessesRepository';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '@/constants/taskLabels';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminTasksScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [tasks, setTasks] = useState<EnrichedTask[]>([]);
@@ -141,7 +142,7 @@ export default function AdminTasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
   header: { marginBottom: Spacing[4] },
@@ -163,4 +164,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing[3] },
   empty: { alignItems: 'center', paddingTop: Spacing[10] },
   emptyText: { ...Typography.bodyMedium, color: Colors.textMuted },
-});
+}));

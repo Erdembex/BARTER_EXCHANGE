@@ -288,6 +288,7 @@ export async function discoverListings(options?: {
   district?: string;
   skills?: string[];
   q?: string;
+  rewardType?: string;
 }): Promise<DiscoverListingsResult> {
   try {
     const { data } = await apiClient.get<ListingsPageDto>('/api/listings', {
@@ -298,6 +299,7 @@ export async function discoverListings(options?: {
         district: options?.district || undefined,
         skills: options?.skills?.length ? options.skills : undefined,
         q: options?.q?.trim() || undefined,
+        rewardType: options?.rewardType || undefined,
       },
       paramsSerializer: {
         indexes: null,

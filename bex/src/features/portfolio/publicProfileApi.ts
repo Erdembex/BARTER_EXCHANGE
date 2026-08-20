@@ -11,6 +11,8 @@ export type PublicProfileDto = {
   username?: string;
   fullName?: string;
   avatarUrl?: string | null;
+  bio?: string | null;
+  cvUrl?: string | null;
   completedTaskCount?: number;
   averageRating?: number;
   feedbackCount?: number;
@@ -37,6 +39,8 @@ export type PublicUserProfile = {
   username: string;
   fullName: string;
   avatarUrl: string | null;
+  bio?: string;
+  cvUrl?: string;
   completedTaskCount: number;
   averageRating: number;
   feedbackCount: number;
@@ -103,6 +107,8 @@ function mapPublicProfile(dto: PublicProfileDto): PublicUserProfile {
     username: dto.username?.trim() || '',
     fullName: dto.fullName?.trim() || 'Kullanıcı',
     avatarUrl: dto.avatarUrl?.trim() ? resolveMediaUrl(dto.avatarUrl.trim()) : null,
+    bio: dto.bio?.trim() || undefined,
+    cvUrl: dto.cvUrl?.trim() ? resolveMediaUrl(dto.cvUrl.trim()) : undefined,
     completedTaskCount: dto.completedTaskCount ?? completedTasks.length,
     averageRating: dto.averageRating ?? 0,
     feedbackCount: dto.feedbackCount ?? 0,

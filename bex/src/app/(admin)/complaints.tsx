@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   RefreshControl,
@@ -20,10 +19,12 @@ import {
   rejectComplaintAdmin,
   type ComplaintModerationDto,
 } from '@/features/complaint/complaintsApi';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminComplaintsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [items, setItems] = useState<ComplaintModerationDto[]>([]);
@@ -147,7 +148,7 @@ export default function AdminComplaintsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
   header: { gap: Spacing[2], marginBottom: Spacing[4] },
@@ -168,4 +169,4 @@ const styles = StyleSheet.create({
   meta: { ...Typography.caption, color: Colors.textMuted },
   body: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
   actions: { flexDirection: 'row', gap: Spacing[2] },
-});
+}));

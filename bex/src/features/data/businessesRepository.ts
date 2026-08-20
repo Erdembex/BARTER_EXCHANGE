@@ -109,7 +109,13 @@ export const tasksRepository = {
   async getActive(
     pageSize = 10,
     cursor?: QueryDocumentSnapshot<DocumentData> | string | null,
-    filters?: { city?: string; district?: string; category?: TaskCategory | null; q?: string }
+    filters?: {
+      city?: string;
+      district?: string;
+      category?: TaskCategory | null;
+      q?: string;
+      rewardType?: string;
+    }
   ): Promise<{
     tasks: EnrichedTask[];
     lastDoc: QueryDocumentSnapshot<DocumentData> | null;
@@ -131,6 +137,7 @@ export const tasksRepository = {
           district: toApiDistrictFilter(filters?.city, filters?.district),
           skills,
           q: filters?.q,
+          rewardType: filters?.rewardType,
         });
         return {
           tasks: asEnriched(page.tasks),

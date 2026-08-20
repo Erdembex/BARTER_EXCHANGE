@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 import { AuthFormData, BexUser, UserRole } from '../../types';
-import { resolveEffectiveRole } from '../../lib/devMode';
+import { resolveEffectiveRole, shouldUseDemoData } from '../../lib/devMode';
 import { loadTokens, clearTokens, getAccessToken } from '../../lib/auth/tokenStorage';
 import { decodeJwtPayload, isTokenExpired } from '../../lib/auth/jwtUtils';
 import type { AuthSession } from './authTypes';
@@ -49,7 +49,11 @@ function mapUserTypeToRole(userType: string | undefined, email?: string | null):
   if (userType === 'ADMIN') return 'admin';
   const base: UserRole =
     userType === 'BUSINESS' ? 'business' : userType === 'INDIVIDUAL' ? 'user' : 'user';
-  return resolveEffectiveRole(email, base);
+  // REST/canlı API: yalnizca JWT userType — admin@bex.dev hack'i sadece demo modda
+  if (shouldUseDemoData()) {
+    return resolveEffectiveRole(email, base);
+  }
+  return base;
 }
 
 function sessionFromAccessToken(accessToken: string, displayName?: string | null): AuthSession {
@@ -73,6 +77,8 @@ function mapProfileToBexUser(
     phone?: string;
     phoneVerified?: boolean;
     avatarUrl?: string;
+    bio?: string;
+    cvUrl?: string;
     verified?: boolean;
     completedTaskCount?: number;
     reputationScore?: number;
@@ -91,6 +97,8 @@ function mapProfileToBexUser(
     phone: profile.phone ?? '',
     phoneVerified: profile.phoneVerified ?? false,
     avatarUrl: profile.avatarUrl ?? '',
+    bio: profile.bio?.trim() || undefined,
+    cvUrl: profile.cvUrl?.trim() || undefined,
     city: profile.city,
     district: profile.district,
     reputationScore: profile.reputationScore ?? 0,
@@ -154,6 +162,8 @@ async function fetchProfileForSession(
       phone: profile.phone ?? '',
       phoneVerified: profile.phoneVerified ?? false,
       avatarUrl: resolveMediaUrl(profile.avatarUrl ?? ''),
+      bio: profile.bio?.trim() || undefined,
+      cvUrl: profile.cvUrl ? resolveMediaUrl(profile.cvUrl) : undefined,
       city: profile.city,
       district: profile.district,
       completedTaskCount,
@@ -172,12 +182,12 @@ export const authService = {
     if (!stored) return { session: null, bexUser: null };
 
     let accessToken = stored.accessToken;
-    if (isTokenExpired(accessToken)) {
-      accessToken = (await refreshAccessToken()) ?? '';
-      if (!accessToken) {
-        await clearTokens();
-        return { session: null, bexUser: null };
-      }
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      accessToken = refreshed;
+    } else if (isTokenExpired(accessToken)) {
+      await clearTokens();
+      return { session: null, bexUser: null };
     }
 
     const claims = decodeJwtPayload(accessToken);
@@ -386,6 +396,55 @@ export const authService = {
 
     const session = sessionFromAccessToken(token);
     return fetchProfileForSession(session, claims.userType);
+  },
+
+  async updateBio(bio: string): Promise<BexUser | null> {
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+    const claims = decodeJwtPayload(token);
+    if (claims?.userType === 'BUSINESS') {
+      throw Object.assign(new Error('İşletme hesapları için desteklenmiyor.'), {
+        code: 'not-supported-yet',
+      });
+    }
+    const trimmed = bio.trim().slice(0, 1000);
+    const current = await fetchIndividualProfile();
+    await updateIndividualProfile({ ...current, bio: trimmed || null });
+    const session = sessionFromAccessToken(token);
+    return fetchProfileForSession(session, claims?.userType);
+  },
+
+  async uploadCv(localUri: string, fileName: string): Promise<BexUser | null> {
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+    const claims = decodeJwtPayload(token);
+    if (claims?.userType === 'BUSINESS') {
+      throw Object.assign(new Error('İşletme hesapları için desteklenmiyor.'), {
+        code: 'not-supported-yet',
+      });
+    }
+    const { uploadCvFile } = await import('@/features/media/mediaApi');
+    const cvUrl = await uploadCvFile(localUri, fileName);
+    const current = await fetchIndividualProfile();
+    await updateIndividualProfile({ ...current, cvUrl });
+    const session = sessionFromAccessToken(token);
+    return fetchProfileForSession(session, claims?.userType);
+  },
+
+  async removeCv(): Promise<BexUser | null> {
+    const token = await ensureValidAccessToken();
+    if (!token) {
+      throw Object.assign(new Error('Oturum bulunamadı.'), { code: 'auth/not-authenticated' });
+    }
+    const claims = decodeJwtPayload(token);
+    const current = await fetchIndividualProfile();
+    await updateIndividualProfile({ ...current, cvUrl: null });
+    const session = sessionFromAccessToken(token);
+    return fetchProfileForSession(session, claims?.userType);
   },
 
   async getUserDocument(

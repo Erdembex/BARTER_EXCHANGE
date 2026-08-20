@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
@@ -21,10 +20,12 @@ import {
 } from '@/features/complaint/complaintsApi';
 import { formatShortDate } from '@/lib/dateUtils';
 import { Timestamp } from 'firebase/firestore';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function ComplaintBexScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
   const [publicItems, setPublicItems] = useState<PublicComplaintDto[]>([]);
@@ -118,7 +119,7 @@ export default function ComplaintBexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   lead: { ...Typography.bodyMedium, color: Colors.textMuted, lineHeight: 22 },
@@ -151,4 +152,4 @@ const styles = StyleSheet.create({
   cardTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   cardMeta: { ...Typography.caption, color: Colors.textMuted },
   cardBody: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
-});
+}));

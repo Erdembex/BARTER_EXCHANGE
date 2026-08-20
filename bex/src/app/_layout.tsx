@@ -17,6 +17,8 @@ import { BackendStatusBanner } from '@/components/common/BackendStatusBanner';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { ToastProvider } from '@/components/common/Toast';
 import { useNotifications } from '@/hooks/useNotifications';
+import { PendingFeedbackGate } from '@/components/feedback/PendingFeedbackGate';
+import { useAppFonts } from '@/hooks/useAppFonts';
 
 export default function RootLayout() {
   const { setFirebaseUser, setBexUser, setInitialized, isInitialized } =
@@ -27,6 +29,7 @@ export default function RootLayout() {
   const isDark = useIsDarkMode();
   const theme = useMemo(() => getTheme(Colors), [Colors]);
   const styles = useMemo(() => createStyles(Colors), [Colors]);
+  const fontsLoaded = useAppFonts();
 
   useNotifications();
 
@@ -51,7 +54,7 @@ export default function RootLayout() {
     };
   }, [setFirebaseUser, setBexUser, setInitialized]);
 
-  if (!isInitialized) {
+  if (!isInitialized || !fontsLoaded) {
     return (
       <View style={styles.splash}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -68,6 +71,7 @@ export default function RootLayout() {
               <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={Colors.background} />
               <OfflineBanner />
               <BackendStatusBanner />
+              <PendingFeedbackGate />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
@@ -82,6 +86,10 @@ export default function RootLayout() {
                 <Stack.Screen name="setup-guide" />
                 <Stack.Screen name="expo-test-guide" />
                 <Stack.Screen name="settings" />
+                <Stack.Screen name="about" />
+                <Stack.Screen name="leaderboard" />
+                <Stack.Screen name="map" />
+                <Stack.Screen name="swap-chat/[offerId]" />
                 <Stack.Screen name="search" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="user/[id]" />
               </Stack>

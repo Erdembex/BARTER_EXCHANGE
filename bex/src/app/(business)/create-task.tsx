@@ -2,13 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -23,7 +21,7 @@ import { StepIndicator } from '@/components/business';
 import { Button, Input } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
 import { getListingLimitInfo, ListingLimitInfo } from '@/lib/listingLimit';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const DIFFICULTIES: TaskDifficulty[] = ['easy', 'medium', 'hard'];
@@ -53,6 +51,8 @@ const initialForm: FormState = {
 };
 
 export default function CreateTaskScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { business, loading: businessLoading } = useBusiness();
   const { showToast } = useToast();
   const { t } = useTranslation();
@@ -178,24 +178,11 @@ export default function CreateTaskScreen() {
         ),
       };
 
-      const created = await tasksRepository.create(business.id, data);
+      await tasksRepository.createAndPublish(business.id, data);
       setSubmitted(true);
-
-      if (created.approvedByAdmin) {
-        showToast(t('createTaskScreen.createSuccessToast'));
-        Alert.alert(
-          t('createTaskScreen.createSuccessTitle'),
-          t('createTaskScreen.createSuccessBody'),
-          [{ text: t('createTaskScreen.ok'), onPress: navigateAfterCreate }]
-        );
-      } else {
-        showToast(t('createTaskScreen.createPendingToast'));
-        Alert.alert(
-          t('createTaskScreen.createPendingTitle'),
-          t('createTaskScreen.createPendingBody'),
-          [{ text: t('createTaskScreen.goToMyTasks'), onPress: () => router.replace('/(business)/tasks') }]
-        );
-      }
+      setLoading(false);
+      showToast(t('createTaskScreen.createSuccessToast'));
+      navigateAfterCreate();
     } catch (err: unknown) {
       submitLock.current = false;
       setLoading(false);
@@ -454,7 +441,7 @@ export default function CreateTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   topBar: {
@@ -573,4 +560,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing[3], marginTop: Spacing[6] },
   halfBtn: { flex: 1 },
   error: { ...Typography.bodySmall, color: Colors.error, marginBottom: Spacing[3] },
-});
+}));

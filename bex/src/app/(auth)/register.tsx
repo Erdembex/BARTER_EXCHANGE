@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
@@ -14,12 +13,14 @@ import { authService, getAuthErrorMessage } from '@/features/auth/authService';
 import { useAuthStore } from '@/store/authStore';
 import { AUTH_HOME_ROUTE } from '@/lib/authRouting';
 import { UserRole } from '@/types';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
-import { Button, Input, BexLogo } from '@/components/ui';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
+import { Button, Input, PasslaLogo } from '@/components/ui';
 import { LocationPicker } from '@/components/common/LocationPicker';
 import { useTranslation } from '@/i18n';
 
 export default function RegisterScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const ROLES: { id: UserRole; label: string; desc: string; emoji: string }[] = [
     {
@@ -133,7 +134,7 @@ export default function RegisterScreen() {
 
           {/* Başlık */}
           <View style={styles.header}>
-            <BexLogo size="sm" />
+            <PasslaLogo size="sm" />
             <Text style={styles.title}>{t('registerScreen.title')}</Text>
             <Text style={styles.subtitle}>
               {t('registerScreen.subtitle')}
@@ -270,7 +271,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -412,4 +413,4 @@ const styles = StyleSheet.create({
     ...Typography.labelLarge,
     color: Colors.primary,
   },
-});
+}));

@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Task, TaskDifficulty } from '../../types';
 import { DIFFICULTY_LABELS, CATEGORY_LABELS } from '../../constants/taskLabels';
 import { formatDeadline, getDifficultyColor } from '../../lib/taskUtils';
-import { Colors, Typography, Radius, Spacing, Shadow } from '../../theme';
+import { Typography, Radius, Spacing, Shadow, createThemedStyles } from '../../theme';
 import { DangerBadge } from '../profile/DangerBadge';
 import { useTranslation } from '@/i18n';
 
@@ -25,6 +25,7 @@ export function TaskCard({
   onPress,
 }: TaskCardProps) {
   const { t } = useTranslation();
+  const styles = useStyles();
   const diffColor = getDifficultyColor(task.difficulty);
 
   return (
@@ -92,7 +93,7 @@ export function TaskCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((Colors) => ({
   card: {
     backgroundColor: Colors.card,
     borderRadius: Radius.xl,
@@ -204,4 +205,4 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     fontWeight: '600',
   },
-});
+}));

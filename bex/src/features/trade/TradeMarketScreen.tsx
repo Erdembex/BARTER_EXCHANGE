@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/common/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { tradeRepository } from './tradeRepository';
-import { tradeTheme, TradeTheme } from './tradeTheme';
+import { tradeTheme, TradeTheme, useTradeTheme } from './tradeTheme';
+import { Spacing, useThemeColors } from '@/theme';
 import { TradeListing, TradeOffer } from './types';
 import { TradeMyListingsPanel } from './TradeMyListingsPanel';
 import { TradeMyOffersPanel } from './TradeMyOffersPanel';
@@ -205,6 +206,8 @@ function TradeTabSwitch({
 }
 
 export function TradeMarketScreen() {
+  const tradeTheme = useTradeTheme();
+  const Colors = useThemeColors();
   const { t } = useTranslation();
   const { firebaseUser } = useAuthStore();
   const { showToast } = useToast();

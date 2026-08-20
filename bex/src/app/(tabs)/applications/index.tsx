@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   RefreshControl,
@@ -21,23 +20,29 @@ import { getApplicationQuickAction, getApplicationTarget } from '@/lib/applicati
 import { formatRelativeTime } from '@/lib/dateUtils';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { AppHeader } from '@/components/navigation/AppHeader';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
-const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  pending: Colors.warning,
-  approved: Colors.info,
-  rejected: Colors.error,
-  submitted: Colors.primary,
-  submission_approved: Colors.success,
-  rewarded: Colors.success,
-  cancelled: Colors.textTertiary,
-};
+function useStatusColors(): Record<ApplicationStatus, string> {
+  const Colors = useThemeColors();
+  return {
+    pending: Colors.warning,
+    approved: Colors.info,
+    rejected: Colors.error,
+    submitted: Colors.primary,
+    submission_approved: Colors.success,
+    rewarded: Colors.success,
+    cancelled: Colors.textTertiary,
+  };
+}
 
 interface EnrichedApplication extends Application {
   taskTitle: string;
 }
 
 export default function MyApplicationsScreen() {
+  const Colors = useThemeColors();
+  const statusColors = useStatusColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const { firebaseUser } = useAuthStore();
@@ -130,7 +135,7 @@ export default function MyApplicationsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const statusColor = STATUS_COLORS[item.status];
+          const statusColor = statusColors[item.status];
           const quickAction = getApplicationQuickAction(item);
           return (
             <TouchableOpacity
@@ -169,7 +174,7 @@ export default function MyApplicationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
@@ -239,4 +244,4 @@ const styles = StyleSheet.create({
     ...Typography.labelLarge,
     color: Colors.textOnPrimary,
   },
-});
+}));

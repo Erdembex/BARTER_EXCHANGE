@@ -37,6 +37,9 @@ public class IndividualProfile {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(length = 500)
+    private String cvUrl;
+
     @OneToMany(mappedBy = "profile",
                cascade = CascadeType.ALL,
                orphanRemoval = true,

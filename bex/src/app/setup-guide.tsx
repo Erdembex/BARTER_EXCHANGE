@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -11,7 +10,7 @@ import {
 import { router } from 'expo-router';
 import { isAuthEmulatorActive } from '@/lib/firebase';
 import { shouldUseDemoData } from '@/lib/devMode';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { Button } from '@/components/ui';
 
 const STORAGE_CONSOLE =
@@ -92,6 +91,8 @@ const STEPS: Step[] = [
 ];
 
 export default function SetupGuideScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const demoMode = shouldUseDemoData();
   const emulator = isAuthEmulatorActive();
 
@@ -168,7 +169,7 @@ export default function SetupGuideScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
   back: { alignSelf: 'flex-start' },
@@ -225,4 +226,4 @@ const styles = StyleSheet.create({
   },
   actionTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   actionText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
-});
+}));

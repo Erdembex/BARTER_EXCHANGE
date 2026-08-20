@@ -13,7 +13,7 @@ import { Input, Button } from '@/components/ui';
 import { SendChatOfferInput } from '@/features/messages/offersApi';
 import { TaskCategory } from '@/types';
 import { ALL_CATEGORIES, useCategoryLabels } from '@/constants/taskLabels';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type SendOfferSheetProps = {
@@ -24,6 +24,8 @@ type SendOfferSheetProps = {
 };
 
 export function SendOfferSheet({ visible, onClose, onSubmit, loading }: SendOfferSheetProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const CATEGORY_LABELS = useCategoryLabels();
   const [title, setTitle] = useState('');
@@ -193,7 +195,7 @@ export function SendOfferSheet({ visible, onClose, onSubmit, loading }: SendOffe
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
@@ -232,4 +234,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: Spacing[3] },
   half: { flex: 1 },
   error: { ...Typography.caption, color: Colors.error },
-});
+}));

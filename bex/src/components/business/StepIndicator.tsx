@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { View, Text } from 'react-native';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 interface StepIndicatorProps {
   steps: string[];
@@ -8,6 +8,8 @@ interface StepIndicatorProps {
 }
 
 export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.container}>
       {steps.map((label, index) => {
@@ -39,7 +41,7 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -81,4 +83,4 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '600',
   },
-});
+}));

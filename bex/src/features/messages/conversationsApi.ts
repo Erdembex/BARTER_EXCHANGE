@@ -115,7 +115,7 @@ function mapMessagesError(error: unknown, fallback: string): Error {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     if (status === 403 || status === 404) {
-      return new Error('Bu başvuru için mesajlaşma henüz açılmadı. Başvuru onaylandıktan sonra yazışabilirsiniz.');
+      return new Error('Bu başvuru için mesajlaşma açılamadı. Sayfayı yenileyip tekrar deneyin.');
     }
     return new Error(getApiErrorMessage(error, fallback));
   }
@@ -245,7 +245,7 @@ export async function sendMessageByApplication(
 ): Promise<ApplicationMessage> {
   const conversationId = await resolveConversationId(applicationId);
   if (!conversationId) {
-    throw new Error('Bu başvuru için mesajlaşma henüz açılmadı. Başvuru onaylandıktan sonra yazışabilirsiniz.');
+    throw new Error('Bu başvuru için mesajlaşma açılamadı. Sayfayı yenileyip tekrar deneyin.');
   }
 
   try {
@@ -267,7 +267,7 @@ export async function sendImageMessageByApplication(
 ): Promise<ApplicationMessage> {
   const conversationId = await resolveConversationId(applicationId);
   if (!conversationId) {
-    throw new Error('Bu başvuru için mesajlaşma henüz açılmadı. Başvuru onaylandıktan sonra yazışabilirsiniz.');
+    throw new Error('Bu başvuru için mesajlaşma açılamadı. Sayfayı yenileyip tekrar deneyin.');
   }
 
   try {

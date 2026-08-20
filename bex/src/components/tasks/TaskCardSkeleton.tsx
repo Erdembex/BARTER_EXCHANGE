@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { SkeletonBox } from '@/components/common/Skeleton';
-import { Colors, Spacing, Radius } from '@/theme';
+import { Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 export function TaskCardSkeleton() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -26,6 +28,7 @@ export function TaskCardSkeleton() {
 }
 
 export function TaskListSkeleton({ count = 4 }: { count?: number }) {
+  const styles = useScreenStyles();
   return (
     <View style={styles.list}>
       {Array.from({ length: count }).map((_, i) => (
@@ -36,6 +39,7 @@ export function TaskListSkeleton({ count = 4 }: { count?: number }) {
 }
 
 export function TaskDetailSkeleton() {
+  const styles = useScreenStyles();
   return (
     <View style={styles.detail}>
       <SkeletonBox width={60} height={16} />
@@ -48,6 +52,7 @@ export function TaskDetailSkeleton() {
 }
 
 export function WalletSkeleton() {
+  const styles = useScreenStyles();
   return (
     <View style={styles.wallet}>
       <SkeletonBox width="50%" height={24} />
@@ -58,7 +63,7 @@ export function WalletSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   list: { gap: Spacing[3], paddingHorizontal: Spacing[5] },
   detail: { padding: Spacing[5], flex: 1 },
   wallet: { padding: Spacing[5], gap: Spacing[3], flex: 1 },
@@ -76,4 +81,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: Spacing[4],
   },
-});
+}));

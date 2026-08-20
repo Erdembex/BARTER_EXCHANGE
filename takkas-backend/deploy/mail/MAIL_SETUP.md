@@ -9,13 +9,13 @@
 ## 2. Domain doğrulama
 
 1. SendGrid → Settings → Sender Authentication → Authenticate Domain
-2. Domain: `bex.app`
+2. Domain: `passla.com.tr`
 3. DNS kayıtlarını domain sağlayıcısına ekle:
    - CNAME (DKIM x3)
    - TXT (SPF)
 4. DMARC (opsiyonel ama önerilir):
    ```
-   _dmarc.bex.app TXT "v=DMARC1; p=none; rua=mailto:dmarc@bex.app"
+   _dmarc.passla.com.tr TXT "v=DMARC1; p=none; rua=mailto:dmarc@passla.com.tr"
    ```
 
 ## 3. Backend env
@@ -25,13 +25,14 @@ SPRING_MAIL_HOST=smtp.sendgrid.net
 SPRING_MAIL_PORT=587
 SPRING_MAIL_USERNAME=apikey
 SPRING_MAIL_PASSWORD=SG.xxxxx
+SPRING_MAIL_FROM=noreply@passla.com.tr
 ```
 
 Production profili (`application-prod.yml`) bu değerleri otomatik okur.
 
 ## 4. Gönderen adresi
 
-Kodda veya `spring.mail.properties.from` ile ayarla: `noreply@bex.app`
+Kodda gönderen: `noreply@passla.com.tr` (`SPRING_MAIL_FROM`)
 
 Doğrulanmış domain olmadan mailler spam'e düşer.
 

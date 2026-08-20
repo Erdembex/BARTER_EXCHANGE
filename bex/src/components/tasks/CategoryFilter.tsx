@@ -3,11 +3,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Text,
-  StyleSheet,
 } from 'react-native';
 import { TaskCategory } from '../../types';
 import { ALL_CATEGORIES, CATEGORY_ICONS, CATEGORY_LABELS } from '../../constants/taskLabels';
-import { Colors, Typography, Radius, Spacing } from '../../theme';
+import { Typography, Radius, Spacing, createThemedStyles, useThemeColors } from '../../theme';
 import { useTranslation } from '@/i18n';
 
 interface CategoryFilterProps {
@@ -16,6 +15,8 @@ interface CategoryFilterProps {
 }
 
 export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   return (
     <ScrollView
@@ -53,7 +54,7 @@ export function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: {
     gap: Spacing[2],
     paddingVertical: Spacing[1],
@@ -83,4 +84,4 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: Colors.textOnPrimary,
   },
-});
+}));

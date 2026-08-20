@@ -3,7 +3,6 @@ import {
   Modal,
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
@@ -24,7 +23,7 @@ import {
 } from '@/lib/couponUtils';
 import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { Typography, Spacing, Radius, Shadow, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const QR_SIZE = 240;
@@ -46,6 +45,8 @@ export function CouponQrModal({
   visible,
   onClose,
 }: CouponQrModalProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const [restQrToken, setRestQrToken] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
@@ -214,7 +215,7 @@ export function CouponQrModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
@@ -333,4 +334,4 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
   },
-});
+}));

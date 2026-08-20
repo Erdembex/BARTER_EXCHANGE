@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -13,10 +12,12 @@ import { businessesRepository, tasksRepository, EnrichedTask } from '@/features/
 import { searchBusinessProfiles, BusinessSearchHit } from '@/features/business/businessProfileApi';
 import { SearchBar } from '@/components/tasks/SearchBar';
 import { TaskCard } from '@/components/tasks';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function SearchScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { q: initialQ } = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(typeof initialQ === 'string' ? initialQ : '');
@@ -144,7 +145,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   topBar: {
     flexDirection: 'row',
@@ -194,4 +195,4 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: Spacing[8], gap: Spacing[2] },
   emptyTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   emptyText: { ...Typography.bodySmall, color: Colors.textMuted, textAlign: 'center' },
-});
+}));

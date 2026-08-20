@@ -15,7 +15,7 @@ import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 import { ZoomableImage } from '@/components/common/ZoomableImage';
 import { saveChatImageToGallery } from '@/lib/saveImageToGallery';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -37,6 +37,8 @@ export function ChatImageBubble({
   isRead,
   onReport,
 }: ChatImageBubbleProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -149,6 +151,8 @@ type ChatImageAttachButtonProps = {
 };
 
 export function ChatImageAttachButton({ onPress, disabled, loading }: ChatImageAttachButtonProps) {
+  const styles = useScreenStyles();
+  const Colors = useThemeColors();
   const { t } = useTranslation();
   return (
     <TouchableOpacity
@@ -167,7 +171,7 @@ export function ChatImageAttachButton({ onPress, disabled, loading }: ChatImageA
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: {
     width: '100%',
     marginBottom: Spacing[2],
@@ -309,4 +313,4 @@ const styles = StyleSheet.create({
   },
   attachBtnDisabled: { opacity: 0.45 },
   attachIcon: { fontSize: 20 },
-});
+}));

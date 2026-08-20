@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
@@ -17,10 +16,12 @@ import {
   fetchMyIndividualComplaintsBusiness,
   type IndividualComplaintDto,
 } from '@/features/complaint/complaintsApi';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation, getLocale } from '@/i18n';
 
 export default function BusinessComplaintsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
   const STATUS_LABELS: Record<string, string> = {
@@ -88,7 +89,7 @@ export default function BusinessComplaintsScreen() {
             <View key={item.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.targetName}>{item.individualDisplayName}</Text>
-                <Text style={[styles.status, statusStyle(item.status)]}>
+                <Text style={[styles.status, statusStyle(item.status, Colors)]}>
                   {STATUS_LABELS[item.status] ?? item.status}
                 </Text>
               </View>
@@ -113,13 +114,13 @@ export default function BusinessComplaintsScreen() {
   );
 }
 
-function statusStyle(status: string) {
+function statusStyle(status: string, Colors: ReturnType<typeof useThemeColors>) {
   if (status === 'APPROVED') return { color: Colors.success };
   if (status === 'REJECTED') return { color: Colors.error };
   return { color: Colors.warning };
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   lead: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
@@ -148,4 +149,4 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
   },
   errorText: { ...Typography.bodySmall, color: Colors.error },
-});
+}));

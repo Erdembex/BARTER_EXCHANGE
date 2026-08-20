@@ -3,6 +3,7 @@ package com.takkas.modules.feedback.api;
 import com.takkas.common.security.CurrentUser;
 import com.takkas.common.security.UserPrincipal;
 import com.takkas.modules.feedback.api.dto.FeedbackResponse;
+import com.takkas.modules.feedback.api.dto.PendingFeedbackResponse;
 import com.takkas.modules.feedback.api.dto.ProfileFeedbackSummary;
 import com.takkas.modules.feedback.api.dto.SubmitFeedbackRequest;
 import com.takkas.modules.feedback.service.FeedbackService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Geri Bildirim", description = "Görev sonrası yıldız ve yorum")
@@ -43,5 +45,17 @@ public class FeedbackController {
                                                      @RequestParam(defaultValue = "10") int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 20);
         return feedbackService.getProfileFeedback(profileId, safeLimit);
+    }
+
+    @GetMapping("/api/individual/applications/pending-feedback")
+    @PreAuthorize("hasRole('INDIVIDUAL')")
+    public List<PendingFeedbackResponse> getIndividualPendingFeedback(@CurrentUser UserPrincipal p) {
+        return feedbackService.getPendingFeedbackForIndividual(p.profileId(), p.userId());
+    }
+
+    @GetMapping("/api/business/applications/pending-feedback")
+    @PreAuthorize("hasRole('BUSINESS')")
+    public List<PendingFeedbackResponse> getBusinessPendingFeedback(@CurrentUser UserPrincipal p) {
+        return feedbackService.getPendingFeedbackForBusiness(p.profileId(), p.userId());
     }
 }

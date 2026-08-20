@@ -38,7 +38,7 @@ UPLOAD_DIR=/var/takkas/uploads
 
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-AWS_S3_BUCKET=bex-media-prod
+AWS_S3_BUCKET=passla-media-prod
 AWS_S3_REGION=eu-central-1
 
 SPRING_MAIL_HOST=smtp.sendgrid.net

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Typography, Spacing } from '../../theme';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '../../theme';
 
 interface SectionHeaderProps {
   title: string;
@@ -9,6 +9,8 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.title}>{title}</Text>
@@ -21,7 +23,7 @@ export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderPro
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -36,4 +38,4 @@ const styles = StyleSheet.create({
     ...Typography.labelMedium,
     color: Colors.primary,
   },
-});
+}));

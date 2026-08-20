@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -18,7 +17,7 @@ import { tasksRepository } from '@/features/data';
 import { Task, TaskCategory, TaskDifficulty } from '@/types';
 import { ALL_CATEGORIES, useCategoryLabels } from '@/constants/taskLabels';
 import { Button, Input } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const DIFFICULTIES: TaskDifficulty[] = ['easy', 'medium', 'hard'];
@@ -54,6 +53,8 @@ function taskToForm(task: Task): FormState {
 }
 
 export default function EditTaskScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const CATEGORY_LABELS = useCategoryLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -204,7 +205,7 @@ export default function EditTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing[3] },
   scroll: { padding: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
@@ -226,4 +227,4 @@ const styles = StyleSheet.create({
   chipText: { ...Typography.labelMedium, color: Colors.textSecondary },
   chipTextActive: { color: Colors.textOnPrimary },
   error: { ...Typography.bodySmall, color: Colors.error },
-});
+}));

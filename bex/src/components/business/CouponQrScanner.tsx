@@ -3,13 +3,12 @@ import {
   Modal,
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface CouponQrScannerProps {
@@ -19,6 +18,8 @@ interface CouponQrScannerProps {
 }
 
 export function CouponQrScanner({ visible, onClose, onScan }: CouponQrScannerProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const scannedRef = useRef(false);
@@ -91,7 +92,7 @@ export function CouponQrScanner({ visible, onClose, onScan }: CouponQrScannerPro
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
@@ -144,4 +145,4 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.overlay,
     paddingVertical: Spacing[3],
   },
-});
+}));

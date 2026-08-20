@@ -2,11 +2,10 @@ import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { Colors } from '@/theme';
+import { createThemedStyles, useThemeColors } from '@/theme';
 import { AuthenticatedImage } from '@/components/common/AuthenticatedImage';
 
 interface ProfileAvatarProps {
@@ -26,6 +25,8 @@ export function ProfileAvatar({
   editable = false,
   loading = false,
 }: ProfileAvatarProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const initial = (name ?? '?').charAt(0).toUpperCase();
   const radius = size / 2;
 
@@ -70,7 +71,7 @@ export function ProfileAvatar({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   fallback: {
     backgroundColor: Colors.primaryLight,
     alignItems: 'center',
@@ -98,4 +99,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-});
+}));

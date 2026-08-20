@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
@@ -13,7 +12,7 @@ import {
   type IndividualSearchHit,
 } from '@/features/business/businessProfileApi';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface IndividualPickerProps {
@@ -29,6 +28,8 @@ export function IndividualPicker({
   onSelect,
   onClear,
 }: IndividualPickerProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<IndividualSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -126,7 +127,7 @@ export function IndividualPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: { gap: Spacing[2] },
   selectedCard: {
     flexDirection: 'row',
@@ -155,4 +156,4 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   resultName: { ...Typography.labelMedium, color: Colors.textPrimary },
   resultMeta: { ...Typography.caption, color: Colors.textMuted },
-});
+}));

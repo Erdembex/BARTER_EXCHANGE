@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { Coupon } from '@/types';
 import {
   getCouponRemainingUses,
@@ -9,7 +9,7 @@ import {
 } from '@/lib/couponUtils';
 import { getCouponVisual } from '@/lib/couponVisuals';
 import { formatDaysUntil, formatShortDate } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius, Shadow } from '@/theme';
+import { Typography, Spacing, Radius, Shadow, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface CouponCardProps {
@@ -21,16 +21,19 @@ interface CouponCardProps {
   style?: ViewStyle;
 }
 
-const STATUS_COLORS: Record<
+function useCouponStatusColors(): Record<
   ReturnType<typeof getCouponDisplayStatus>,
   string
-> = {
-  active: Colors.primary,
-  pending: Colors.warning,
-  exhausted: Colors.textMuted,
-  expired: Colors.warning,
-  traded: Colors.accent,
-};
+> {
+  const Colors = useThemeColors();
+  return {
+    active: Colors.primary,
+    pending: Colors.warning,
+    exhausted: Colors.textMuted,
+    expired: Colors.warning,
+    traded: Colors.accent,
+  };
+}
 
 export function CouponCard({
   coupon,
@@ -40,11 +43,14 @@ export function CouponCard({
   layout = 'stack',
   style,
 }: CouponCardProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const displayStatus = getCouponDisplayStatus(coupon);
   const expiringSoon = isCouponExpiringSoon(coupon);
   const remaining = getCouponRemainingUses(coupon);
-  const statusColor = expiringSoon ? Colors.warning : STATUS_COLORS[displayStatus];
+  const statusColors = useCouponStatusColors();
+  const statusColor = expiringSoon ? Colors.warning : statusColors[displayStatus];
   const visual = getCouponVisual(coupon.rewardDescription);
   const isHero = variant === 'hero';
   const isCarousel = layout === 'carousel';
@@ -119,7 +125,7 @@ export function CouponCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrapper: {
     marginBottom: Spacing[3],
   },
@@ -258,4 +264,4 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
-});
+}));

@@ -20,6 +20,7 @@ import { ApplicationMessage, ApplicationStatus, UserRole } from '@/types';
 // işletme sonraki görevleri doğrudan bu kişiye ilan olarak gönderebilir. Sohbet yalnızca
 // biri diğerini engellerse kapanır (engelleme akışı ayrıca yönetilir).
 const MESSAGE_STATUSES: ApplicationStatus[] = [
+  'pending',
   'approved',
   'submitted',
   'submission_approved',

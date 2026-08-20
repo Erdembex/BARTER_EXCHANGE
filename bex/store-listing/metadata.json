@@ -1,11 +1,11 @@
 {
-  "appName": "Barter",
-  "androidPackage": "com.bex.app",
-  "iosBundleId": "com.bex.app",
+  "appName": "Passla",
+  "androidPackage": "com.passla.app",
+  "iosBundleId": "com.passla.app",
   "defaultLanguage": "tr-TR",
-  "privacyPolicyUrl": "https://barterex.com.tr/gizlilik.html",
-  "supportUrl": "https://barterex.com.tr/destek.html",
-  "supportEmail": "destek@barterex.com.tr",
+  "privacyPolicyUrl": "https://passla.com.tr/gizlilik.html",
+  "supportUrl": "https://passla.com.tr/destek.html",
+  "supportEmail": "destek@passla.com.tr",
   "category": {
     "playStore": "BUSINESS",
     "appStore": "BUSINESS"

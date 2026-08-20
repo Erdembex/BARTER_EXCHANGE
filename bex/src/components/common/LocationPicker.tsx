@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -18,7 +17,7 @@ import {
 } from '@/lib/locationFilterUtils';
 import { resolveLocationFromDevice } from '@/hooks/useDeviceLocation';
 import { LocationSelectorModal } from '@/components/common/LocationSelectorModal';
-import { Colors, Typography, Radius, Spacing } from '@/theme';
+import { Typography, Radius, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type LocationFieldsProps = {
@@ -47,6 +46,7 @@ function SelectField({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const styles = useScreenStyles();
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -75,6 +75,8 @@ function LocationFields({
   showGps = true,
   error,
 }: LocationFieldsProps) {
+  const styles = useScreenStyles();
+  const Colors = useThemeColors();
   const [cityModal, setCityModal] = useState(false);
   const [districtModal, setDistrictModal] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -219,6 +221,8 @@ export function LocationFilter({
   onCityChange,
   onDistrictChange,
 }: LocationFilterProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   return (
     <View>
@@ -264,7 +268,7 @@ export function LocationPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: { gap: Spacing[3] },
   sectionLabel: {
     ...Typography.labelMedium,
@@ -333,6 +337,6 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.error,
   },
-});
+}));
 
 export type { TurkeyCity } from '@/constants/turkeyLocations';

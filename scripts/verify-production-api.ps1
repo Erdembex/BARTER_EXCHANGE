@@ -32,7 +32,8 @@ else { Write-Host "[OK] Health UP" -ForegroundColor Green }
 
 Test-Endpoint "Listings (public)" "$BaseUrl/api/listings" @(200)
 Test-Endpoint "Swagger (prod kapali)" "$BaseUrl/swagger-ui.html" @(404, 500, 403)
-Test-Endpoint "WebSocket info (auth gerekir)" "$BaseUrl/ws/info" @(401, 403)
+Test-Endpoint "Pending feedback (auth gerekir)" "$BaseUrl/api/individual/applications/pending-feedback" @(401, 403)
+Test-Endpoint "CV upload route (auth gerekir)" "$BaseUrl/api/individual/uploads/cv" @(401, 403, 405)
 
 Write-Host ""
 if ($fail -eq 0) {

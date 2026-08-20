@@ -1,4 +1,4 @@
-# BEX — Play Store Listing (English)
+# Passla — Play Store Listing (English)
 
 ## Short description (max 80 characters)
 
@@ -6,13 +6,14 @@ Complete tasks, earn rewards. Find local business tasks and win coupons.
 
 ## Full description
 
-Earn rewards by completing tasks from local businesses with BEX!
+Earn rewards by completing tasks from local businesses with Passla!
 
 **What you can do**
 • Discover tasks near you
 • Complete tasks and earn coupons
 • Message businesses and send offers
 • Trade skills and collaborate
+• Add a bio and optional CV to your profile
 • Redeem coupons via QR code
 
 **Who is it for?**
@@ -20,6 +21,6 @@ Students, freelancers, and anyone looking for extra income. Businesses post task
 
 **Your privacy**
 Location is used only while the app is open to show nearby tasks.
-Privacy policy: https://YOUR-DOMAIN/gizlilik.html
+Privacy policy: https://passla.com.tr/gizlilik.html
 
-Support: support@YOUR-DOMAIN
+Support: destek@passla.com.tr

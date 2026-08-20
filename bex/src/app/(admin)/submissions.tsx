@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   TouchableOpacity,
@@ -16,10 +15,12 @@ import { Button, Input } from '@/components/ui';
 import { ImagePreviewGrid } from '@/components/common/ImagePreviewGrid';
 import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminSubmissionsScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [submissions, setSubmissions] = useState<EnrichedSubmission[]>([]);
@@ -168,7 +169,7 @@ export default function AdminSubmissionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   list: { padding: Spacing[5], paddingBottom: Spacing[10], flexGrow: 1 },
   header: { marginBottom: Spacing[4] },
@@ -205,4 +206,4 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing[3] },
   empty: { alignItems: 'center', paddingTop: Spacing[10] },
   emptyText: { ...Typography.bodyMedium, color: Colors.textMuted },
-});
+}));

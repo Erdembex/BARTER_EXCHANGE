@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { createBox } from '@shopify/restyle';
 import { Theme } from '@/theme/restyle';
-import { Colors, Shadow } from '@/theme';
+import { Shadow, useThemeColors } from '@/theme';
 import { Text } from './Text';
 
 const Box = createBox<Theme>();
@@ -45,12 +45,12 @@ const TEXT_VARIANT: Record<Variant, TextVariant> = {
   danger: 'buttonDanger',
 };
 
-const LOADER_COLOR: Record<Variant, string> = {
-  primary: Colors.textOnPrimary,
-  secondary: Colors.white,
-  outline: Colors.primary,
-  ghost: Colors.primary,
-  danger: Colors.textOnPrimary,
+const LOADER_COLOR: Record<Variant, (colors: ReturnType<typeof useThemeColors>) => string> = {
+  primary: (c) => c.textOnPrimary,
+  secondary: (c) => c.white,
+  outline: (c) => c.primary,
+  ghost: (c) => c.primary,
+  danger: (c) => c.textOnPrimary,
 };
 
 function getBoxProps(variant: Variant) {
@@ -84,6 +84,7 @@ export function Button({
   textStyle,
   leftIcon,
 }: ButtonProps) {
+  const Colors = useThemeColors();
   const isDisabled = disabled || loading;
 
   return (
@@ -109,7 +110,7 @@ export function Button({
         {...getBoxProps(variant)}
       >
         {loading ? (
-          <ActivityIndicator color={LOADER_COLOR[variant]} size="small" />
+          <ActivityIndicator color={LOADER_COLOR[variant](Colors)} size="small" />
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {leftIcon}

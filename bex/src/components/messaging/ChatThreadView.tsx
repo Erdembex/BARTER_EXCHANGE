@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TextInput,
   TouchableOpacity,
@@ -41,7 +40,7 @@ import { uploadLocalFiles } from '@/lib/storageUpload';
 import { normalizeUploadPath } from '@/lib/mediaUrl';
 import { useToast } from '@/components/common/Toast';
 import { formatRelativeTime } from '@/lib/dateUtils';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface ChatThreadViewProps {
@@ -72,6 +71,8 @@ export function ChatThreadView({
   priorUnread = 0,
   messagingAudience = 'user',
 }: ChatThreadViewProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -533,7 +534,7 @@ export function ChatThreadView({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   root: {
     gap: Spacing[3],
   },
@@ -736,4 +737,4 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 22,
   },
-});
+}));

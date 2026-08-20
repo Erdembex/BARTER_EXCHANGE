@@ -90,7 +90,7 @@ export function parseCouponScan(raw: string): {
   if (payload) return { couponId: payload.couponId };
 
   const code = raw.trim().toUpperCase();
-  if (code.startsWith('BEX-')) return { couponCode: code };
+  if (code.startsWith('PS-') || code.startsWith('BEX-')) return { couponCode: code };
 
   return null;
 }

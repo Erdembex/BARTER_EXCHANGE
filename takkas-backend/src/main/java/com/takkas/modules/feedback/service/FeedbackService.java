@@ -7,11 +7,13 @@ import com.takkas.modules.application.domain.Application;
 import com.takkas.modules.application.domain.enums.ApplicationStatus;
 import com.takkas.modules.application.repository.ApplicationRepository;
 import com.takkas.modules.feedback.api.dto.FeedbackResponse;
+import com.takkas.modules.feedback.api.dto.PendingFeedbackResponse;
 import com.takkas.modules.feedback.api.dto.ProfileFeedbackSummary;
 import com.takkas.modules.feedback.api.dto.SubmitFeedbackRequest;
 import com.takkas.modules.feedback.domain.TaskFeedback;
 import com.takkas.modules.feedback.domain.enums.FeedbackAuthorRole;
 import com.takkas.modules.feedback.repository.TaskFeedbackRepository;
+import com.takkas.modules.listing.repository.ListingRepository;
 import com.takkas.modules.user.domain.BusinessProfile;
 import com.takkas.modules.user.domain.IndividualProfile;
 import com.takkas.modules.user.repository.BusinessProfileRepository;
@@ -36,6 +38,7 @@ public class FeedbackService {
     private final ApplicationRepository applicationRepo;
     private final BusinessProfileRepository businessRepo;
     private final IndividualProfileRepository individualRepo;
+    private final ListingRepository listingRepository;
 
     @Transactional
     public FeedbackResponse submitIndividualFeedback(UUID userId, UUID profileId,
@@ -76,14 +79,40 @@ public class FeedbackService {
         return feedbackRepo.findByApplicationIdAndAuthorUserId(applicationId, authorUserId).isPresent();
     }
 
+    public List<PendingFeedbackResponse> getPendingFeedbackForIndividual(UUID profileId, UUID userId) {
+        return applicationRepo
+            .findAllByIndividualIdAndStatusInOrderByReviewedAtDesc(profileId, FEEDBACK_ELIGIBLE)
+            .stream()
+            .filter(app -> !hasFeedbackForApplication(app.getId(), userId))
+            .map(this::toPendingResponse)
+            .toList();
+    }
+
+    public List<PendingFeedbackResponse> getPendingFeedbackForBusiness(UUID businessId, UUID userId) {
+        return applicationRepo
+            .findAllByBusinessIdAndStatusInOrderByAppliedAtDesc(businessId, FEEDBACK_ELIGIBLE)
+            .stream()
+            .filter(app -> !hasFeedbackForApplication(app.getId(), userId))
+            .map(this::toPendingResponse)
+            .toList();
+    }
+
+    private PendingFeedbackResponse toPendingResponse(Application app) {
+        String title = listingRepository.findById(app.getListingId())
+            .map(listing -> listing.getTitle())
+            .orElse("Görev");
+        return new PendingFeedbackResponse(
+            app.getId(), app.getListingId(), title, app.getStatus());
+    }
+
     private FeedbackResponse saveFeedback(UUID authorUserId, UUID applicationId,
                                           FeedbackAuthorRole role, UUID targetProfileId,
                                           SubmitFeedbackRequest req) {
         if (feedbackRepo.findByApplicationIdAndAuthorUserId(applicationId, authorUserId).isPresent()) {
             throw new BusinessRuleException("Bu görev için zaten geri bildirim verdin.");
         }
-        if (req.comment() != null && !req.comment().isBlank() && req.stars() < 1) {
-            throw new BusinessRuleException("Önce yıldız vermelisin.");
+        if (req.stars() == null || req.stars() < 1 || req.stars() > 5) {
+            throw new BusinessRuleException("Puan vermek zorunludur (1-5 yıldız).");
         }
 
         TaskFeedback feedback = TaskFeedback.builder()

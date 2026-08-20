@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
@@ -21,9 +20,11 @@ import { CouponCard, CouponQrModal } from '@/components/wallet';
 import { WalletSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Button } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 export default function WalletScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const COUPON_STATUS_LABELS = useCouponStatusLabels();
   const { firebaseUser } = useAuthStore();
@@ -233,7 +234,7 @@ export default function WalletScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingTop: Spacing[2], paddingBottom: Spacing[10], flexGrow: 1 },
   header: {
@@ -296,4 +297,4 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[4],
   },
   errorText: { ...Typography.bodySmall, color: Colors.error, lineHeight: 20 },
-});
+}));

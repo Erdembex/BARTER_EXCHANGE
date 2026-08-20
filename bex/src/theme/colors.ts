@@ -1,70 +1,62 @@
 export const Colors = {
-  // Marka — altın & para yeşili
-  primary: '#EAB308',
-  primaryLight: 'rgba(234, 179, 8, 0.14)',
-  primaryDark: '#C8940A',
-  secondary: '#052E16',
-  accent: '#FFD700',
-  accentLight: 'rgba(255, 215, 0, 0.14)',
-  accentDark: '#D4AF37',
+  // Passla — yumuşak mor & altın (parlak değil)
+  primary: '#D4B86A',
+  primaryLight: 'rgba(212, 184, 106, 0.14)',
+  primaryDark: '#B89A52',
+  secondary: '#9B7EC8',
+  accent: '#B794F6',
+  accentLight: 'rgba(183, 148, 246, 0.14)',
+  accentDark: '#8B6CB8',
 
-  moneyGreen: '#22C55E',
-  moneyGreenDark: '#15803D',
-  moneyGreenLight: 'rgba(34, 197, 94, 0.16)',
+  moneyGreen: '#6BBF8A',
+  moneyGreenDark: '#4A9968',
+  moneyGreenLight: 'rgba(107, 191, 138, 0.14)',
 
-  // İşletme tarafı — kurumsal ikincil kimlik rengi (derin zümrüt-teal)
-  business: '#0F766E',
-  businessLight: 'rgba(15, 118, 110, 0.16)',
-  businessDark: '#0B5C56',
+  business: '#9B7EC8',
+  businessLight: 'rgba(155, 126, 200, 0.16)',
+  businessDark: '#7A5FA8',
 
-  // Koyu zengin arka plan — daha net yüzey hiyerarşisi
-  background: '#0A0F0C',
-  surface: '#131A16',
-  surfaceSecondary: '#1A2420',
-  card: '#1E2A24',
+  background: '#18122B',
+  surface: '#211835',
+  surfaceSecondary: '#2A2040',
+  card: '#322848',
 
-  // Sıcak krem tonları — koyu zeminde yüksek okunabilirlik
-  text: '#F5F0E1',
-  textPrimary: '#F5F0E1',
-  textMuted: '#7E9481',
-  textSecondary: '#B7C4B4',
-  textTertiary: '#6B806E',
+  text: '#F3EEF8',
+  textPrimary: '#F3EEF8',
+  textMuted: '#A898C0',
+  textSecondary: '#C9BBDA',
+  textTertiary: '#8A7A9E',
   textInverse: '#FFFFFF',
-  textOnPrimary: '#1B1608',
-  textOnGold: '#1B1608',
+  textOnPrimary: '#2A2438',
+  textOnGold: '#2A2438',
 
-  // Sınır — daha görünür ayraç
-  border: '#2A3B32',
-  borderLight: '#1F2C26',
-  borderFocus: '#EAB308',
-  borderGold: 'rgba(234, 179, 8, 0.45)',
+  border: '#463A5C',
+  borderLight: '#352A4A',
+  borderFocus: '#D4B86A',
+  borderGold: 'rgba(212, 184, 106, 0.4)',
 
-  // Durum — info artık primary'den ayrı (bildirim ödül gibi görünmesin)
-  success: '#22C55E',
-  successLight: 'rgba(34, 197, 94, 0.16)',
-  error: '#F87171',
-  errorLight: 'rgba(248, 113, 113, 0.14)',
-  warning: '#F5A524',
-  warningLight: 'rgba(245, 165, 36, 0.14)',
-  info: '#38BDF8',
-  infoLight: 'rgba(56, 189, 248, 0.14)',
+  success: '#6BBF8A',
+  successLight: 'rgba(107, 191, 138, 0.14)',
+  error: '#E8929A',
+  errorLight: 'rgba(232, 146, 154, 0.14)',
+  warning: '#D4A574',
+  warningLight: 'rgba(212, 165, 116, 0.14)',
+  info: '#B794F6',
+  infoLight: 'rgba(183, 148, 246, 0.14)',
 
-  // Zorluk seviyeleri
-  difficultyEasy: '#22C55E',
-  difficultyMedium: '#EAB308',
-  difficultyHard: '#F87171',
+  difficultyEasy: '#6BBF8A',
+  difficultyMedium: '#D4B86A',
+  difficultyHard: '#E8929A',
 
-  // Overlay
-  overlay: 'rgba(10, 15, 12, 0.78)',
-  overlayLight: 'rgba(234, 179, 8, 0.08)',
+  overlay: 'rgba(24, 18, 43, 0.78)',
+  overlayLight: 'rgba(183, 148, 246, 0.08)',
 
   transparent: 'transparent',
   white: '#FFFFFF',
 
-  // Hero gradyanları
-  gradientBlue: '#052E16',
-  gradientGold: '#EAB308',
-  gradientMid: '#131A16',
+  gradientBlue: '#5B4A8A',
+  gradientGold: '#D4B86A',
+  gradientMid: '#2A2040',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

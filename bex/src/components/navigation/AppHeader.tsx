@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { router, Href } from 'expo-router';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useOpenNotifications } from '@/hooks/useOpenNotifications';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface AppHeaderProps {
@@ -13,69 +13,7 @@ interface AppHeaderProps {
   onBack?: () => void;
 }
 
-export function AppHeader({
-  title,
-  showMenu = true,
-  showNotifications = true,
-  onBack,
-}: AppHeaderProps) {
-  const { unreadCount } = useNotifications();
-  const openNotifications = useOpenNotifications();
-  const { t } = useTranslation();
-
-  return (
-    <View style={styles.container}>
-      {onBack ? (
-        <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-      ) : showMenu ? (
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)/more' as Href)}
-          style={styles.iconBtn}
-          accessibilityRole="button"
-          accessibilityLabel={t('header.openMenu')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <View style={styles.menuIcon}>
-            <View style={styles.bar} />
-            <View style={styles.bar} />
-            <View style={styles.bar} />
-          </View>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.iconPlaceholder} />
-      )}
-      {title ? (
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-      ) : (
-        <View style={styles.titleSpacer} />
-      )}
-      {showNotifications && !onBack ? (
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={openNotifications}
-          accessibilityRole="button"
-          accessibilityLabel={t('header.notifications')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={styles.bellIcon}>◉</Text>
-          {unreadCount > 0 ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.iconPlaceholder} />
-      )}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles((Colors) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -137,4 +75,67 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     flex: 1,
   },
-});
+}));
+
+export function AppHeader({
+  title,
+  showMenu = true,
+  showNotifications = true,
+  onBack,
+}: AppHeaderProps) {
+  const styles = useStyles();
+  const { unreadCount } = useNotifications();
+  const openNotifications = useOpenNotifications();
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.container}>
+      {onBack ? (
+        <TouchableOpacity onPress={onBack} style={styles.iconBtn}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+      ) : showMenu ? (
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/more' as Href)}
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('header.openMenu')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <View style={styles.menuIcon}>
+            <View style={styles.bar} />
+            <View style={styles.bar} />
+            <View style={styles.bar} />
+          </View>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconPlaceholder} />
+      )}
+      {title ? (
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+      ) : (
+        <View style={styles.titleSpacer} />
+      )}
+      {showNotifications && !onBack ? (
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={openNotifications}
+          accessibilityRole="button"
+          accessibilityLabel={t('header.notifications')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.bellIcon}>◉</Text>
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconPlaceholder} />
+      )}
+    </View>
+  );
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Button, Input } from '@/components/ui';
 import { ComplaintApplicationPicker } from '@/components/complaint/ComplaintApplicationPicker';
 import {
@@ -8,7 +8,7 @@ import {
   submitComplaint,
   type ComplaintEligibleApplicationDto,
 } from '@/features/complaint/complaintsApi';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 const REASON_OPTIONS: ComplaintReason[] = [
@@ -36,6 +36,8 @@ export function ComplaintSubmitForm({
   onCancel,
   showCancel = false,
 }: ComplaintSubmitFormProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const COMPLAINT_REASON_LABELS = useComplaintReasonLabels();
   const [applicationId, setApplicationId] = useState(initialApplicationId);
@@ -137,7 +139,7 @@ export function ComplaintSubmitForm({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: { gap: Spacing[4] },
   lead: { ...Typography.bodySmall, color: Colors.textMuted, lineHeight: 20 },
   fieldLabel: { ...Typography.labelMedium, color: Colors.textPrimary },
@@ -154,4 +156,4 @@ const styles = StyleSheet.create({
   reasonChipTextActive: { color: Colors.primary, fontWeight: '700' },
   error: { ...Typography.bodySmall, color: Colors.error },
   actions: { flexDirection: 'row', gap: Spacing[2] },
-});
+}));

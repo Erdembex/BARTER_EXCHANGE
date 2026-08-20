@@ -6,6 +6,7 @@ spring:
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:}
     password: ${SPRING_MAIL_PASSWORD:}
+    from: ${SPRING_MAIL_FROM:noreply@passla.com.tr}
     properties:
       mail:
         smtp:
@@ -18,10 +19,10 @@ spring:
 
 app:
   admin:
-    seed-enabled: false
+    seed-enabled: ${ADMIN_SEED_ENABLED:false}
     sync-password-on-startup: false
   listings:
-    auto-approve-on-create: false
+    auto-approve-on-create: true
   dev:
     expose-password-reset-token: false
     expose-phone-code: false

@@ -1,4 +1,4 @@
-# BEX — App Store Listing (Türkçe)
+# Passla — App Store Listing (Türkçe)
 
 ## Alt başlık (max 30 karakter)
 
@@ -6,19 +6,19 @@ Görev yap, ödül kazan
 
 ## Açıklama
 
-BEX ile çevrendeki işletmelerden görev al, becerilerini kullan ve kupon kazan!
+Passla ile çevrendeki işletmelerden görev al, becerilerini kullan ve kupon kazan!
 
-Yakınındaki görevleri keşfet, tamamla ve ödüllerini topla. İşletmelerle mesajlaş, teklif gönder, takas yap. Kuponlarını QR kod ile kullan.
+Yakınındaki görevleri keşfet, tamamla ve ödüllerini topla. İşletmelerle mesajlaş, teklif gönder, takas yap. Profiline ön yazı ve CV ekleyebilirsin. Kuponlarını QR kod ile kullan.
 
 Konum bilgisi yalnızca uygulama açıkken yakındaki görevleri göstermek için kullanılır.
 
-Gizlilik: https://SENIN-DOMAIN/gizlilik.html
-Destek: https://SENIN-DOMAIN/destek.html
+Gizlilik: https://passla.com.tr/gizlilik.html
+Destek: https://passla.com.tr/destek.html
 
-## Anahtar kelimeler (max 100 karakter, virgülle)
+## Anahtar kelimeler (max 100 karacter, virgülle)
 
-görev,ödül,kupon,iş,beceri,takas,yakın,freelance
+görev,ödül,kupon,iş,beceri,takas,yakın,freelance,passla
 
 ## Promotional text (opsiyonel)
 
-Yeni: Mesajlaşmada teklif gönder, görselleri galerine kaydet!
+Yeni: Profil ön yazısı, CV yükleme ve görev sonrası değerlendirme!

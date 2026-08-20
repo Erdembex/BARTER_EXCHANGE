@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { router, Href } from 'expo-router';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { useOpenNotifications } from '@/hooks/useOpenNotifications';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 type MoreLink = {
@@ -15,10 +15,16 @@ type MoreLink = {
 };
 
 const MORE_LINKS: MoreLink[] = [
+  {
+    route: '/settings' as Href,
+    labelKey: 'moreScreen.settings',
+    hintKey: 'moreScreen.settingsHint',
+    icon: '⚙',
+  },
   { route: '/(tabs)/trade' as Href, labelKey: 'moreScreen.trade', hintKey: 'moreScreen.tradeHint', icon: '⇄' },
   { route: '/(tabs)/wallet' as Href, labelKey: 'moreScreen.wallet', hintKey: 'moreScreen.walletHint', icon: '▣' },
   {
-    route: '/(tabs)/complaints/index' as Href,
+    route: '/(tabs)/complaints' as Href,
     labelKey: 'moreScreen.complaint',
     hintKey: 'moreScreen.complaintHint',
     icon: '⚠',
@@ -26,6 +32,8 @@ const MORE_LINKS: MoreLink[] = [
 ];
 
 export default function MoreScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const openNotifications = useOpenNotifications();
   const { unreadCount } = useNotifications();
@@ -72,7 +80,7 @@ export default function MoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], gap: Spacing[3], paddingBottom: Spacing[10] },
   noticeCard: {
@@ -122,4 +130,4 @@ const styles = StyleSheet.create({
   linkTitle: { ...Typography.labelLarge, color: Colors.textPrimary },
   linkHint: { ...Typography.caption, color: Colors.textSecondary },
   chevron: { ...Typography.headingMedium, color: Colors.textMuted, fontWeight: '300' },
-});
+}));

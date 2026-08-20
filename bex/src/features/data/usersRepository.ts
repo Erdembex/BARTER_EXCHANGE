@@ -58,6 +58,8 @@ export const usersRepository = {
     portfolio: PortfolioItem[];
     displayName: string;
     avatarUrl: string | null;
+    bio?: string;
+    cvUrl?: string;
     averageRating: number;
     feedbackCount: number;
     approvedComplaintCount: number;
@@ -76,6 +78,8 @@ export const usersRepository = {
           portfolio: profile.portfolio,
           displayName: profile.username ? `@${profile.username}` : profile.fullName,
           avatarUrl: profile.avatarUrl,
+          bio: profile.bio,
+          cvUrl: profile.cvUrl,
           averageRating: profile.averageRating,
           feedbackCount: profile.feedbackCount,
           approvedComplaintCount: profile.approvedComplaintCount,
@@ -96,6 +100,8 @@ export const usersRepository = {
     portfolio: PortfolioItem[];
     displayName: string;
     avatarUrl: string | null;
+    bio?: string;
+    cvUrl?: string;
     profileId: string;
     averageRating: number;
     feedbackCount: number;
@@ -115,6 +121,8 @@ export const usersRepository = {
         portfolio: profile.portfolio,
         displayName: profile.username ? `@${profile.username}` : profile.fullName,
         avatarUrl: profile.avatarUrl,
+        bio: profile.bio,
+        cvUrl: profile.cvUrl,
         averageRating: profile.averageRating,
         feedbackCount: profile.feedbackCount,
         approvedComplaintCount: profile.approvedComplaintCount,

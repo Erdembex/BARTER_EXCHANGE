@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { CompletedTask, PortfolioItem } from '@/types';
 import { CompletedTasksList, CompletedTasksStat } from '@/components/profile/CompletedTasksList';
 import { UserPortfolioGallery } from '@/components/profile/UserPortfolioGallery';
@@ -7,11 +7,13 @@ import { ProfileFeedbackList } from '@/components/profile/ProfileFeedbackList';
 import { DangerBadge } from '@/components/profile/DangerBadge';
 import { fetchProfileFeedback } from '@/features/feedback/feedbackApi';
 import { PORTFOLIO_GALLERY_LIMIT } from '@/features/portfolio/profileLimits';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface PublicProfileSectionsProps {
   profileId?: string;
+  bio?: string;
+  cvUrl?: string;
   completedCount: number;
   completedTasks: CompletedTask[];
   portfolio: PortfolioItem[];
@@ -24,6 +26,8 @@ interface PublicProfileSectionsProps {
 
 export function PublicProfileSections({
   profileId,
+  bio,
+  cvUrl,
   completedCount,
   completedTasks,
   portfolio,
@@ -33,6 +37,8 @@ export function PublicProfileSections({
   approvedComplaintCount = 0,
   complaintRate = 0,
 }: PublicProfileSectionsProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const [feedbackItems, setFeedbackItems] = useState<
     Awaited<ReturnType<typeof fetchProfileFeedback>>['recent']
@@ -64,6 +70,19 @@ export function PublicProfileSections({
             })}
           </Text>
         </View>
+      ) : null}
+
+      {bio?.trim() ? (
+        <View style={styles.bioBox}>
+          <Text style={styles.bioTitle}>{t('publicProfile.bioTitle')}</Text>
+          <Text style={styles.bioText}>{bio.trim()}</Text>
+        </View>
+      ) : null}
+
+      {cvUrl ? (
+        <TouchableOpacity onPress={() => Linking.openURL(cvUrl)}>
+          <Text style={styles.cvLink}>{t('publicProfile.viewCv')}</Text>
+        </TouchableOpacity>
       ) : null}
 
       <View style={styles.statsRow}>
@@ -106,9 +125,20 @@ export function PublicProfileSections({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   dangerWrap: { alignItems: 'center', gap: Spacing[2] },
   dangerHint: { ...Typography.caption, color: Colors.error, textAlign: 'center' },
+  bioBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: Spacing[2],
+  },
+  bioTitle: { ...Typography.labelMedium, color: Colors.textPrimary },
+  bioText: { ...Typography.bodyMedium, color: Colors.textSecondary, lineHeight: 22 },
+  cvLink: { ...Typography.labelMedium, color: Colors.primary, textAlign: 'center' },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,4 +148,4 @@ const styles = StyleSheet.create({
   },
   statsDivider: { ...Typography.bodySmall, color: Colors.textMuted },
   statsMuted: { ...Typography.bodySmall, color: Colors.textMuted },
-});
+}));

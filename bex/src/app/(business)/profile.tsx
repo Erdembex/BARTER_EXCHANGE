@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -24,10 +23,12 @@ import {
   useBusinessCategoryLabels,
   useVerificationStatusLabels,
 } from '@/constants/businessLabels';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function BusinessProfileScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const BUSINESS_CATEGORY_LABELS = useBusinessCategoryLabels();
   const VERIFICATION_STATUS_LABELS = useVerificationStatusLabels();
@@ -174,15 +175,23 @@ export default function BusinessProfileScreen() {
         />
 
         <Button
-          title={t('businessProfileScreen.publishChecklist')}
-          variant="outline"
-          onPress={() => router.push('/setup-guide' as Href)}
+          title={t('profileScreen.settings')}
+          variant="primary"
+          onPress={() => router.push('/settings' as Href)}
         />
+
+        {__DEV__ ? (
+          <Button
+            title={t('businessProfileScreen.publishChecklist')}
+            variant="outline"
+            onPress={() => router.push('/setup-guide' as Href)}
+          />
+        ) : null}
 
         <Button title={t('businessProfileScreen.logout')} variant="outline" onPress={handleLogout} />
 
         <View style={styles.meta}>
-          <Text style={styles.metaText}>BEX v{appVersion}</Text>
+          <Text style={styles.metaText}>Passla v{appVersion}</Text>
           {__DEV__ && (
             <Text style={styles.metaText}>
               {isAuthEmulatorActive() ? t('businessProfileScreen.emulatorDemo') : t('businessProfileScreen.liveBackend')}
@@ -194,7 +203,7 @@ export default function BusinessProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     padding: Spacing[5],
@@ -271,4 +280,4 @@ const styles = StyleSheet.create({
   },
   meta: { alignItems: 'center', gap: Spacing[1], marginTop: Spacing[2] },
   metaText: { ...Typography.caption, color: Colors.textTertiary },
-});
+}));

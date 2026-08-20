@@ -11,4 +11,4 @@ public record ApplicationDetailResponse(
     ApplicationStatus status, Instant appliedAt,
     String submissionText, List<String> submissionImageUrls,
     Instant submittedAt, String reviewNote, Instant reviewedAt,
-    UUID listingId, UUID businessId) {}
+    UUID listingId, UUID businessId, boolean feedbackSubmittedByMe) {}

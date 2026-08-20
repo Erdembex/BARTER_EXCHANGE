@@ -2,31 +2,35 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Href } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { tasksRepository, EnrichedTask } from '@/features/data';
 import { shouldUseListingsRest } from '@/features/listing/listingsApi';
 import { TaskCategory, TaskDifficulty } from '@/types';
-import { SearchBar, CategoryFilter, TaskCard } from '@/components/tasks';
+import { SearchBar, CategoryFilter, TaskCard, RewardFilterChips } from '@/components/tasks';
 import { LocationFilter } from '@/components/common/LocationPicker';
 import { TaskListSkeleton } from '@/components/tasks/TaskCardSkeleton';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { useAuthStore } from '@/store/authStore';
 import { saveLocationFilter } from '@/lib/locationFilterStorage';
 import { resolveLocationFilter } from '@/lib/resolveLocationFilter';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { resolveRewardFilter, type RewardFilterPreset } from '@/lib/rewardFilterUtils';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 import { useDifficultyLabels } from '@/constants/taskLabels';
 
 const DIFFICULTIES: (TaskDifficulty | null)[] = [null, 'easy', 'medium', 'hard'];
 
 export default function TasksScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const difficultyLabels = useDifficultyLabels();
   const DIFF_LABELS: Record<string, string> = {
@@ -38,6 +42,7 @@ export default function TasksScreen() {
   const didInitFilter = useRef(false);
   const didInitSearch = useRef(false);
   const [search, setSearch] = useState('');
+  const [rewardPreset, setRewardPreset] = useState<RewardFilterPreset | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const [filterReady, setFilterReady] = useState(false);
@@ -109,6 +114,11 @@ export default function TasksScreen() {
     setLoading(true);
     setLoadError(null);
     try {
+      const rewardFilter = rewardPreset
+        ? resolveRewardFilter(rewardPreset, '')
+        : search.trim()
+          ? { q: search.trim() }
+          : {};
       const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
         10,
         null,
@@ -116,7 +126,8 @@ export default function TasksScreen() {
           city: city ?? undefined,
           district: district ?? undefined,
           category,
-          q: restListings && search.trim() ? search.trim() : undefined,
+          q: rewardFilter.q,
+          rewardType: rewardFilter.rewardType,
         }
       );
       setTasks(fetched);
@@ -129,13 +140,18 @@ export default function TasksScreen() {
     } finally {
       setLoading(false);
     }
-  }, [city, district, category, search, restListings]);
+  }, [city, district, category, search, rewardPreset, restListings, t]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     if (!nextCursor && !lastDoc) return;
     setLoadingMore(true);
     const cursorArg = nextCursor ?? lastDoc ?? undefined;
+    const rewardFilter = rewardPreset
+      ? resolveRewardFilter(rewardPreset, '')
+      : search.trim()
+        ? { q: search.trim() }
+        : {};
     const { tasks: fetched, lastDoc: doc, nextCursor: cursor } = await tasksRepository.getActive(
       10,
       cursorArg,
@@ -143,7 +159,8 @@ export default function TasksScreen() {
         city: city ?? undefined,
         district: district ?? undefined,
         category,
-        q: restListings && search.trim() ? search.trim() : undefined,
+        q: rewardFilter.q,
+        rewardType: rewardFilter.rewardType,
       }
     );
     setTasks((prev) => [...prev, ...fetched]);
@@ -171,10 +188,39 @@ export default function TasksScreen() {
       <AppHeader title={t('tasksScreen.title')} />
       <View style={styles.header}>
         <Text style={styles.subtitle}>{t('tasksScreen.subtitle')}</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => router.push('/map' as Href)} style={styles.toolBtn}>
+            <Ionicons name="map-outline" size={18} color={Colors.primary} />
+            <Text style={styles.toolBtnText}>{t('map.title')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/leaderboard' as Href)}
+            style={styles.toolBtn}
+          >
+            <Ionicons name="trophy-outline" size={18} color={Colors.primary} />
+            <Text style={styles.toolBtnText}>{t('leaderboard.title')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.filters}>
-        <SearchBar value={search} onChangeText={setSearch} />
+        <SearchBar
+          value={search}
+          onChangeText={(v) => {
+            setSearch(v);
+            if (v.trim()) setRewardPreset(null);
+          }}
+          placeholder={t('rewardFilter.placeholder')}
+        />
+        {restListings ? (
+          <RewardFilterChips
+            active={rewardPreset}
+            onSelect={(preset) => {
+              setRewardPreset(preset);
+              if (preset) setSearch('');
+            }}
+          />
+        ) : null}
         <LocationFilter
           city={city}
           district={district}
@@ -240,10 +286,23 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
-  header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[1], paddingBottom: Spacing[2] },
+  header: { paddingHorizontal: Spacing[5], paddingTop: Spacing[1], paddingBottom: Spacing[2], gap: Spacing[3] },
   subtitle: { ...Typography.bodySmall, color: Colors.textSecondary },
+  headerActions: { flexDirection: 'row', gap: Spacing[2] },
+  toolBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primaryLight,
+    borderWidth: 1,
+    borderColor: Colors.borderGold,
+  },
+  toolBtnText: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
   filters: { paddingHorizontal: Spacing[5], gap: Spacing[3], paddingBottom: Spacing[3] },
   diffRow: { flexDirection: 'row', gap: Spacing[2] },
   diffChip: {
@@ -263,4 +322,4 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: Spacing[5], gap: Spacing[4], paddingBottom: Spacing[10] },
   empty: { ...Typography.bodyMedium, color: Colors.textTertiary, textAlign: 'center', marginTop: 40 },
   error: { ...Typography.bodyMedium, color: Colors.error, textAlign: 'center', marginTop: 40, lineHeight: 22 },
-});
+}));

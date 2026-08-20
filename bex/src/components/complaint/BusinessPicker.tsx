@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
@@ -13,7 +12,7 @@ import {
   type BusinessSearchHit,
 } from '@/features/business/businessProfileApi';
 import { BUSINESS_CATEGORY_LABELS } from '@/constants/businessLabels';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 interface BusinessPickerProps {
@@ -29,6 +28,8 @@ export function BusinessPicker({
   onSelect,
   onClear,
 }: BusinessPickerProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<BusinessSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -123,7 +124,7 @@ export function BusinessPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: { gap: Spacing[2] },
   selectedCard: {
     flexDirection: 'row',
@@ -151,4 +152,4 @@ const styles = StyleSheet.create({
   },
   resultName: { ...Typography.labelMedium, color: Colors.textPrimary },
   resultMeta: { ...Typography.caption, color: Colors.textMuted },
-});
+}));

@@ -1,13 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Colors, Typography, Spacing } from '@/theme';
+import { Typography, Spacing, createThemedStyles, useThemeColors } from '@/theme';
 
 interface BackHeaderProps {
   title: string;
 }
 
 export function BackHeader({ title }: BackHeaderProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
@@ -20,7 +22,7 @@ export function BackHeader({ title }: BackHeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -32,4 +34,4 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: Spacing[1] },
   backText: { ...Typography.labelMedium, color: Colors.textSecondary },
   title: { ...Typography.headingSmall, color: Colors.textPrimary, flex: 1 },
-});
+}));

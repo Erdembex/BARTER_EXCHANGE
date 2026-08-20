@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   Alert,
@@ -25,7 +24,7 @@ import {
 } from '@/features/coupon/businessCouponsApi';
 import { CouponQrScanner } from '@/components/business/CouponQrScanner';
 import { Button, Input } from '@/components/ui';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 function formatDateTime(ts: BusinessIssuedCoupon['issuedAt']): string {
@@ -44,6 +43,8 @@ function formatDateTime(ts: BusinessIssuedCoupon['issuedAt']): string {
 }
 
 export default function CouponVerifyScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const COUPON_STATUS_LABELS = useCouponStatusLabels();
   const ISSUED_STATUS_LABELS: Record<BusinessIssuedCoupon['statusRaw'], string> = {
@@ -277,7 +278,7 @@ export default function CouponVerifyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
   title: { ...Typography.headingLarge, color: Colors.textPrimary, marginBottom: Spacing[1] },
@@ -354,4 +355,4 @@ const styles = StyleSheet.create({
   badgeExpired: { backgroundColor: Colors.borderLight },
   badgeSwapped: { backgroundColor: Colors.borderLight },
   badgeText: { ...Typography.labelSmall, color: Colors.textPrimary },
-});
+}));

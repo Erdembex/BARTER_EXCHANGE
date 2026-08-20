@@ -25,7 +25,8 @@ public class ApplicationMapper {
     }
 
     public static ApplicationDetailResponse toDetailResponse(Application a,
-                                                               IndividualProfileSummary profile) {
+                                                               IndividualProfileSummary profile,
+                                                               boolean feedbackSubmittedByMe) {
         return new ApplicationDetailResponse(
             a.getId(), profile.id(), profile.fullName(), profile.avatarUrl(),
             profile.city(), null, profile.skills(), profile.bio(),
@@ -33,6 +34,6 @@ public class ApplicationMapper {
             a.getSubmissionText(),
             a.getSubmissionImageUrls() != null ? a.getSubmissionImageUrls() : List.of(),
             a.getSubmittedAt(), a.getReviewNote(), a.getReviewedAt(),
-            a.getListingId(), a.getBusinessId());
+            a.getListingId(), a.getBusinessId(), feedbackSubmittedByMe);
     }
 }

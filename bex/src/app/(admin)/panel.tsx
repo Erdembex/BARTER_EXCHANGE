@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
@@ -17,10 +16,12 @@ import { authService } from '@/features/auth/authService';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/common/Toast';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { useTranslation } from '@/i18n';
 
 export default function AdminPanelScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const { bexUser, signOut } = useAuthStore();
   const { showToast } = useToast();
@@ -185,7 +186,7 @@ export default function AdminPanelScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10] },
   header: {
@@ -225,4 +226,4 @@ const styles = StyleSheet.create({
   },
   noteTitle: { ...Typography.labelLarge, color: Colors.textPrimary, marginBottom: Spacing[1] },
   noteText: { ...Typography.bodySmall, color: Colors.textSecondary, lineHeight: 20 },
-});
+}));

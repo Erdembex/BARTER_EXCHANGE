@@ -13,10 +13,31 @@ npx eas init
 
 ## 2. Production secrets
 
+**Script ile (önerilen):**
+
+Windows:
+```powershell
+cd bex
+.\scripts\setup-eas-secrets.ps1 -ApiDomain api.SENIN-DOMAIN `
+  -EasProjectId "..." `
+  -FirebaseApiKey "..." `
+  -FirebaseAuthDomain "..." `
+  -FirebaseProjectId "..." `
+  -FirebaseStorageBucket "..." `
+  -FirebaseMessagingSenderId "..." `
+  -FirebaseAppId "..."
+```
+
+macOS/Linux:
 ```bash
-eas secret:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.bex.app
-eas secret:create --name EXPO_PUBLIC_EAS_PROJECT_ID --value <project-id>
-# Firebase değişkenlerini de ekle ( .env.production.example listesine bak )
+export EXPO_PUBLIC_FIREBASE_API_KEY=...
+# diğer EXPO_PUBLIC_FIREBASE_* ...
+./scripts/setup-eas-secrets.sh api.SENIN-DOMAIN
+```
+
+Manuel:
+```bash
+eas secret:create --name EXPO_PUBLIC_API_BASE_URL --value https://api.SENIN-DOMAIN
 ```
 
 Secrets listesi: `eas secret:list`
@@ -49,6 +70,9 @@ eas build --profile production --platform ios
 ```bash
 npm run submit:android
 npm run submit:ios
+npm run submit:all    # her iki platform
+# veya
+bash scripts/store-submit-all.sh
 ```
 
-Detay: [`docs/PLAY_STORE.md`](../docs/PLAY_STORE.md), [`docs/APP_STORE.md`](../docs/APP_STORE.md)
+Detay: [`docs/PLAY_CONSOLE_SETUP.md`](../docs/PLAY_CONSOLE_SETUP.md), [`docs/APP_STORE_CONNECT_SETUP.md`](../docs/APP_STORE_CONNECT_SETUP.md)

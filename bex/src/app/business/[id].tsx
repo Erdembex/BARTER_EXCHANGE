@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -19,9 +18,11 @@ import { ProfileFeedbackList } from '@/components/profile/ProfileFeedbackList';
 import { DangerBadge } from '@/components/profile/DangerBadge';
 import { Button } from '@/components/ui';
 import { fetchProfileFeedback, FeedbackDto } from '@/features/feedback/feedbackApi';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 export default function BusinessDetailScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const BUSINESS_CATEGORY_LABELS = useBusinessCategoryLabels();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -169,7 +170,7 @@ export default function BusinessDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: {
     flex: 1,
@@ -215,4 +216,4 @@ const styles = StyleSheet.create({
   sectionTitle: { ...Typography.headingSmall, color: Colors.textPrimary, marginTop: Spacing[2] },
   empty: { ...Typography.bodyMedium, color: Colors.textTertiary },
   taskWrap: { marginBottom: Spacing[3] },
-});
+}));

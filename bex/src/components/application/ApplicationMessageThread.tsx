@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { UserRole } from '@/types';
 import { ChatThreadView } from '@/components/messaging/ChatThreadView';
-import { Colors, Spacing, Radius } from '@/theme';
+import { Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 interface ApplicationMessageThreadProps {
   applicationId: string;
@@ -17,6 +17,8 @@ export function ApplicationMessageThread({
   taskTitle,
   ...props
 }: ApplicationMessageThreadProps) {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   return (
     <View style={styles.wrap}>
       <ChatThreadView
@@ -29,7 +31,7 @@ export function ApplicationMessageThread({
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   wrap: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -37,4 +39,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
-});
+}));

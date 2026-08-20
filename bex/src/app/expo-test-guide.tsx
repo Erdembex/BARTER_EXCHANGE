@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -12,7 +11,7 @@ import { API_BASE_URL } from '@/lib/api/config';
 import { useBackendHealth } from '@/hooks/useBackendHealth';
 import { shouldUseDemoData } from '@/lib/devMode';
 import { isAuthEmulatorActive } from '@/lib/firebase';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 import { Button } from '@/components/ui';
 
 type TestStep = {
@@ -128,6 +127,8 @@ const TEST_STEPS: TestStep[] = [
 ];
 
 export default function ExpoTestGuideScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { reachable, checking, refresh } = useBackendHealth();
   const demoMode = shouldUseDemoData();
   const emulator = isAuthEmulatorActive();
@@ -216,7 +217,7 @@ export default function ExpoTestGuideScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: Spacing[5], paddingBottom: Spacing[10], gap: Spacing[4] },
   back: { alignSelf: 'flex-start' },
@@ -273,4 +274,4 @@ const styles = StyleSheet.create({
     padding: Spacing[4],
   },
   noteText: { ...Typography.caption, color: Colors.textMuted, lineHeight: 18 },
-});
+}));

@@ -25,7 +25,13 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
   }
   // FormData: boundary otomatik eklenmeli (RN/axios multipart hatası önlenir)
   if (config.data instanceof FormData) {
-    delete config.headers['Content-Type'];
+    if (typeof config.headers.delete === 'function') {
+      config.headers.delete('Content-Type');
+      config.headers.delete('content-type');
+    } else {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
   }
   return config;
 });

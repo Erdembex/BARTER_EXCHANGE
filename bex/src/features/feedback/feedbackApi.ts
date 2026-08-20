@@ -72,3 +72,25 @@ export async function submitBusinessFeedback(
     throw mapError(error, 'Geri bildirim gönderilemedi.');
   }
 }
+
+export type PendingFeedbackDto = {
+  applicationId: string;
+  listingId: string;
+  taskTitle: string;
+  status: string;
+};
+
+export async function fetchPendingFeedback(
+  role: 'user' | 'business'
+): Promise<PendingFeedbackDto[]> {
+  const path =
+    role === 'business'
+      ? '/api/business/applications/pending-feedback'
+      : '/api/individual/applications/pending-feedback';
+  try {
+    const { data } = await apiClient.get<PendingFeedbackDto[]>(path);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    throw mapError(error, 'Bekleyen puanlar yüklenemedi.');
+  }
+}

@@ -49,7 +49,7 @@ public class ApplicationService {
             .individual(individual).coverLetter(req.coverLetter()).build());
 
         eventPublisher.publish(new ApplicationReceivedEvent(
-            saved.getId(), req.listingId(), businessUserId, individualId));
+            saved.getId(), req.listingId(), businessUserId, individualId, individualUserId));
 
         return ApplicationMapper.toResponse(saved);
     }

@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -23,11 +22,11 @@ import { useToast } from '@/components/common/Toast';
 import { getApplicationTimeline } from '@/lib/applicationTimeline';
 import { canUseApplicationMessages } from '@/features/messages';
 import { isCurrentApplicationOwner } from '@/features/application/applicationsApi';
-import { TaskFeedbackModal } from '@/components/profile/TaskFeedbackModal';
-import { submitIndividualFeedback } from '@/features/feedback/feedbackApi';
-import { Colors, Typography, Spacing, Radius } from '@/theme';
+import { Typography, Spacing, Radius, createThemedStyles, useThemeColors } from '@/theme';
 
 export default function ApplicationDetailScreen() {
+  const Colors = useThemeColors();
+  const styles = useScreenStyles();
   const { t } = useTranslation();
   const APPLICATION_STATUS_LABELS = useApplicationStatusLabels();
   const STATUS_HINTS: Partial<Record<Application['status'], string>> = {
@@ -48,7 +47,6 @@ export default function ApplicationDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -78,6 +76,12 @@ export default function ApplicationDetailScreen() {
       load();
     }, [load])
   );
+
+  const needsFeedback =
+    !!application &&
+    isOwner &&
+    ['submission_approved', 'rewarded'].includes(application.status) &&
+    !application.feedbackSubmitted;
 
   const canCancel =
     application &&
@@ -244,12 +248,18 @@ export default function ApplicationDetailScreen() {
           />
         ) : null}
 
-        {['submission_approved', 'rewarded'].includes(application.status) && isOwner ? (
-          <Button
-            title={t('applicationDetailScreen.giveFeedback')}
-            variant="secondary"
-            onPress={() => setShowFeedback(true)}
-          />
+        {needsFeedback ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>{t('applicationDetailScreen.feedbackRequired')}</Text>
+          </View>
+        ) : null}
+
+        {['submission_approved', 'rewarded'].includes(application.status) &&
+        isOwner &&
+        application.feedbackSubmitted ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>{t('applicationDetailScreen.feedbackSubmitted')}</Text>
+          </View>
         ) : null}
 
         {firebaseUser &&
@@ -289,21 +299,11 @@ export default function ApplicationDetailScreen() {
           />
         )}
       </ScrollView>
-
-      <TaskFeedbackModal
-        visible={showFeedback}
-        title={t('applicationDetailScreen.feedbackTitle')}
-        onClose={() => setShowFeedback(false)}
-        onSubmit={async (stars, comment) => {
-          await submitIndividualFeedback(application.id, stars, comment);
-          showToast(t('applicationDetailScreen.feedbackSaved'));
-        }}
-      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const useScreenStyles = createThemedStyles((Colors) => ({
   safe: { flex: 1, backgroundColor: Colors.background },
   center: {
     flex: 1,
@@ -380,4 +380,4 @@ const styles = StyleSheet.create({
   timelineContent: { flex: 1, gap: 2 },
   timelineLabel: { ...Typography.bodySmall, color: Colors.textPrimary },
   timelineTime: { ...Typography.caption, color: Colors.textMuted },
-});
+}));

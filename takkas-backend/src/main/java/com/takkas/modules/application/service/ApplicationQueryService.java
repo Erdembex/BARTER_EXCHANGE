@@ -5,6 +5,7 @@ import com.takkas.modules.application.api.dto.*;
 import com.takkas.modules.application.domain.enums.ApplicationStatus;
 import com.takkas.modules.application.mapper.ApplicationMapper;
 import com.takkas.modules.application.repository.ApplicationRepository;
+import com.takkas.modules.feedback.service.FeedbackService;
 import com.takkas.modules.listing.repository.ListingRepository;
 import com.takkas.modules.user.UserFacade;
 import com.takkas.modules.user.domain.enums.UserType;
@@ -23,6 +24,7 @@ public class ApplicationQueryService {
     private final ApplicationRepository applicationRepository;
     private final ListingRepository listingRepository;
     private final UserFacade userFacade;
+    private final FeedbackService feedbackService;
 
     public List<ApplicantResponse> getApplicantsByListing(UUID businessId,
                                                             UUID listingId,
@@ -43,7 +45,8 @@ public class ApplicationQueryService {
             .stream().map(ApplicationMapper::toResponse).toList();
     }
 
-    public ApplicationDetailResponse getDetail(UUID applicationId, UUID requesterId, UserType type) {
+    public ApplicationDetailResponse getDetail(UUID applicationId, UUID requesterId, UserType type,
+                                                 UUID requesterUserId) {
         var app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
         boolean ok = switch (type) {
@@ -53,14 +56,16 @@ public class ApplicationQueryService {
         };
         if (!ok) throw new ForbiddenException("Bu başvuruya erişim yetkiniz yok.");
         var profile = userFacade.getIndividualSummary(app.getIndividual().getId());
-        return ApplicationMapper.toDetailResponse(app, profile);
+        boolean feedbackSubmitted = requesterUserId != null
+            && feedbackService.hasFeedbackForApplication(applicationId, requesterUserId);
+        return ApplicationMapper.toDetailResponse(app, profile, feedbackSubmitted);
     }
 
     public List<ApplicationDetailResponse> getPendingSubmissions() {
         return applicationRepository.findAllByStatusOrderBySubmittedAtDesc(ApplicationStatus.SUBMITTED)
             .stream()
             .map(a -> ApplicationMapper.toDetailResponse(
-                a, userFacade.getIndividualSummary(a.getIndividual().getId())))
+                a, userFacade.getIndividualSummary(a.getIndividual().getId()), false))
             .toList();
     }
 
@@ -68,6 +73,6 @@ public class ApplicationQueryService {
         var app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Başvuru bulunamadı."));
         var profile = userFacade.getIndividualSummary(app.getIndividual().getId());
-        return ApplicationMapper.toDetailResponse(app, profile);
+        return ApplicationMapper.toDetailResponse(app, profile, false);
     }
 }
